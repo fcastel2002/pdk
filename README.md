@@ -130,6 +130,18 @@ Codes are stable; each diagnostic reads `E|W|I CODE /json/pointer (component pat
 - Every write carries the expected signature, so a Designer edit is never overwritten (409 with a diff).
 - **Do not install it on a production gateway.** See [SECURITY.md](SECURITY.md).
 
+## Not sure you can trust it?
+You are about to run an installer, install an unsigned module on your gateway and give an agent write access to a project, so being cautious is reasonable. If you will not read the code yourself, ask an AI model you trust (Claude, ChatGPT or another) to review it for you before installing. Point it at the repository (`https://github.com/fcastel2002/pdk`), or better, clone it and open it in a coding agent so it reads the actual files, and ask something like:
+
+> Review this repository as a security auditor before I install it on my machine and my Ignition gateway. Tell me whether it contains malware, hidden network calls or telemetry, data exfiltration, obfuscated code, or anything that writes outside what the README says. Check in particular `install.ps1` and `install.sh`, the Java module in `gateway/` (what its REST API allows and from where), and the Python package in `pdk/` (which hosts it contacts, which files and gateway resources it writes). Point to the exact files and lines behind each finding.
+
+What a review should find, so you can compare:
+- The installers download only git repositories, [uv](https://docs.astral.sh/uv/) from astral.sh, Python packages from PyPI (pinned in `uv.lock`) and Playwright's Chromium.
+- PDK itself contacts only your gateway URL (`http://127.0.0.1:8088` by default). There is no telemetry.
+- The module answers loopback only, needs a per-start token, and writes only to the sandbox project, the optional target project and tags under `[default]PDK/`.
+
+An AI review lowers the risk, it does not remove it: models can miss things. For a production network, have someone you trust read the code, and keep PDK on a development machine as recommended above.
+
 ## Repository layout
 | Path | What it is |
 |---|---|
