@@ -38,7 +38,9 @@ Endpoints
    * - PUT
      - ``/projects/{project}/resources/{module}/{type}/{path…}``
      - Create or modify a resource. Body: ``{"files": {name: content}, "signature": "<expected>"}``; no signature
-       creates. Answers ``201`` (created) or ``200`` (modified) with the new signature.
+       creates. An optional ``scope`` is the resource's application scope: a combination of ``G``, ``C`` and ``D``
+       (each at most once), ``A`` (all) or ``N`` (none), default ``G``; anything else is a ``400``. Answers ``201``
+       (created) or ``200`` (modified) with the new signature.
    * - DELETE
      - ``/projects/{project}/resources/{module}/{type}/{path…}?signature=…``
      - Delete a resource if its signature still matches.

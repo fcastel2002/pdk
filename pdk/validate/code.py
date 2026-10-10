@@ -107,13 +107,60 @@ def _event_scripts(events: Any, base: str) -> Iterator[tuple[Any, str]]:
 def _script(text: Any, pointer: str, where: str) -> list[Diagnostic]:
     if not isinstance(text, str):
         return []
-    for number, line in enumerate(text.split("\n"), 1):
-        if line.strip() and not line[0].isspace():
+    lines = text.split("\n")
+    for number, (line, starts) in enumerate(zip(lines, _logical_starts(lines), strict=True), 1):
+        stripped = line.strip()
+        if starts and stripped and not stripped.startswith("#") and not line[0].isspace():
             return [make("E007", "error", pointer, where,
                          f"script line {number} is not indented: {_short(line)!r}",
                          "Ignition wraps the body in a function: start every line with a tab "
                          '("\\tsystem.perspective.print(value)"), and nest blocks with more tabs')]
     return []
+
+
+def _logical_starts(lines: list[str]) -> list[bool]:
+    """For each physical line, whether it begins a logical Python line: not inside a triple-quoted
+    string, not inside brackets, not after a backslash continuation. Single-line strings end at the
+    line break; a '#' outside strings ends the code of its line."""
+    starts: list[bool] = []
+    triple = ""  # closing delimiter of the triple-quoted string that is still open, if any
+    depth = 0
+    continued = False
+    for raw in lines:
+        line = raw.rstrip("\r")
+        starts.append(not triple and depth == 0 and not continued)
+        continued = False
+        i, n = 0, len(line)
+        while i < n:
+            ch = line[i]
+            if triple:
+                if line.startswith(triple, i):
+                    triple = ""
+                    i += 3
+                elif ch == "\\":
+                    i += 2
+                else:
+                    i += 1
+            elif ch == "#":
+                break
+            elif ch in "'\"":
+                if line.startswith(ch * 3, i):
+                    triple = ch * 3
+                    i += 3
+                else:
+                    i += 1
+                    while i < n and line[i] != ch:
+                        i += 2 if line[i] == "\\" else 1
+                    i += 1
+            else:
+                if ch in "([{":
+                    depth += 1
+                elif ch in ")]}":
+                    depth = max(0, depth - 1)
+                elif ch == "\\" and i == n - 1:
+                    continued = True
+                i += 1
+    return starts
 
 
 # --- expressions ------------------------------------------------------------------------------

@@ -89,6 +89,7 @@ class Opened:
     readiness_ms: float
     maker_notice: bool
     console: list[dict[str, str]] = field(default_factory=list)
+    endless: list[str] = field(default_factory=list)  # component paths of infinite animations, left out of the wait
 
 
 # ------------------------------------------------------------------------------------------------ page scripts
@@ -128,19 +129,29 @@ ANIMATIONS_JS = r"""
   }).map((a) => {
     const t = a.effect && a.effect.target;
     const owner = t && t.closest ? t.closest('[data-component-path]') : null;
-    return {name: a.animationName || null, path: owner ? owner.getAttribute('data-component-path') : null};
+    // Infinite iterations (a blinking alarm, a spinner) never finish: the caller does not wait for them.
+    const timing = a.effect && a.effect.getTiming ? a.effect.getTiming() : null;
+    const computed = a.effect && a.effect.getComputedTiming ? a.effect.getComputedTiming() : null;
+    const endless = (timing && timing.iterations === Infinity) || (computed && computed.endTime === Infinity);
+    return {name: a.animationName || null, path: owner ? owner.getAttribute('data-component-path') : null,
+            endless: !!endless};
   });
 }
 """
 
+# arg = {sel: SELECTORS, skip: [component paths]}: the skipped components and their descendants are not sampled.
 GEOMETRY_JS = r"""
-(sel) => {
-  const root = document.querySelector(sel.root);
+(arg) => {
+  const root = document.querySelector(arg.sel.root);
   if (!root) return null;
+  const skip = arg.skip || [];
+  const skipped = (path) => skip.some((p) => path === p || path.startsWith(p + ':'));
   const out = {};
   for (const el of [root, ...root.querySelectorAll('[data-component-path]')]) {
+    const path = el.getAttribute('data-component-path');
+    if (skipped(path)) continue;
     const r = el.getBoundingClientRect();
-    out[el.getAttribute('data-component-path')] = [r.x, r.y, r.width, r.height];
+    out[path] = [r.x, r.y, r.width, r.height];
   }
   return out;
 }
@@ -401,7 +412,7 @@ class Eyes:
                                           timeout=FONTS_MS)
         except Exception as exc:  # noqa: BLE001
             raise EyesError(READINESS_TIMEOUT, f"fonts never finished loading: {exc}") from exc
-        _wait_stable(opened.page)
+        opened.endless = _wait_stable(opened.page)
         return opened
 
     @staticmethod
@@ -414,7 +425,7 @@ class Eyes:
             raise EyesError(HTTP_ERROR, f"{url} answered HTTP {response.status}", {"http_status": response.status})
 
     def _extract(self, opened: Opened, root: str = ROOT_PATH) -> dict[str, Any]:
-        _wait_stable(opened.page)
+        opened.endless = sorted({*opened.endless, *_wait_stable(opened.page)})
         try:
             extracted = opened.page.evaluate(EXTRACT_JS, {**SELECTORS, "root": f'[data-component-path="{root}"]'})
         except Exception as exc:  # noqa: BLE001
@@ -531,30 +542,37 @@ def geometry_delta(previous: dict[str, list[float]], current: dict[str, list[flo
     return worst, where
 
 
-def _wait_stable(page: Any) -> None:
-    """No running animations under the root and STABLE_SAMPLES equal rAF geometry samples in a row."""
+def _wait_stable(page: Any) -> list[str]:
+    """No running finite animations under the root and STABLE_SAMPLES equal rAF geometry samples in a row. Endless
+    animations (infinite iterations) never finish: they are not waited for and their components are left out of the
+    samples. Returns the sorted component paths of those endless animations."""
     deadline = time.perf_counter() + STABILITY_MS / 1000
     running: list[dict[str, Any]] = []
+    endless: set[str] = set()
     while time.perf_counter() < deadline:
         running = page.evaluate(ANIMATIONS_JS, SELECTORS)
-        if not running:
+        endless.update(a["path"] for a in running if a.get("endless") and a.get("path"))
+        finite = [a for a in running if not a.get("endless")]
+        if not finite:
             break
         time.sleep(POLL_S)
     else:
-        raise EyesError(LAYOUT_UNSTABLE, "animations under the view root never finished", {"animations": running})
+        finite = [a for a in running if not a.get("endless")]
+        raise EyesError(LAYOUT_UNSTABLE, "animations under the view root never finished", {"animations": finite})
+    skip = sorted(endless)
     previous: dict[str, list[float]] | None = None
     steady = 0
     moving: tuple[float, str | None] = (0.0, None)
     while time.perf_counter() < deadline:
         page.evaluate("() => new Promise((resolve) => requestAnimationFrame(() => resolve(null)))")
-        sample = page.evaluate(GEOMETRY_JS, SELECTORS)
+        sample = page.evaluate(GEOMETRY_JS, {"sel": SELECTORS, "skip": skip})
         if sample is None:
             raise EyesError(READINESS_TIMEOUT, "the view root disappeared while waiting for a stable layout")
         if previous is not None:
             moving = geometry_delta(previous, sample)
             steady = steady + 1 if moving[0] <= LAYOUT_EPSILON_PX else 0
             if steady >= STABLE_SAMPLES - 1:
-                return
+                return skip
         previous = sample
         time.sleep(POLL_S)
     raise EyesError(LAYOUT_UNSTABLE, f"the layout kept moving (largest move {moving[0]} px at {moving[1]})",

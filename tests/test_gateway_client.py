@@ -175,3 +175,26 @@ def test_token_comes_from_env_or_the_gateway_data_dir(tmp_path, monkeypatch) -> 
     assert client.read_token() == "from-env"
     assert client.resource_route("p", VIEWS, "/A b/C/") == (
         "/projects/p/resources/com.inductiveautomation.perspective/views/A%20b/C")
+
+
+def test_read_token_file_ignores_the_env_token(tmp_path, monkeypatch) -> None:
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / client.TOKEN_FILE).write_text("from-file\n", encoding="utf-8")
+    monkeypatch.setenv(client.TOKEN_ENV, "from-env")
+    assert client.read_token(tmp_path) == "from-env"
+    assert client.read_token_file(tmp_path) == "from-file"
+
+
+def test_health_is_asked_once_per_instance(monkeypatch) -> None:
+    calls: list[str] = []
+
+    def call(self: Gateway, method: str, route: str, body: Any = None) -> dict[str, Any]:
+        calls.append(route)
+        return {"sandbox": "sandbox", "target": None}
+
+    monkeypatch.setattr(Gateway, "call", call)
+    gateway = Gateway(url="http://127.0.0.1:8088", token=TOKEN)
+    assert gateway.health()["sandbox"] == "sandbox" and gateway.health() == {"sandbox": "sandbox", "target": None}
+    assert calls == ["/health"]
+    gateway.health(refresh=True)
+    assert calls == ["/health", "/health"]

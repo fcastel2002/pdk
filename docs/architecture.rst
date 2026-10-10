@@ -108,7 +108,9 @@ Loopback only
    forwarding headers. A request from the network is refused.
 A token per start
    The module writes a random 256-bit token to ``<ignition>/data/pdk-gateway.token`` on every start; every request
-   must carry it in the ``X-PDK-Token`` header. Only users who can read the gateway's data folder can use the API.
+   must carry it in the ``X-PDK-Token`` header. The file is written privately and then moved over the old one, so
+   it is never readable by other local users; on Linux and macOS it is ``rw-r-----``, so members of the gateway's
+   group can use PDK.
 Read-only by default
    Without ``-Dpdk.sandbox`` nothing can be written. With it, resources can be written only in the sandbox, and in
    the target project only views outside ``PDK/`` and the stylesheet. Projects and tags are named in

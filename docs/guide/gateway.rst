@@ -34,7 +34,8 @@ The commands
    the target project.
 
 ``pdk delete <folder>``
-   Deletes a pulled view on the gateway, only if nobody changed it since the pull. The local copy stays.
+   Deletes a pulled view on the gateway, only if nobody changed it since the pull. The local copy stays. It works
+   only on the sandbox: a view in the target project is removed in the Designer.
 
 With Claude Code these are the ``pdk_pull``, ``pdk_deploy``, ``pdk_promote`` and ``pdk_delete`` tools.
 ``pdk_promote`` and ``pdk_delete`` are marked as destructive: the agent should run them only when asked.

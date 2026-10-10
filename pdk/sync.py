@@ -325,6 +325,9 @@ def delete(gateway: Gateway, location: Path, *, resolved: bool = False, root: Pa
         signature = _expected_signature(sidecar, resolved)
     except ValueError as exc:
         return Outcome(False, f"pdk: {exc}")
+    if project == _roles(gateway)[1]:
+        return Outcome(False, f"pdk: {project} is the target project: PDK never deletes there (remove the view in the "
+                              "Designer); delete works on the sandbox")
     if signature is None:
         return Outcome(False, f"pdk: {project}:{path} no longer exists on the gateway")
     try:
@@ -337,7 +340,7 @@ def delete(gateway: Gateway, location: Path, *, resolved: bool = False, root: Pa
         return Outcome(False, _conflict(exc, directory, sidecar, project, path, text, "delete", budget))
     (directory / SIDECAR).unlink(missing_ok=True)
     (directory / GATEWAY_COPY).unlink(missing_ok=True)
-    warning = None if project == _roles(gateway)[1] else remove_preview(gateway, project, path)
+    warning = remove_preview(gateway, project, path)
     pruned = result.get("pruned") or []
     folders = f"; removed the empty folder(s) {', '.join(pruned)}" if pruned else ""
     return Outcome(True, f"deleted {project}:{path} ({_short(signature)}){folders}. "

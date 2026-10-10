@@ -3,7 +3,9 @@ MCP tools
 
 ``pdk-mcp`` is an MCP server over standard input/output (see :doc:`../guide/agents` to register it). Each tool
 mirrors a command of the :doc:`command line <cli>` and returns the same text report. Tools are annotated for the
-client: *read-only*, *writes* (signed, non-destructive) or *destructive*.
+client: *read-only*, *writes* (signed, non-destructive) or *destructive*. ``pdk_open`` and ``pdk_screenshot``
+add the preview page to the sandbox's page-config (additive and idempotent); ``pdk_inspect`` is destructive because
+its ``act`` steps run the view's own event scripts on the gateway, which can write tags or databases.
 
 .. list-table::
    :header-rows: 1
@@ -44,14 +46,14 @@ client: *read-only*, *writes* (signed, non-destructive) or *destructive*.
        ``quality``, ``file`` (tag export JSON for ``apply``), ``to`` (folder under ``PDK/``), ``depth``. See
        :doc:`../guide/tags`.
    * - ``pdk_open``
-     - read-only
+     - writes (preview)
      - ``path`` (sandbox path or local folder), ``viewport`` (``WIDTHxHEIGHT``). Renders the view and reports load
        time, components rendered and browser errors.
    * - ``pdk_inspect``
-     - read-only
+     - destructive
      - ``path``, ``viewport``, ``focus``, ``query``, ``expect``, ``act``. See :doc:`../guide/inspection`.
    * - ``pdk_screenshot``
-     - read-only
+     - writes (preview)
      - ``path``, ``viewport``, ``component`` (name path such as ``root/Panel``). Returns a PNG image.
 
 The server's instructions describe the whole cycle (catalog, write, validate, deploy, inspect, fix), so a client
