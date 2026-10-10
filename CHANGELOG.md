@@ -16,4 +16,6 @@ First public release.
 - Documentation site built with Sphinx (`docs/`): introduction, installation, tutorial, user guide, architecture, troubleshooting and the reference of the CLI, diagnostic codes, MCP tools, REST API and Python API.
 
 ### Fixed
+- `--expect` percentages of width and height are shares of the parent's content box (inside its border and padding,
+  like CSS; a coordinate container's padding box), so `width 100%` holds for a child that fills a padded parent.
 - Schema extraction on Windows: retry the final rename when a just-written file is still held, and never treat a leftover staging folder as a bundle version.

@@ -103,7 +103,8 @@ spaces.
      - the edges line up: ``left``, ``right``, ``top``, ``bottom``, ``center-x``, ``center-y``.
    * - ``root/Table width 100%``
      - a size or position: ``width``, ``height``, ``x``, ``y``; operators ``=`` (default), ``>=``, ``<=``, ``>``,
-       ``<``; pixels or a percentage of the parent. ``x`` and ``y`` are measured from the parent's inner top-left
+       ``<``; pixels, or a percentage of the parent's content box (inside its border and padding, like CSS; for a
+       coordinate container, its padding box). ``x`` and ``y`` are measured from the parent's inner top-left
        corner, like ``position.x`` and ``position.y`` in a coordinate container.
    * - ``root/Title text "Pump 1"``
      - the exact text; ``text ~ "Pump"`` for "contains".

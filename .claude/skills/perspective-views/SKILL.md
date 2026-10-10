@@ -30,7 +30,7 @@ description: Create or edit Ignition Perspective views (view.json) verified agai
    - `root/Body below root/Header gap 8` (also `above`, `left-of`, `right-of`; `gap >= 8` or `gap 8..16` for a range)
    - `root/Log/Last inside root/Log` (inside its box or, on the scrolling axis, inside all of its content)
    - `root/Save aligned right root/Form` (`left|right|top|bottom|center-x|center-y`)
-   - `root/Table width 100%` (`width|height|x|y`, `=` by default or `>= <= > <`; px or % of the parent; 1px tolerance). `x`/`y` are measured from the inside of the parent (its padding box), like `position.x/y` in a coord container: `root/Diagram/Pump x 150`
+   - `root/Table width 100%` (`width|height|x|y`, `=` by default or `>= <= > <`; px or % of the parent's content box, inside its padding; 1px tolerance). `x`/`y` are measured from the inside of the parent (its padding box), like `position.x/y` in a coord container: `root/Diagram/Pump x 150`
    - `root/Title text "Pump 1"` (`text ~ "Pump"` contains), `root/Alarm visible|hidden` (rendered, even if scrolled out of view)
    - `root/Events scrolls y` (the content overflows and that axis scrolls; without an axis, either), `root/Events/Last in-view` (fully in view: not scrolled away, clipped or outside the viewport)
    - `root/Title color #323232`, `bg`, `font-size 16`, `font-weight 700`

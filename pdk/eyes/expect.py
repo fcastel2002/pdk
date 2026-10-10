@@ -5,7 +5,7 @@ One expectation per `;` or line, `<component> <relation> [args]`, components by 
     root/Subtitle below root/Title [gap 8]        also above, left-of, right-of; gap >= 8, gap 8..16
     root/Log/Last inside root/Log                 within its box, or its content along an axis it scrolls
     root/Save aligned right root/Form             edges: left right top bottom center-x center-y
-    root/Table width 100%                         width height x y; = (default), >=, <=, >, <; px or % of the parent
+    root/Table width 100%                         width height x y; =, >=, <=, >, <; px or % of the parent's content
     root/Pump x 150                               x and y from the parent's inner top-left (coord's position.x/y)
     root/Title text "Pump 1"                      text ~ "Pump" for contains
     root/Alarm visible                            or hidden (rendered with a size, wherever it is scrolled to)
@@ -42,6 +42,7 @@ EDGES = {"left", "right", "top", "bottom", "center-x", "center-y"}
 METRICS = {"width", "height", "x", "y"}
 OPS = {"=", ">=", "<=", ">", "<"}
 WEIGHTS = {"normal": "400", "bold": "700"}
+COORD = "ia.container.coord"
 GRAMMAR = ("One per ; or line: `<name path> below|above|left-of|right-of <name path> [gap [op] N | gap N..M]`, "
            "`<a> inside <b>`, "
            "`<a> aligned left|right|top|bottom|center-x|center-y <b>`, `<a> width|height|x|y [=|>=|<=|>|<] N[px|%]`, "
@@ -419,11 +420,22 @@ def _inner(joined: Joined, parent: Part | None) -> dict[str, float]:
             "height": b["height"] - (border[0] or 0) - (border[2] or 0)}
 
 
+def _room(joined: Joined, parent: Part | None) -> dict[str, float]:
+    """What a % width or height is a share of, like CSS: the parent's content box (inside border and padding); a
+    coord container's children are placed in its padding box, so there padding counts as room."""
+    inner = _inner(joined, parent)
+    if parent is None or parent.node.type == COORD:
+        return inner
+    padding = parent.dom.get("padding") or [0, 0, 0, 0]
+    return {"width": inner["width"] - (padding[1] or 0) - (padding[3] or 0),
+            "height": inner["height"] - (padding[0] or 0) - (padding[2] or 0)}
+
+
 def _length(joined: Joined, parent: Part | None, metric: str, raw: str) -> float:
     if not raw.endswith("%"):
         return _number(raw.removesuffix("px"))
     if metric in ("width", "height"):
-        base = parent.dom["bounds"][metric] if parent is not None else joined.viewport.get(metric, 0)
+        base = _room(joined, parent)[metric]
     else:
         base = _inner(joined, parent)["width" if metric == "x" else "height"]
     return base * _number(raw[:-1]) / 100

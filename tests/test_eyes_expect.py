@@ -176,3 +176,11 @@ def test_popups_open_and_closed() -> None:
     [failure] = expect.check(joined, "popup other open").diagnostics
     assert failure["code"] == "A001" and "open popups: detail" in failure["message"]
     assert _codes("popup detail maybe", joined) == ["A002"]
+
+
+def test_percent_sizes_are_shares_of_the_parents_content_box() -> None:
+    # Row is 800 wide; with 2px borders and 298px of padding on each side its content box is 200 wide, like CSS.
+    joined = _joined(**{"C.0:1": {"border_width": [0, 2, 0, 2], "padding": [0, 298, 0, 298]}})
+    assert _codes("root/Row/Narrow width 100%; root/Row/Narrow width >= 50%", joined) == []
+    [wide] = expect.check(joined, "root/Row/Narrow width 50%").diagnostics
+    assert wide["message"] == "root/Row/Narrow width 50%: width is 200px, expected = 100px (50%)"
