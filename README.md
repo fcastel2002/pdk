@@ -9,6 +9,8 @@ PDK (Perspective DevKit) is a set of tools for an AI agent (Claude Code or any M
 - **Deploy** them to a sandbox project on your development gateway without ever overwriting a Designer edit (signed writes, 409 with a diff on conflict).
 - **Inspect** them running: PDK opens the view in headless Chromium and joins the DOM with the gateway's evaluated tree, so clipped text, collapsed containers, bad tag qualities, failing scripts and browser errors come back on the component that has them. Layout and behavior requests are checked, not eyeballed: `--expect "root/Body below root/Header; root/Header width 100%"`, `--act "click root/Save"`.
 
+![The loop on a tank card: validate catches an invented component type and a prop that does not exist; inspect then finds a missing tag, a formatting error and a clipped title; after the fixes the view is clean and both expectations pass.](docs/images/pdk-loop.gif)
+
 > **Development gateways only.** PDK installs an unsigned module that writes to a sandbox project. Never install it on a production gateway.
 
 PDK is an independent project. It is not affiliated with, endorsed by or supported by Inductive Automation. Ignition and Perspective are trademarks of Inductive Automation.
