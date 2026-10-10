@@ -7,6 +7,7 @@ from pathlib import Path
 
 from pdk.project import PERSPECTIVE_DIR, load_project, locate
 from pdk.validate import validate_file
+from pdk.validate.refs import _missing_view_hint
 from tests.helpers import label, view
 
 
@@ -93,3 +94,49 @@ def test_percent_encoded_folders_resolve_by_their_resource_name(tmp_path) -> Non
     assert project.find_view("Bench/%41%75%78/Pump") is None
     file = root / PERSPECTIVE_DIR / "views" / "Bench" / "%41%75%78" / "Pump" / "view.json"
     assert locate(file)[1] == "Bench/Aux/Pump"
+
+
+def _r010_hint(bundle, base: Path, target: str, views: list[str], *, event: bool = False) -> str:
+    root = _project(base)
+    for path in views:
+        _view(root, path, view(label()))
+    if event:  # popup open, the event call site
+        node = {"type": "ia.input.button", "meta": {"name": "Open"}, "position": {"basis": "48px"},
+                "props": {"text": "Open"},
+                "events": {"component": {"onActionPerformed": {"type": "popup", "scope": "C",
+                                                               "config": {"type": "open", "id": "p",
+                                                                          "viewPath": target}}}}}
+    else:  # embedded view
+        node = {"type": "ia.display.view", "meta": {"name": "Ghost"}, "position": {"basis": "48px"},
+                "props": {"path": target}}
+    file = _view(root, "Bench/Screen", view(node))
+    [hint] = [d["hint"] for d in validate_file(file, bundle).diagnostics if d["code"] == "R010"]
+    return hint
+
+
+def test_missing_view_hint_prefers_a_match_in_its_own_folder(bundle, tmp_path) -> None:
+    assert _r010_hint(bundle, tmp_path, "Bench/Run/Popop", ["Bench/Run/Popup"]) == "did you mean 'Bench/Run/Popup'?"
+
+
+def test_missing_view_hint_points_to_a_sibling_run_when_the_folder_is_absent(bundle, tmp_path) -> None:
+    hint = _r010_hint(bundle, tmp_path, "Bench/r3/Auxiliares/Popup", ["Bench/r2/Helpers/Popup"])
+    assert hint == ("create the view first (deploy the views it uses before it); "
+                    "closest elsewhere: 'Bench/r2/Helpers/Popup'")
+
+
+def test_missing_view_hint_keeps_the_own_folder_over_a_closer_elsewhere(bundle, tmp_path) -> None:
+    views = ["Bench/Run/Sub/Pop", "Bench/Run/Sub2/Popup"]
+    assert _r010_hint(bundle, tmp_path, "Bench/Run/Sub/Popup", views) == "did you mean 'Bench/Run/Sub/Pop'?"
+
+
+def test_event_targets_share_the_missing_view_hint(bundle, tmp_path) -> None:
+    assert _r010_hint(bundle, tmp_path / "own", "Bench/Run/Popop", ["Bench/Run/Popup"], event=True) == \
+        "did you mean 'Bench/Run/Popup'?"
+    hint = _r010_hint(bundle, tmp_path / "run", "Bench/r3/Auxiliares/Popup", ["Bench/r2/Helpers/Popup"], event=True)
+    assert hint == _r010_hint(bundle, tmp_path / "embedded", "Bench/r3/Auxiliares/Popup",
+                              ["Bench/r2/Helpers/Popup"])
+    assert hint.startswith("create the view first") and "closest elsewhere: 'Bench/r2/Helpers/Popup'" in hint
+
+
+def test_missing_view_hint_without_views_asks_to_create_it() -> None:
+    assert _missing_view_hint("Bench/Run/Popup", []) == "create the view first"

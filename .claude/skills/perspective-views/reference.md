@@ -102,5 +102,7 @@ Examples: `snippets/tag-transforms-script.view.json`, `snippets/table.view.json`
   ```
   with `trends[].columns[].key = "Flow"`. A literal series is named the same way: `{"time": ..., "Target": 15}`. Confirm it in the screenshot.
 - Built-in images: `/system/images/Builtin/icons/48/about.png` is a verified path. For others, check *Image Management* on the gateway; do not invent names.
+- An image that fills its box (`fit.mode` `fill`, `contain`…) shows `content 300x305 in 300x300` in `query`: the 5 px are the empty line gap under the inline `<img>`, clipped by the component. The image is whole; it is not an anomaly and V002 does not flag it.
+- `defaultSize` is the size in the Designer, in popups and where the view is embedded. Opened as a page (the preview of `pdk_deploy`, `pdk_inspect`, `pdk_screenshot`), the root fills the viewport: a fixed 640×480 panel is a coordinate container measured at `--viewport 640x480`, or a child with that `position` inside the root.
 - Folder or view names reserved on Windows (`Aux`, `Con`, `Nul`, `Prn`, `Com1`…): Ignition stores them encoded on disk (`%41%75%78`). PDK resolves them, but `work/` and other tools do not: avoid them.
 - The `hmi-*` classes in the snippets are the design system of perspective-compiler and only exist in projects that import them.

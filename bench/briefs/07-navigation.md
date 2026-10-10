@@ -14,7 +14,7 @@
 - Visible texts: "View equipment", "Open detail", "Close detail".
 - Minimum components: 1 menu tree, 3 buttons, 1 text field, 1 embedded view, 2 flex repeaters.
 - The actions are `nav` and `popup` (scope `C`) on `onActionPerformed`. The popup opens and closes with the same `id`.
-- The name reaches the summary through a `property` binding from the text field.
+- The name reaches the summary through a `property` binding from the text field: after typing `P-205` in the field, the embedded summary shows it (verified with `inspect`, `--act 'type <field> "P-205"'` and `--expect '<summary> text ~ "P-205"'`).
 
 **Data**: auxiliary views `PDK/_bench/Auxiliary/Equipment`, `PDK/_bench/Auxiliary/EquipmentPopup`, `PDK/_bench/Auxiliary/Summary` and `PDK/_bench/Auxiliary/Pump`. If they do not exist, create them first in the sandbox, with the params the screen uses (Equipment: `name`; EquipmentPopup: `name`, `running`; Summary: `area`, `name`; Pump: `name`, `running`, `flow`).
 **Target**: sandbox → `PDK/_bench/Navigation`.

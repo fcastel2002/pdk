@@ -107,7 +107,8 @@ spaces.
        coordinate container, its padding box). ``x`` and ``y`` are measured from the parent's inner top-left
        corner, like ``position.x`` and ``position.y`` in a coordinate container.
    * - ``root/Title text "Pump 1"``
-     - the exact text; ``text ~ "Pump"`` for "contains".
+     - the exact text; ``text ~ "Pump"`` for "contains". An embedded view or a repeater is read through the text
+       its views render, so ``root/Summary text ~ "P-205"`` checks what reached it.
    * - ``root/Alarm visible`` / ``hidden``
      - the component is rendered with a size (or not).
    * - ``root/Save enabled`` / ``disabled``

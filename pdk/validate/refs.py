@@ -300,6 +300,21 @@ def _view_paths(ctx: Context, instance: Any, ref: SchemaRef, pointer: str, path:
                 yield from _view_paths(ctx, value, items, join(pointer, i), f"{path}[{i}]")
 
 
+def _missing_view_hint(target: str, views: list[str]) -> str:
+    """Suggest a view for a missing one, searching its own folder first and then the ancestors up to the root."""
+    if not views:
+        return "create the view first"
+    folders = target.split("/")[:-1]
+    for depth in range(len(folders), -1, -1):
+        prefix = "".join(f"{part}/" for part in folders[:depth])
+        match = closest(target, [v for v in views if v.startswith(prefix)], cutoff=0.5)
+        if match:
+            if depth == len(folders):
+                return f"did you mean '{match}'?"
+            return f"create the view first (deploy the views it uses before it); closest elsewhere: '{match}'"
+    return did_you_mean(target, views, cutoff=0.5)
+
+
 def _project_refs(ctx: Context) -> list[Diagnostic]:
     project = ctx.project
     assert project is not None
@@ -314,7 +329,7 @@ def _project_refs(ctx: Context) -> list[Diagnostic]:
                 if value and not _bound(node.component, prop_path) and project.find_view(value) is None:
                     out.append(make("R010", "error", pointer, node.path,
                                     f"view '{value}' does not exist in project {project.name}",
-                                    did_you_mean(value, views, cutoff=0.5) if views else "create the view first"))
+                                    _missing_view_hint(value, views)))
         if node.type == "ia.display.view" and isinstance(props.get("path"), str):
             bound = {k[len("props.params."):].split(".")[0] for k in (node.component.get("propConfig") or {})
                      if k.startswith("props.params.")}
@@ -357,7 +372,7 @@ def _event_views(ctx: Context, node: Node) -> list[Diagnostic]:
                 if project.find_view(target) is None:
                     out.append(make("R010", "error", join(pointer, "config", view_key), node.path,
                                     f"view '{target}' does not exist in project {project.name}",
-                                    did_you_mean(target, list(project.views), cutoff=0.5)))
+                                    _missing_view_hint(target, list(project.views))))
                     continue
                 params = config.get(params_key) if isinstance(config.get(params_key), dict) else {}
                 out += _params(ctx, target, params, set(), join(pointer, "config", params_key), node.path)

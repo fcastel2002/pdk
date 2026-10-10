@@ -254,6 +254,9 @@ EXTRACT_JS = r"""
       white_space: cs.whiteSpace, text_overflow: cs.textOverflow,
       flex_grow: Number(cs.flexGrow), flex_shrink: Number(cs.flexShrink), flex_basis: cs.flexBasis,
       text: text.text, text_rects: text.rects, clip_rect: clipRect(el, false),
+      // An embedded view or repeater has no text of its own: what its views render, for `text` expectations.
+      inner_text: /^ia\.display\.(view|flex-repeater)$/.test(el.getAttribute('data-component') || '')
+        ? el.innerText.trim() || null : null,
       cut_rect: clipRect(el, true), overlay: overlay(el), failed_views: failedViews(el),
       disabled: el.matches(':disabled') || !!el.querySelector('input:disabled, button:disabled, textarea:disabled'),
       color: ts.color, background_color: cs.backgroundColor,

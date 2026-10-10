@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -31,6 +32,26 @@ def _utf8_streams() -> None:
         reconfigure = getattr(stream, "reconfigure", None)
         if reconfigure:
             reconfigure(encoding="utf-8", errors="replace")
+
+
+_UNSAFE_FILE_CHARS = re.compile(r'[\\/:*?"<>|]')
+
+
+def screenshot_name(view: str, component: str | None = None) -> str:
+    """File stem of a default screenshot: the view path with "/" as "__", then "__" and the component (its "/"
+    become "_"). Characters that file names cannot hold become "_"."""
+    stem = view.strip("/").replace("/", "__")
+    if component and component.strip("/"):
+        stem += "__" + component.strip("/")
+    return _UNSAFE_FILE_CHARS.sub("_", stem)
+
+
+def default_screenshot(view: str, component: str | None = None) -> Path:
+    """Where `pdk screenshot` writes when --out is omitted: <work>/_screenshots/<screenshot_name>.png, with the
+    work folder from PDK_WORK_DIR or the repository's work/ (gitignored). The path is absolute."""
+    from pdk.sync import work_root
+
+    return (work_root() / "_screenshots" / f"{screenshot_name(view, component)}.png").resolve()
 
 
 def _cmd_validate(args: argparse.Namespace) -> int:
@@ -276,7 +297,7 @@ def _cmd_eyes(args: argparse.Namespace) -> int:
             if png is None:
                 print(text, file=sys.stderr)
                 return EXIT_FINDINGS
-            out = Path(args.out)
+            out = Path(args.out) if args.out else default_screenshot(args.path, args.component)
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_bytes(png)
             print(f"{text} -> {out}")
@@ -395,7 +416,8 @@ def build_parser() -> argparse.ArgumentParser:
     inspector.add_argument("--budget", type=int, default=DEFAULT_BUDGET, help="output budget in tokens")
     shooter = sub.add_parser("screenshot", help="PNG of a deployed view, or of one of its components")
     shooter.add_argument("--component", help="name path (root/Panel/Label) or DOM path (C.0:1)")
-    shooter.add_argument("--out", default="screenshot.png", help="PNG file to write (default: screenshot.png)")
+    shooter.add_argument("--out", default=None, help="PNG file to write (default: <work>/_screenshots/<view>"
+                                                     "[__<component>].png, <work> being PDK_WORK_DIR or work/)")
     for command in (opener, inspector, shooter):
         command.add_argument("path", help=view_arg)
         command.add_argument("--viewport", default=None, help="WIDTHxHEIGHT (default: 1366x768)")

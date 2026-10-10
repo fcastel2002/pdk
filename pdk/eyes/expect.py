@@ -7,7 +7,7 @@ One expectation per `;` or line, `<component> <relation> [args]`, components by 
     root/Save aligned right root/Form             edges: left right top bottom center-x center-y
     root/Table width 100%                         width height x y; =, >=, <=, >, <; px or % of the parent's content
     root/Pump x 150                               x and y from the parent's inner top-left (coord's position.x/y)
-    root/Title text "Pump 1"                      text ~ "Pump" for contains
+    root/Title text "Pump 1"                      text ~ "Pump" for contains; an embedded view: its views' text
     root/Alarm visible                            or hidden (rendered with a size, wherever it is scrolled to)
     root/Save enabled                             or disabled (the control, or the input inside it)
     popup detail open                             or closed; inside an open popup: popup:detail/root/Name text "P-1"
@@ -449,7 +449,7 @@ def _text(subject: Part, args: list[str], item: str) -> Diagnostic | None:
     want = " ".join(values[0].split())
     if subject.dom is None:
         return _fail(subject, "text", f"{item}: it is not rendered")
-    have = " ".join(str(subject.dom.get("text") or "").split())
+    have = " ".join(str(subject.dom.get("text") or subject.dom.get("inner_text") or "").split())
     if (want in have) if contains else (want == have):
         return None
     return _fail(subject, "text", f"{item}: the text is {have!r}")

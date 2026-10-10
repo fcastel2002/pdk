@@ -16,6 +16,12 @@ First public release.
 - Documentation site built with Sphinx (`docs/`): introduction, installation, tutorial, user guide, architecture, troubleshooting and the reference of the CLI, diagnostic codes, MCP tools, REST API and Python API.
 
 ### Fixed
+- `pdk screenshot` without `--out` writes to `work/_screenshots/<view>[__<component>].png`, not to the current
+  directory.
+- R010's hint looks for the missing view in its own folder first; a near name elsewhere (another run's copy) is
+  offered after "create the view first", not as the fix.
+- `--expect` reads an embedded view or a repeater through the text its views render, so `text ~` can check what a
+  binding passed into it.
 - `--expect` percentages of width and height are shares of the parent's content box (inside its border and padding,
   like CSS; a coordinate container's padding box), so `width 100%` holds for a child that fills a padded parent.
 - Schema extraction on Windows: retry the final rename when a just-written file is still held, and never treat a leftover staging folder as a bundle version.
