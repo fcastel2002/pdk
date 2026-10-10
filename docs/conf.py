@@ -25,7 +25,6 @@ extensions = [
 
 exclude_patterns = ["_build"]
 templates_path: list[str] = []
-html_static_path = ["_static"]
 
 html_theme = "furo"
 html_title = "PDK for Ignition Perspective"
