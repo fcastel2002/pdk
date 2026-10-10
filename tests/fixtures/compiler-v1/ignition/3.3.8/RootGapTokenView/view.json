@@ -1,0 +1,17 @@
+{
+  "custom": {},
+  "params": {},
+  "props": {},
+  "root": {
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column",
+      "style": {
+        "classes": "hmi-spacing-md"
+      }
+    },
+    "type": "ia.container.flex"
+  }
+}

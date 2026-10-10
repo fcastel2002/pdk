@@ -1,0 +1,61 @@
+{
+  "custom": {
+    "PathPump": "Pump/Main",
+    "envelope": {
+      "$": [
+        "ds",
+        192,
+        1782478332743
+      ],
+      "$columns": [
+        {
+          "data": [
+            "RESUMEN",
+            "TOP"
+          ],
+          "name": "tipo",
+          "type": "String"
+        },
+        {
+          "data": [
+            null,
+            "prov:default:/tag:LH/LI_SG101/PV"
+          ],
+          "name": "equipo",
+          "type": "String"
+        }
+      ]
+    },
+    "fechaHora": "2026-09-07 11:25:34",
+    "bandera": "false",
+    "historyHours": 1
+  },
+  "params": {},
+  "props": {},
+  "root": {
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column"
+    },
+    "type": "ia.container.flex",
+    "children": [
+      {
+        "meta": {
+          "name": "Label"
+        },
+        "position": {
+          "basis": "32px"
+        },
+        "props": {
+          "style": {
+            "classes": "hmi-typography-body"
+          },
+          "text": "Custom data carrier"
+        },
+        "type": "ia.display.label"
+      }
+    ]
+  }
+}

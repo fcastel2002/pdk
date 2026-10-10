@@ -1,0 +1,50 @@
+{
+  "custom": {},
+  "params": {
+    "setpoint": 100
+  },
+  "props": {},
+  "root": {
+    "children": [
+      {
+        "meta": {
+          "name": "NumericEntry"
+        },
+        "position": {
+          "basis": "90px",
+          "shrink": 0
+        },
+        "propConfig": {
+          "props.value": {
+            "binding": {
+              "config": {
+                "path": "view.params.setpoint"
+              },
+              "type": "property"
+            }
+          }
+        },
+        "props": {
+          "format": "0.0",
+          "mode": "direct",
+          "placeholder": "0.0",
+          "spinner": {
+            "enabled": false
+          },
+          "style": {
+            "classes": "setpoint-input"
+          },
+          "value": 100
+        },
+        "type": "ia.input.numeric-entry-field"
+      }
+    ],
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column"
+    },
+    "type": "ia.container.flex"
+  }
+}

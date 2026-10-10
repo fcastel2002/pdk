@@ -1,0 +1,22 @@
+{
+  "custom": {},
+  "params": {
+    "equipmentId": "P-01",
+    "limit": 100
+  },
+  "props": {
+    "defaultSize": {
+      "height": 600,
+      "width": 800
+    }
+  },
+  "root": {
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column"
+    },
+    "type": "ia.container.flex"
+  }
+}

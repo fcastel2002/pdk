@@ -1,0 +1,36 @@
+name: Bug report
+description: Something in PDK does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach views, tags, screenshots or logs from a real project, a customer or a plant.
+        Reproduce the problem with a synthetic view in your sandbox.
+        Security problems go through Security → Report a vulnerability, not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The command or MCP tool you ran, what you expected and what you got (paste the output).
+    validations:
+      required: true
+  - type: textarea
+    id: view
+    attributes:
+      label: Smallest view.json that shows it
+      description: If the problem is about a view.
+      render: json
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: PDK commit (git rev-parse --short HEAD), Ignition and Perspective, OS.
+      placeholder: "abc1234 · Ignition 8.3.8 / Perspective 3.3.8 · Windows 11"
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `uv run pdk doctor`
+      render: text

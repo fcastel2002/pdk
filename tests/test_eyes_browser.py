@@ -1,0 +1,142 @@
+"""The pure parts of pdk.eyes.browser; the browser itself is exercised by `pytest -m gateway`."""
+
+from __future__ import annotations
+
+import math
+import time
+
+import pytest
+
+from pdk.eyes import browser
+from pdk.eyes.browser import Viewport
+
+
+def test_viewport_parsing() -> None:
+    assert Viewport.parse(None) == Viewport(1366, 768)
+    assert Viewport.parse(" 1920 x 1080 ") == Viewport(1920, 1080)
+    assert str(Viewport.parse("800X600")) == "800x600"
+    for bad in ("1366", "wide", "1x2", "1366x768x2"):
+        with pytest.raises(ValueError):
+            Viewport.parse(bad)
+
+
+@pytest.mark.parametrize(("state", "status"), [
+    ({"viewNotFound": True}, browser.VIEW_NOT_FOUND),
+    ({"sessionExceeded": True, "sessionExceededText": "Too many sessions"}, browser.SESSION_REFUSED),
+    ({"bannerActive": True, "bannerText": "Reconnecting"}, browser.DISCONNECTED),
+])
+def test_terminal_page_states(state: dict, status: str) -> None:
+    assert browser.classify_state(state)[0] == status
+
+
+def test_loading_page_is_not_terminal() -> None:
+    assert browser.classify_state({"rootVisible": False, "bannerActive": False}) is None
+
+
+def test_geometry_delta() -> None:
+    a = {"C.0": [0, 0, 100, 50], "C.0:0": [0, 0, 100, 20]}
+    assert browser.geometry_delta(a, dict(a)) == (0.0, None)
+    moved = {**a, "C.0:0": [0, 3.5, 100, 20]}
+    assert browser.geometry_delta(a, moved) == (3.5, "C.0:0")
+    mounted = {**a, "C.0:1": [0, 20, 100, 20]}
+    delta, where = browser.geometry_delta(a, mounted)
+    assert math.isinf(delta) and where == "C.0:1"
+
+
+def test_extract_js_reports_computed_style() -> None:
+    sync_api = pytest.importorskip("playwright.sync_api")
+    html = """
+    <div id="root">
+      <div data-component-path="C.0" data-component="ia.container.flex"
+           style="display:flex; flex-direction:column; gap:8px; padding:4px 6px"></div>
+      <div data-component-path="C.1" data-component="ia.display.label"
+           style="color:red; font-size:14px; font-weight:700; border:2px solid black">Hola</div>
+      <div data-component-path="C.2" data-component="ia.display.label" style="color:rgb(50, 50, 50)">
+        <span style="color:#C62828; font-size:12px; font-weight:700">Obligatorio</span></div>
+    </div>
+    """
+    with sync_api.sync_playwright() as p:
+        try:
+            chromium = p.chromium.launch(headless=True)
+        except Exception as exc:  # the browser binary is not installed for Playwright on this machine
+            pytest.skip(f"Playwright Chromium is not available: {exc}")
+        try:
+            page = chromium.new_page()
+            page.set_content(html)
+            result = page.evaluate(browser.EXTRACT_JS, {"root": "#root"})
+        finally:
+            chromium.close()
+
+    nodes = {node["path"]: node for node in result["nodes"] if node["path"]}
+    flex, label = nodes["C.0"], nodes["C.1"]
+
+    assert flex["display"] == "flex" and flex["flex_direction"] == "column"
+    assert flex["row_gap"] == 8.0 and flex["column_gap"] == 8.0
+    assert flex["padding"] == [4.0, 6.0, 4.0, 6.0]
+    assert flex["border_width"] == [0.0, 0.0, 0.0, 0.0]
+    assert flex["justify_content"] and flex["align_items"]
+    assert flex["color"].startswith("rgb(") and flex["background_color"].startswith("rgb")
+    assert flex["font_family"] and flex["text_align"]
+
+    assert label["color"] == "rgb(255, 0, 0)"
+    assert label["background_color"] == "rgba(0, 0, 0, 0)"
+    assert label["font_size"] == 14.0
+    assert label["font_weight"] == "700"
+    assert label["border_width"] == [2.0, 2.0, 2.0, 2.0]
+    assert label["padding"] == [0.0, 0.0, 0.0, 0.0]
+    assert label["row_gap"] is None and label["column_gap"] is None
+
+    # A label's textStyle styles the element inside it: color and font are the text's, not the root's.
+    styled = nodes["C.2"]
+    assert (styled["color"], styled["font_size"], styled["font_weight"]) == ("rgb(198, 40, 40)", 12.0, "700")
+
+
+def test_extract_js_cut_rect_frees_the_axes_a_container_scrolls() -> None:
+    sync_api = pytest.importorskip("playwright.sync_api")
+    # Body clips; Log, inside it, scrolls along y; Far lies past both bottoms; Cut is wider than Log, which clips x
+    html = """
+    <div id="root" style="overflow:hidden; width:300px; height:300px">
+      <div data-component-path="C.0" data-component="ia.container.flex" style="overflow:hidden; height:200px">
+        <div data-component-path="C.0:0" data-component="ia.container.flex"
+             style="overflow-x:hidden; overflow-y:auto; width:200px; height:100px">
+          <div data-component-path="C.0:0:0" data-component="ia.display.label" style="height:400px">Near</div>
+          <div data-component-path="C.0:0:1" data-component="ia.display.label" style="height:20px">Far</div>
+          <div data-component-path="C.0:0:2" data-component="ia.display.label"
+               style="width:500px; white-space:nowrap">Cut</div>
+        </div>
+      </div>
+    </div>
+    """
+    with sync_api.sync_playwright() as p:
+        try:
+            chromium = p.chromium.launch(headless=True)
+        except Exception as exc:  # the browser binary is not installed for Playwright on this machine
+            pytest.skip(f"Playwright Chromium is not available: {exc}")
+        try:
+            page = chromium.new_page()
+            page.set_content(html)
+            result = page.evaluate(browser.EXTRACT_JS, {"root": "#root"})
+        finally:
+            chromium.close()
+
+    nodes = {node["path"]: node for node in result["nodes"] if node["path"]}
+    far, cut = nodes["C.0:0:1"], nodes["C.0:0:2"]
+    assert far["clip_rect"]["bottom"] == far["clip_rect"]["top"] + 100  # what is in sight: Log's box
+    assert far["cut_rect"]["top"] < -1e5 and far["cut_rect"]["bottom"] > 1e5  # y scrolls, up to the root
+    assert cut["cut_rect"]["width"] == 200  # x does not scroll: Log still cuts it
+
+
+def test_an_idle_browser_is_closed_and_the_next_call_reopens_it() -> None:
+    eyes = browser.Eyes(idle_s=0.2)
+    closed: list[int] = []
+
+    def fake_close() -> None:
+        closed.append(1)
+        eyes._browser = None
+
+    eyes._close = fake_close  # type: ignore[method-assign]
+    eyes._browser = object()
+    eyes.run(lambda: None)
+    time.sleep(0.6)
+    assert closed == [1] and eyes._browser is None
+    eyes.close()

@@ -1,0 +1,89 @@
+{
+  "custom": {},
+  "params": {},
+  "propConfig": {},
+  "props": {
+    "defaultSize": {
+      "height": 696,
+      "width": 1200
+    }
+  },
+  "root": {
+    "children": [
+      {
+        "events": {
+          "dom": {
+            "onSelect": {
+              "config": {
+                "params": {},
+                "view": "powerchart"
+              },
+              "scope": "C",
+              "type": "nav"
+            }
+          }
+        },
+        "meta": {
+          "name": "AlarmStatusTable"
+        },
+        "position": {
+          "basis": "100%"
+        },
+        "props": {
+          "columns": {
+            "active": {
+              "activeTime": {
+                "order": 1
+              },
+              "displayPath": {
+                "order": 2
+              },
+              "label": {
+                "enabled": true,
+                "order": 0
+              },
+              "name": {
+                "enabled": false
+              },
+              "priority": {
+                "enabled": false,
+                "order": 3
+              },
+              "source": {
+                "order": 5
+              },
+              "state": {
+                "order": 4
+              }
+            }
+          },
+          "filters": {
+            "active": {
+              "conditions": {
+                "displayPath": "SDC"
+              },
+              "priorities": {
+                "low": false,
+                "medium": false
+              },
+              "states": {
+                "clearUnacked": false
+              }
+            }
+          },
+          "responsive": {
+            "enabled": true
+          }
+        },
+        "type": "ia.display.alarmstatustable"
+      }
+    ],
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column"
+    },
+    "type": "ia.container.flex"
+  }
+}

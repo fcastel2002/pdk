@@ -1,0 +1,239 @@
+{
+  "custom": {},
+  "params": {},
+  "props": {
+    "defaultSize": {
+      "height": 768,
+      "width": 1366
+    }
+  },
+  "root": {
+    "children": [
+      {
+        "meta": {
+          "name": "Label"
+        },
+        "position": {
+          "basis": "40px",
+          "shrink": 0
+        },
+        "props": {
+          "style": {
+            "classes": "hmi-typography-heading"
+          },
+          "text": "Setpoint and mode"
+        },
+        "type": "ia.display.label"
+      },
+      {
+        "meta": {
+          "name": "Slider"
+        },
+        "position": {
+          "basis": "36px",
+          "shrink": 0
+        },
+        "props": {
+          "step": 5,
+          "value": 40
+        },
+        "type": "ia.input.slider"
+      },
+      {
+        "meta": {
+          "name": "Dropdown"
+        },
+        "position": {
+          "basis": "36px",
+          "shrink": 0
+        },
+        "props": {
+          "options": [
+            {
+              "label": "Automatic",
+              "value": "auto"
+            },
+            {
+              "label": "Manual",
+              "value": "manual"
+            }
+          ],
+          "placeholder": {
+            "text": "Select mode"
+          },
+          "value": "auto"
+        },
+        "type": "ia.input.dropdown"
+      },
+      {
+        "meta": {
+          "name": "Progress"
+        },
+        "position": {
+          "basis": "24px",
+          "shrink": 0
+        },
+        "propConfig": {
+          "props.value": {
+            "binding": {
+              "config": {
+                "path": "/root/Slider.props.value"
+              },
+              "type": "property"
+            }
+          }
+        },
+        "type": "ia.display.progress"
+      },
+      {
+        "meta": {
+          "name": "Label_0"
+        },
+        "position": {
+          "basis": "32px",
+          "shrink": 0
+        },
+        "propConfig": {
+          "props.text": {
+            "binding": {
+              "config": {
+                "path": "/root/Dropdown.props.value"
+              },
+              "type": "property"
+            }
+          }
+        },
+        "props": {
+          "style": {
+            "classes": "hmi-typography-body"
+          }
+        },
+        "type": "ia.display.label"
+      },
+      {
+        "meta": {
+          "name": "Label_1"
+        },
+        "position": {
+          "basis": "32px",
+          "shrink": 0
+        },
+        "propConfig": {
+          "props.text": {
+            "binding": {
+              "config": {
+                "path": "/root/Slider.props.value"
+              },
+              "transforms": [
+                {
+                  "expression": "\"Setpoint: \" + numberFormat({value}, \"0\")",
+                  "type": "expression"
+                }
+              ],
+              "type": "property"
+            }
+          }
+        },
+        "props": {
+          "style": {
+            "classes": "hmi-typography-body"
+          }
+        },
+        "type": "ia.display.label"
+      },
+      {
+        "meta": {
+          "name": "ToggleSwitch"
+        },
+        "position": {
+          "basis": "36px",
+          "shrink": 0
+        },
+        "props": {
+          "label": {
+            "text": "Armed"
+          },
+          "selected": true
+        },
+        "type": "ia.input.toggle-switch"
+      },
+      {
+        "meta": {
+          "name": "RadioGroup"
+        },
+        "position": {
+          "basis": "40px",
+          "shrink": 0
+        },
+        "props": {
+          "radios": [
+            {
+              "enabled": true,
+              "selected": true,
+              "style": {
+                "classes": ""
+              },
+              "text": "Low",
+              "value": 1
+            },
+            {
+              "text": "High",
+              "value": 2
+            }
+          ],
+          "value": 1
+        },
+        "type": "ia.input.radio-group"
+      },
+      {
+        "meta": {
+          "name": "Progress_0"
+        },
+        "position": {
+          "basis": "24px",
+          "shrink": 0
+        },
+        "propConfig": {
+          "props.value": {
+            "binding": {
+              "config": {
+                "path": "/root/RadioGroup.props.value"
+              },
+              "type": "property"
+            }
+          }
+        },
+        "props": {
+          "max": 2
+        },
+        "type": "ia.display.progress"
+      },
+      {
+        "meta": {
+          "name": "DateTimeInput"
+        },
+        "position": {
+          "basis": "40px",
+          "shrink": 0
+        },
+        "props": {
+          "format": "MM/DD/YYYY h:mm a",
+          "formattedValue": "10/01/2026 9:00 pm",
+          "value": 1790899200000
+        },
+        "type": "ia.input.date-time-input"
+      }
+    ],
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column",
+      "style": {
+        "classes": "hmi-spacing-md",
+        "padding": "16px"
+      }
+    },
+    "type": "ia.container.flex"
+  }
+}

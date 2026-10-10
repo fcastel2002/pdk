@@ -1,0 +1,151 @@
+{
+  "custom": {},
+  "params": {},
+  "props": {},
+  "root": {
+    "children": [
+      {
+        "meta": {
+          "name": "MenuTree"
+        },
+        "position": {
+          "basis": "160px"
+        },
+        "props": {
+          "backActionText": "Volver",
+          "items": [
+            {
+              "items": [],
+              "label": {
+                "icon": {
+                  "path": "material/home"
+                },
+                "text": "Home"
+              },
+              "target": "/"
+            },
+            {
+              "items": [
+                {
+                  "items": [],
+                  "label": {
+                    "text": "Alarms"
+                  },
+                  "target": "/alarms"
+                }
+              ],
+              "label": {
+                "text": "Operation"
+              }
+            }
+          ]
+        },
+        "type": "ia.navigation.menutree"
+      },
+      {
+        "events": {
+          "component": {
+            "onActionPerformed": {
+              "config": {
+                "params": {
+                  "name": "P-101"
+                },
+                "view": "Screens/Equipment"
+              },
+              "scope": "C",
+              "type": "nav"
+            }
+          }
+        },
+        "meta": {
+          "name": "Button"
+        },
+        "position": {
+          "basis": "34px"
+        },
+        "props": {
+          "style": {
+            "classes": "hmi-control-height-normal hmi-command-secondary"
+          },
+          "text": "View equipment"
+        },
+        "type": "ia.input.button"
+      },
+      {
+        "events": {
+          "component": {
+            "onActionPerformed": {
+              "config": {
+                "draggable": true,
+                "id": "equipment-detail",
+                "modal": false,
+                "overlayDismiss": false,
+                "resizable": true,
+                "showCloseIcon": true,
+                "type": "open",
+                "viewParams": {
+                  "name": "P-101",
+                  "running": true
+                },
+                "viewPath": "Popups/Equipment",
+                "viewportBound": false
+              },
+              "scope": "C",
+              "type": "popup"
+            }
+          }
+        },
+        "meta": {
+          "name": "Button_0"
+        },
+        "position": {
+          "basis": "34px"
+        },
+        "props": {
+          "style": {
+            "classes": "hmi-control-height-normal hmi-command-secondary"
+          },
+          "text": "Open detail"
+        },
+        "type": "ia.input.button"
+      },
+      {
+        "events": {
+          "component": {
+            "onActionPerformed": {
+              "config": {
+                "id": "equipment-detail",
+                "type": "close"
+              },
+              "scope": "C",
+              "type": "popup"
+            }
+          }
+        },
+        "meta": {
+          "name": "Button_1"
+        },
+        "position": {
+          "basis": "34px"
+        },
+        "props": {
+          "style": {
+            "classes": "hmi-control-height-normal hmi-command-secondary"
+          },
+          "text": "Close detail"
+        },
+        "type": "ia.input.button"
+      }
+    ],
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column",
+      "style": {
+        "classes": "hmi-spacing-md"
+      }
+    },
+    "type": "ia.container.flex"
+  }
+}

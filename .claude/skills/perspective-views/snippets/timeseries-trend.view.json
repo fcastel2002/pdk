@@ -1,0 +1,141 @@
+{
+  "custom": {},
+  "params": {
+    "flowPoints": [
+      {
+        "time": 1790899200000,
+        "value": 12.5
+      },
+      {
+        "time": 1790899260000,
+        "value": 13.2
+      }
+    ]
+  },
+  "props": {},
+  "root": {
+    "children": [
+      {
+        "children": [
+          {
+            "meta": {
+              "name": "TimeSeriesChart"
+            },
+            "position": {
+              "grow": 1
+            },
+            "propConfig": {
+              "props.series[0].data": {
+                "binding": {
+                  "config": {
+                    "path": "view.params.flowPoints"
+                  },
+                  "type": "property"
+                }
+              }
+            },
+            "props": {
+              "legend": {
+                "visible": true
+              },
+              "plots": [
+                {
+                  "axes": [
+                    {
+                      "alignment": "left",
+                      "label": {
+                        "text": "m3/h",
+                        "visible": true
+                      },
+                      "max": 100,
+                      "min": 0,
+                      "name": "value",
+                      "width": 60
+                    }
+                  ],
+                  "markers": [],
+                  "relativeWeight": 1,
+                  "trends": [
+                    {
+                      "axis": "value",
+                      "breakLine": true,
+                      "columns": [
+                        {
+                          "color": "var(--qual-1)",
+                          "key": "value"
+                        }
+                      ],
+                      "interpolation": "curveLinear",
+                      "series": "Flow",
+                      "type": "line",
+                      "visible": true
+                    },
+                    {
+                      "axis": "value",
+                      "breakLine": true,
+                      "columns": [
+                        {
+                          "color": "var(--qual-2)",
+                          "key": "value"
+                        }
+                      ],
+                      "interpolation": "curveLinear",
+                      "series": "Target",
+                      "type": "line",
+                      "visible": true
+                    }
+                  ]
+                }
+              ],
+              "series": [
+                {
+                  "name": "Flow"
+                },
+                {
+                  "data": [
+                    {
+                      "time": 1790899200000,
+                      "value": 15
+                    },
+                    {
+                      "time": 1790899260000,
+                      "value": 15
+                    }
+                  ],
+                  "name": "Target"
+                }
+              ]
+            },
+            "type": "ia.chart.timeseries"
+          },
+          {
+            "meta": {
+              "name": "XAxisLabel"
+            },
+            "props": {
+              "text": "Time"
+            },
+            "type": "ia.display.label"
+          }
+        ],
+        "meta": {
+          "name": "TimeSeriesChartWithAxisLabel"
+        },
+        "position": {
+          "basis": "300px"
+        },
+        "props": {
+          "direction": "column"
+        },
+        "type": "ia.container.flex"
+      }
+    ],
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column"
+    },
+    "type": "ia.container.flex"
+  }
+}

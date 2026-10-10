@@ -1,0 +1,84 @@
+{
+  "custom": {},
+  "params": {},
+  "props": {},
+  "root": {
+    "children": [
+      {
+        "meta": {
+          "name": "AlarmStatusTable"
+        },
+        "position": {
+          "basis": "100%"
+        },
+        "props": {
+          "columns": {
+            "active": {
+              "displayPath": {
+                "enabled": true,
+                "order": 0
+              },
+              "priority": {
+                "enabled": true,
+                "order": 1
+              }
+            }
+          },
+          "filters": {
+            "active": {
+              "conditions": {
+                "displayPath": "Area Norte/*"
+              }
+            }
+          },
+          "responsive": {
+            "enabled": true
+          }
+        },
+        "type": "ia.display.alarmstatustable"
+      },
+      {
+        "meta": {
+          "name": "AlarmJournalTable"
+        },
+        "position": {
+          "basis": "100%"
+        },
+        "props": {
+          "dateRange": {
+            "realtime": {
+              "interval": 1
+            }
+          },
+          "filter": {
+            "conditions": {
+              "displayPath": "Area Norte/*"
+            }
+          },
+          "name": "Sample_Alarm_Journal_Profile",
+          "pager": {
+            "initialOption": 15,
+            "options": [
+              5,
+              15,
+              50,
+              100
+            ]
+          },
+          "refreshRate": 1000
+        },
+        "type": "ia.display.alarmjournaltable"
+      }
+    ],
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column",
+      "style": {
+        "classes": "hmi-spacing-md"
+      }
+    },
+    "type": "ia.container.flex"
+  }
+}

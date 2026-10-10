@@ -1,0 +1,136 @@
+{
+  "custom": {},
+  "params": {
+    "area": "Norte",
+    "enabled": true,
+    "limit": 20,
+    "pumps": [
+      {
+        "flow": 12.5,
+        "name": "P-101",
+        "running": true
+      },
+      {
+        "flow": null,
+        "name": "P-102",
+        "running": false
+      }
+    ]
+  },
+  "propConfig": {
+    "params.area": {
+      "paramDirection": "input",
+      "persistent": true
+    },
+    "params.enabled": {
+      "paramDirection": "input",
+      "persistent": true
+    },
+    "params.limit": {
+      "paramDirection": "input",
+      "persistent": true
+    },
+    "params.pumps": {
+      "paramDirection": "input",
+      "persistent": true
+    }
+  },
+  "props": {},
+  "root": {
+    "children": [
+      {
+        "meta": {
+          "name": "TextField"
+        },
+        "position": {
+          "basis": "40px"
+        },
+        "props": {
+          "text": "P-101"
+        },
+        "type": "ia.input.text-field"
+      },
+      {
+        "meta": {
+          "name": "EmbeddedView"
+        },
+        "position": {
+          "basis": "300px"
+        },
+        "propConfig": {
+          "props.params.area": {
+            "binding": {
+              "config": {
+                "path": "view.params.area"
+              },
+              "type": "property"
+            }
+          },
+          "props.params.name": {
+            "binding": {
+              "config": {
+                "path": "/root/TextField.props.text"
+              },
+              "type": "property"
+            }
+          }
+        },
+        "props": {
+          "params": {
+            "area": "Norte"
+          },
+          "path": "Templates/Summary"
+        },
+        "type": "ia.display.view"
+      },
+      {
+        "meta": {
+          "name": "Repeater"
+        },
+        "propConfig": {
+          "props.instances": {
+            "binding": {
+              "config": {
+                "path": "view.params.pumps"
+              },
+              "type": "property"
+            }
+          }
+        },
+        "props": {
+          "path": "Templates/Pump"
+        },
+        "type": "ia.display.flex-repeater"
+      },
+      {
+        "meta": {
+          "name": "Repeater_0"
+        },
+        "props": {
+          "instances": [
+            {
+              "name": "P-201",
+              "running": true
+            },
+            {
+              "flow": 8.5,
+              "name": "P-202"
+            }
+          ],
+          "path": "Templates/Pump"
+        },
+        "type": "ia.display.flex-repeater"
+      }
+    ],
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column",
+      "style": {
+        "classes": "hmi-spacing-md"
+      }
+    },
+    "type": "ia.container.flex"
+  }
+}

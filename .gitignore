@@ -1,0 +1,28 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# Schema bundles extracted from the local Ignition install (Inductive Automation content, regenerate with `pdk schemas extract`)
+/schemas/
+
+# Local benchmark and demo output
+/bench/out/
+
+# Views pulled from the gateway (`pdk pull`) and their signature sidecars
+/work/
+
+# Personal Claude Code overrides (e.g. approval of the pdk MCP server) and per-machine notes
+/.claude/settings.local.json
+/CLAUDE.local.md
+
+# Office lock files
+~$*
+
+# Worktrees of delegated subagents
+/.claude/worktrees/

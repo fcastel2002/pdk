@@ -1,0 +1,51 @@
+{
+  "custom": {},
+  "params": {},
+  "props": {},
+  "root": {
+    "children": [
+      {
+        "meta": {
+          "name": "Button"
+        },
+        "props": {
+          "enabled": false,
+          "text": "Disabled Button"
+        },
+        "type": "ia.input.button",
+        "position": {
+          "basis": "34px"
+        }
+      },
+      {
+        "meta": {
+          "name": "Button_0"
+        },
+        "propConfig": {
+          "props.enabled": {
+            "binding": {
+              "config": {
+                "path": "view.params.canEdit"
+              },
+              "type": "property"
+            }
+          }
+        },
+        "props": {
+          "text": "Bound Button"
+        },
+        "type": "ia.input.button",
+        "position": {
+          "basis": "34px"
+        }
+      }
+    ],
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column"
+    },
+    "type": "ia.container.flex"
+  }
+}

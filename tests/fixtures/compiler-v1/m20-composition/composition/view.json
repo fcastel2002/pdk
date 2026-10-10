@@ -1,0 +1,2251 @@
+{
+  "custom": {},
+  "params": {},
+  "props": {
+    "defaultSize": {
+      "height": 768,
+      "width": 1366
+    }
+  },
+  "root": {
+    "children": [
+      {
+        "children": [
+          {
+            "children": [
+              {
+                "meta": {
+                  "name": "Title"
+                },
+                "position": {
+                  "shrink": 0
+                },
+                "props": {
+                  "style": {
+                    "color": "#18332f",
+                    "fontFamily": "Segoe UI, sans-serif",
+                    "fontSize": "30px",
+                    "fontWeight": "600",
+                    "lineHeight": "1.2"
+                  },
+                  "text": "Panel de equipo"
+                },
+                "type": "ia.display.label"
+              },
+              {
+                "meta": {
+                  "name": "Subtitle"
+                },
+                "position": {
+                  "shrink": 0
+                },
+                "props": {
+                  "style": {
+                    "color": "#405b55",
+                    "fontFamily": "Segoe UI, sans-serif",
+                    "fontSize": "14px",
+                    "lineHeight": "1.5",
+                    "whiteSpace": "normal"
+                  },
+                  "text": "Evidencia · datos sintéticos · sin conexión operativa"
+                },
+                "type": "ia.display.label"
+              }
+            ],
+            "meta": {
+              "name": "Header"
+            },
+            "position": {
+              "shrink": 0
+            },
+            "props": {
+              "direction": "column",
+              "style": {
+                "backgroundColor": "#e3ebe0",
+                "borderBottom": "1px solid #abbeb5",
+                "gap": "8px",
+                "minWidth": "0px",
+                "padding": "28px 32px 20px"
+              }
+            },
+            "type": "ia.container.flex"
+          },
+          {
+            "children": [
+              {
+                "children": [
+                  {
+                    "meta": {
+                      "name": "EquipmentTitle"
+                    },
+                    "position": {
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "color": "#18332f",
+                        "fontFamily": "Segoe UI, sans-serif",
+                        "fontSize": "21px",
+                        "fontWeight": "600",
+                        "lineHeight": "1.5",
+                        "paddingBottom": "10px"
+                      },
+                      "text": "Equipo de prueba"
+                    },
+                    "type": "ia.display.label"
+                  },
+                  {
+                    "children": [
+                      {
+                        "children": [
+                          {
+                            "meta": {
+                              "name": "VesselName"
+                            },
+                            "position": {
+                              "shrink": 0
+                            },
+                            "props": {
+                              "style": {
+                                "color": "#18332f",
+                                "fontFamily": "Segoe UI, sans-serif",
+                                "fontSize": "12px",
+                                "lineHeight": "1.5",
+                                "textAlign": "center"
+                              },
+                              "text": "DEPÓSITO"
+                            },
+                            "type": "ia.display.label"
+                          },
+                          {
+                            "meta": {
+                              "name": "VesselValue"
+                            },
+                            "position": {
+                              "shrink": 0
+                            },
+                            "props": {
+                              "style": {
+                                "color": "#18332f",
+                                "fontFamily": "Segoe UI, sans-serif",
+                                "fontSize": "18px",
+                                "fontWeight": "600",
+                                "lineHeight": "1.5",
+                                "textAlign": "center"
+                              },
+                              "text": "50 %"
+                            },
+                            "type": "ia.display.label"
+                          }
+                        ],
+                        "meta": {
+                          "name": "Vessel"
+                        },
+                        "position": {
+                          "height": 152,
+                          "width": 128,
+                          "x": 16,
+                          "y": 24
+                        },
+                        "props": {
+                          "direction": "column",
+                          "justify": "center",
+                          "style": {
+                            "backgroundColor": "#ffffff",
+                            "border": "2px solid #21685b",
+                            "borderRadius": "24px",
+                            "gap": "8px",
+                            "justifyContent": "center",
+                            "minWidth": "0px"
+                          }
+                        },
+                        "type": "ia.container.flex"
+                      },
+                      {
+                        "children": [
+                          {
+                            "meta": {
+                              "name": "MotorName"
+                            },
+                            "position": {
+                              "shrink": 0
+                            },
+                            "props": {
+                              "style": {
+                                "color": "#18332f",
+                                "fontFamily": "Segoe UI, sans-serif",
+                                "fontSize": "12px",
+                                "lineHeight": "1.5",
+                                "textAlign": "center"
+                              },
+                              "text": "MOTOR"
+                            },
+                            "type": "ia.display.label"
+                          },
+                          {
+                            "meta": {
+                              "name": "MotorValue"
+                            },
+                            "position": {
+                              "shrink": 0
+                            },
+                            "props": {
+                              "style": {
+                                "color": "#18332f",
+                                "fontFamily": "Segoe UI, sans-serif",
+                                "fontSize": "18px",
+                                "fontWeight": "600",
+                                "lineHeight": "1.5",
+                                "textAlign": "center"
+                              },
+                              "text": "Disponible"
+                            },
+                            "type": "ia.display.label"
+                          }
+                        ],
+                        "meta": {
+                          "name": "Motor"
+                        },
+                        "position": {
+                          "height": 80,
+                          "width": 128,
+                          "x": 176,
+                          "y": 80
+                        },
+                        "props": {
+                          "direction": "column",
+                          "justify": "center",
+                          "style": {
+                            "backgroundColor": "#ffffff",
+                            "border": "2px solid #21685b",
+                            "borderRadius": "6px",
+                            "gap": "8px",
+                            "justifyContent": "center",
+                            "minWidth": "0px"
+                          }
+                        },
+                        "type": "ia.container.flex"
+                      },
+                      {
+                        "meta": {
+                          "name": "BoundsCaption"
+                        },
+                        "position": {
+                          "height": 24,
+                          "width": 288,
+                          "x": 16,
+                          "y": 208
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#405b55",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "12px",
+                            "lineHeight": "1.5"
+                          },
+                          "text": "Bounds relativos al contenedor"
+                        },
+                        "type": "ia.display.label"
+                      }
+                    ],
+                    "meta": {
+                      "name": "FixedDiagram"
+                    },
+                    "position": {
+                      "basis": "240px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "backgroundColor": "#eaf0e6",
+                        "width": "320px"
+                      }
+                    },
+                    "type": "ia.container.coord"
+                  },
+                  {
+                    "meta": {
+                      "name": "VariantCaption"
+                    },
+                    "position": {
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "color": "#405b55",
+                        "fontFamily": "Segoe UI, sans-serif",
+                        "fontSize": "14px",
+                        "lineHeight": "1.5",
+                        "whiteSpace": "normal"
+                      },
+                      "text": "Variante large: diagrama y mediciones en paralelo."
+                    },
+                    "type": "ia.display.label"
+                  }
+                ],
+                "meta": {
+                  "name": "Equipment"
+                },
+                "position": {
+                  "basis": "0px",
+                  "grow": 1,
+                  "shrink": 0
+                },
+                "props": {
+                  "direction": "column",
+                  "style": {
+                    "backgroundColor": "#ffffff",
+                    "border": "1px solid #abbeb5",
+                    "borderRadius": "8px",
+                    "gap": "8px",
+                    "minWidth": "0px",
+                    "padding": "24px"
+                  }
+                },
+                "type": "ia.container.flex"
+              },
+              {
+                "children": [
+                  {
+                    "meta": {
+                      "name": "ReadingsTitle"
+                    },
+                    "position": {
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "color": "#18332f",
+                        "fontFamily": "Segoe UI, sans-serif",
+                        "fontSize": "21px",
+                        "fontWeight": "600",
+                        "lineHeight": "1.5",
+                        "paddingBottom": "10px"
+                      },
+                      "text": "Rendering de referencia"
+                    },
+                    "type": "ia.display.label"
+                  },
+                  {
+                    "children": [
+                      {
+                        "children": [
+                          {
+                            "meta": {
+                              "name": "Image"
+                            },
+                            "position": {
+                              "basis": "100px",
+                              "shrink": 0
+                            },
+                            "props": {
+                              "altText": "Icono de información del Gateway · contain",
+                              "fit": {
+                                "mode": "contain"
+                              },
+                              "source": "/system/images/Builtin/icons/48/about.png",
+                              "style": {
+                                "backgroundColor": "#eaf0e6"
+                              }
+                            },
+                            "type": "ia.display.image"
+                          },
+                          {
+                            "meta": {
+                              "name": "FitCaption"
+                            },
+                            "position": {
+                              "shrink": 0
+                            },
+                            "props": {
+                              "style": {
+                                "color": "#405b55",
+                                "fontFamily": "Segoe UI, sans-serif",
+                                "fontSize": "13px",
+                                "lineHeight": "1.5",
+                                "textAlign": "center"
+                              },
+                              "text": "contain"
+                            },
+                            "type": "ia.display.label"
+                          }
+                        ],
+                        "meta": {
+                          "name": "Image_contain"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "direction": "column",
+                          "style": {
+                            "gap": "8px",
+                            "minWidth": "0px"
+                          }
+                        },
+                        "type": "ia.container.flex"
+                      },
+                      {
+                        "children": [
+                          {
+                            "meta": {
+                              "name": "Image"
+                            },
+                            "position": {
+                              "basis": "100px",
+                              "shrink": 0
+                            },
+                            "props": {
+                              "altText": "Icono de información del Gateway · cover",
+                              "fit": {
+                                "mode": "cover"
+                              },
+                              "source": "/system/images/Builtin/icons/48/about.png",
+                              "style": {
+                                "backgroundColor": "#eaf0e6"
+                              }
+                            },
+                            "type": "ia.display.image"
+                          },
+                          {
+                            "meta": {
+                              "name": "FitCaption"
+                            },
+                            "position": {
+                              "shrink": 0
+                            },
+                            "props": {
+                              "style": {
+                                "color": "#405b55",
+                                "fontFamily": "Segoe UI, sans-serif",
+                                "fontSize": "13px",
+                                "lineHeight": "1.5",
+                                "textAlign": "center"
+                              },
+                              "text": "cover"
+                            },
+                            "type": "ia.display.label"
+                          }
+                        ],
+                        "meta": {
+                          "name": "Image_cover"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "direction": "column",
+                          "style": {
+                            "gap": "8px",
+                            "minWidth": "0px"
+                          }
+                        },
+                        "type": "ia.container.flex"
+                      },
+                      {
+                        "children": [
+                          {
+                            "meta": {
+                              "name": "Image"
+                            },
+                            "position": {
+                              "basis": "100px",
+                              "shrink": 0
+                            },
+                            "props": {
+                              "altText": "Icono de información del Gateway · fill",
+                              "fit": {
+                                "mode": "fill"
+                              },
+                              "source": "/system/images/Builtin/icons/48/about.png",
+                              "style": {
+                                "backgroundColor": "#eaf0e6"
+                              }
+                            },
+                            "type": "ia.display.image"
+                          },
+                          {
+                            "meta": {
+                              "name": "FitCaption"
+                            },
+                            "position": {
+                              "shrink": 0
+                            },
+                            "props": {
+                              "style": {
+                                "color": "#405b55",
+                                "fontFamily": "Segoe UI, sans-serif",
+                                "fontSize": "13px",
+                                "lineHeight": "1.5",
+                                "textAlign": "center"
+                              },
+                              "text": "fill"
+                            },
+                            "type": "ia.display.label"
+                          }
+                        ],
+                        "meta": {
+                          "name": "Image_fill"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "direction": "column",
+                          "style": {
+                            "gap": "8px",
+                            "minWidth": "0px"
+                          }
+                        },
+                        "type": "ia.container.flex"
+                      }
+                    ],
+                    "meta": {
+                      "name": "ImageFits"
+                    },
+                    "position": {
+                      "basis": "132px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "gap": "10px",
+                        "minWidth": "0px"
+                      }
+                    },
+                    "type": "ia.container.flex"
+                  },
+                  {
+                    "meta": {
+                      "name": "ImageCaption"
+                    },
+                    "position": {
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "color": "#405b55",
+                        "fontFamily": "Segoe UI, sans-serif",
+                        "fontSize": "13px",
+                        "lineHeight": "1.5",
+                        "whiteSpace": "normal"
+                      },
+                      "text": "Image · recurso existente; los tres ajustes requieren medición real."
+                    },
+                    "type": "ia.display.label"
+                  },
+                  {
+                    "meta": {
+                      "name": "DefaultRangeTitle"
+                    },
+                    "position": {
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "color": "#18332f",
+                        "fontFamily": "Segoe UI, sans-serif",
+                        "fontSize": "17px",
+                        "fontWeight": "600",
+                        "lineHeight": "1.5",
+                        "paddingTop": "12px"
+                      },
+                      "text": "Progress · rango 0–100"
+                    },
+                    "type": "ia.display.label"
+                  },
+                  {
+                    "children": [
+                      {
+                        "meta": {
+                          "name": "Caption"
+                        },
+                        "position": {
+                          "basis": "85px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5"
+                          },
+                          "text": "Mínimo"
+                        },
+                        "type": "ia.display.label"
+                      },
+                      {
+                        "meta": {
+                          "name": "Progress"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "style": {
+                            "height": "12px",
+                            "minWidth": "0px"
+                          },
+                          "value": 0
+                        },
+                        "type": "ia.display.progress"
+                      },
+                      {
+                        "meta": {
+                          "name": "Fraction"
+                        },
+                        "position": {
+                          "basis": "40px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5",
+                            "textAlign": "right"
+                          },
+                          "text": "0 %"
+                        },
+                        "type": "ia.display.label"
+                      }
+                    ],
+                    "meta": {
+                      "name": "DefaultMin"
+                    },
+                    "position": {
+                      "basis": "28px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "alignItems": "center",
+                      "style": {
+                        "gap": "10px",
+                        "minWidth": "0px"
+                      }
+                    },
+                    "type": "ia.container.flex"
+                  },
+                  {
+                    "children": [
+                      {
+                        "meta": {
+                          "name": "Caption"
+                        },
+                        "position": {
+                          "basis": "85px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5"
+                          },
+                          "text": "Intermedio"
+                        },
+                        "type": "ia.display.label"
+                      },
+                      {
+                        "meta": {
+                          "name": "Progress"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "style": {
+                            "height": "12px",
+                            "minWidth": "0px"
+                          }
+                        },
+                        "type": "ia.display.progress"
+                      },
+                      {
+                        "meta": {
+                          "name": "Fraction"
+                        },
+                        "position": {
+                          "basis": "40px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5",
+                            "textAlign": "right"
+                          },
+                          "text": "50 %"
+                        },
+                        "type": "ia.display.label"
+                      }
+                    ],
+                    "meta": {
+                      "name": "DefaultMiddle"
+                    },
+                    "position": {
+                      "basis": "28px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "alignItems": "center",
+                      "style": {
+                        "gap": "10px",
+                        "minWidth": "0px"
+                      }
+                    },
+                    "type": "ia.container.flex"
+                  },
+                  {
+                    "children": [
+                      {
+                        "meta": {
+                          "name": "Caption"
+                        },
+                        "position": {
+                          "basis": "85px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5"
+                          },
+                          "text": "Máximo"
+                        },
+                        "type": "ia.display.label"
+                      },
+                      {
+                        "meta": {
+                          "name": "Progress"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "style": {
+                            "height": "12px",
+                            "minWidth": "0px"
+                          },
+                          "value": 100
+                        },
+                        "type": "ia.display.progress"
+                      },
+                      {
+                        "meta": {
+                          "name": "Fraction"
+                        },
+                        "position": {
+                          "basis": "40px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5",
+                            "textAlign": "right"
+                          },
+                          "text": "100 %"
+                        },
+                        "type": "ia.display.label"
+                      }
+                    ],
+                    "meta": {
+                      "name": "DefaultMax"
+                    },
+                    "position": {
+                      "basis": "28px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "alignItems": "center",
+                      "style": {
+                        "gap": "10px",
+                        "minWidth": "0px"
+                      }
+                    },
+                    "type": "ia.container.flex"
+                  },
+                  {
+                    "meta": {
+                      "name": "OffsetRangeTitle"
+                    },
+                    "position": {
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "color": "#18332f",
+                        "fontFamily": "Segoe UI, sans-serif",
+                        "fontSize": "17px",
+                        "fontWeight": "600",
+                        "lineHeight": "1.5",
+                        "paddingTop": "12px"
+                      },
+                      "text": "Rango desplazado 20–80"
+                    },
+                    "type": "ia.display.label"
+                  },
+                  {
+                    "children": [
+                      {
+                        "meta": {
+                          "name": "Caption"
+                        },
+                        "position": {
+                          "basis": "85px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5"
+                          },
+                          "text": "Valor 20"
+                        },
+                        "type": "ia.display.label"
+                      },
+                      {
+                        "meta": {
+                          "name": "Progress"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "max": 80,
+                          "min": 20,
+                          "style": {
+                            "height": "12px",
+                            "minWidth": "0px"
+                          },
+                          "value": 20
+                        },
+                        "type": "ia.display.progress"
+                      },
+                      {
+                        "meta": {
+                          "name": "Fraction"
+                        },
+                        "position": {
+                          "basis": "40px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5",
+                            "textAlign": "right"
+                          },
+                          "text": "0 %"
+                        },
+                        "type": "ia.display.label"
+                      }
+                    ],
+                    "meta": {
+                      "name": "OffsetMin"
+                    },
+                    "position": {
+                      "basis": "28px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "alignItems": "center",
+                      "style": {
+                        "gap": "10px",
+                        "minWidth": "0px"
+                      }
+                    },
+                    "type": "ia.container.flex"
+                  },
+                  {
+                    "children": [
+                      {
+                        "meta": {
+                          "name": "Caption"
+                        },
+                        "position": {
+                          "basis": "85px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5"
+                          },
+                          "text": "Valor 50"
+                        },
+                        "type": "ia.display.label"
+                      },
+                      {
+                        "meta": {
+                          "name": "Progress"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "max": 80,
+                          "min": 20,
+                          "style": {
+                            "height": "12px",
+                            "minWidth": "0px"
+                          }
+                        },
+                        "type": "ia.display.progress"
+                      },
+                      {
+                        "meta": {
+                          "name": "Fraction"
+                        },
+                        "position": {
+                          "basis": "40px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5",
+                            "textAlign": "right"
+                          },
+                          "text": "50 %"
+                        },
+                        "type": "ia.display.label"
+                      }
+                    ],
+                    "meta": {
+                      "name": "OffsetMiddle"
+                    },
+                    "position": {
+                      "basis": "28px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "alignItems": "center",
+                      "style": {
+                        "gap": "10px",
+                        "minWidth": "0px"
+                      }
+                    },
+                    "type": "ia.container.flex"
+                  },
+                  {
+                    "children": [
+                      {
+                        "meta": {
+                          "name": "Caption"
+                        },
+                        "position": {
+                          "basis": "85px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5"
+                          },
+                          "text": "Valor 80"
+                        },
+                        "type": "ia.display.label"
+                      },
+                      {
+                        "meta": {
+                          "name": "Progress"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "max": 80,
+                          "min": 20,
+                          "style": {
+                            "height": "12px",
+                            "minWidth": "0px"
+                          },
+                          "value": 80
+                        },
+                        "type": "ia.display.progress"
+                      },
+                      {
+                        "meta": {
+                          "name": "Fraction"
+                        },
+                        "position": {
+                          "basis": "40px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5",
+                            "textAlign": "right"
+                          },
+                          "text": "100 %"
+                        },
+                        "type": "ia.display.label"
+                      }
+                    ],
+                    "meta": {
+                      "name": "OffsetMax"
+                    },
+                    "position": {
+                      "basis": "28px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "alignItems": "center",
+                      "style": {
+                        "gap": "10px",
+                        "minWidth": "0px"
+                      }
+                    },
+                    "type": "ia.container.flex"
+                  },
+                  {
+                    "meta": {
+                      "name": "StyleCaption"
+                    },
+                    "position": {
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "color": "#405b55",
+                        "fontFamily": "Segoe UI, sans-serif",
+                        "fontSize": "13px",
+                        "lineHeight": "1.5",
+                        "whiteSpace": "normal"
+                      },
+                      "text": "Padding, fondo y borde acotados; datos sintéticos sin conexión operativa."
+                    },
+                    "type": "ia.display.label"
+                  }
+                ],
+                "meta": {
+                  "name": "Readings"
+                },
+                "position": {
+                  "basis": "0px",
+                  "grow": 1,
+                  "shrink": 0
+                },
+                "props": {
+                  "direction": "column",
+                  "style": {
+                    "backgroundColor": "#ffffff",
+                    "border": "1px solid #abbeb5",
+                    "borderRadius": "8px",
+                    "gap": "8px",
+                    "minWidth": "0px",
+                    "padding": "24px"
+                  }
+                },
+                "type": "ia.container.flex"
+              }
+            ],
+            "meta": {
+              "name": "Composition"
+            },
+            "position": {
+              "shrink": 0
+            },
+            "props": {
+              "style": {
+                "gap": "32px",
+                "minWidth": "0px",
+                "padding": "24px 32px"
+              }
+            },
+            "type": "ia.container.flex"
+          },
+          {
+            "meta": {
+              "name": "Footer"
+            },
+            "position": {
+              "shrink": 0
+            },
+            "props": {
+              "style": {
+                "color": "#405b55",
+                "fontFamily": "Segoe UI, sans-serif",
+                "fontSize": "13px",
+                "lineHeight": "1.5",
+                "padding": "0px 32px 24px",
+                "whiteSpace": "normal"
+              },
+              "text": "1366×768 y 390×844 · candidato auxiliar; el preview no prueba persistencia ni runtime Perspective."
+            },
+            "type": "ia.display.label"
+          }
+        ],
+        "meta": {
+          "name": "Large"
+        },
+        "position": {
+          "size": "large"
+        },
+        "props": {
+          "direction": "column",
+          "style": {
+            "backgroundColor": "#f2f5ef",
+            "gap": "8px",
+            "minWidth": "0px"
+          }
+        },
+        "type": "ia.container.flex"
+      },
+      {
+        "children": [
+          {
+            "children": [
+              {
+                "meta": {
+                  "name": "Title"
+                },
+                "position": {
+                  "shrink": 0
+                },
+                "props": {
+                  "style": {
+                    "color": "#18332f",
+                    "fontFamily": "Segoe UI, sans-serif",
+                    "fontSize": "30px",
+                    "fontWeight": "600",
+                    "lineHeight": "1.2"
+                  },
+                  "text": "Panel de equipo"
+                },
+                "type": "ia.display.label"
+              },
+              {
+                "meta": {
+                  "name": "Subtitle"
+                },
+                "position": {
+                  "shrink": 0
+                },
+                "props": {
+                  "style": {
+                    "color": "#405b55",
+                    "fontFamily": "Segoe UI, sans-serif",
+                    "fontSize": "14px",
+                    "lineHeight": "1.5",
+                    "whiteSpace": "normal"
+                  },
+                  "text": "Evidencia · datos sintéticos · sin conexión operativa"
+                },
+                "type": "ia.display.label"
+              }
+            ],
+            "meta": {
+              "name": "Header"
+            },
+            "position": {
+              "shrink": 0
+            },
+            "props": {
+              "direction": "column",
+              "style": {
+                "backgroundColor": "#e3ebe0",
+                "borderBottom": "1px solid #abbeb5",
+                "gap": "8px",
+                "minWidth": "0px",
+                "padding": "22px 16px 16px"
+              }
+            },
+            "type": "ia.container.flex"
+          },
+          {
+            "children": [
+              {
+                "children": [
+                  {
+                    "meta": {
+                      "name": "EquipmentTitle"
+                    },
+                    "position": {
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "color": "#18332f",
+                        "fontFamily": "Segoe UI, sans-serif",
+                        "fontSize": "21px",
+                        "fontWeight": "600",
+                        "lineHeight": "1.5",
+                        "paddingBottom": "10px"
+                      },
+                      "text": "Equipo de prueba"
+                    },
+                    "type": "ia.display.label"
+                  },
+                  {
+                    "children": [
+                      {
+                        "children": [
+                          {
+                            "meta": {
+                              "name": "VesselName"
+                            },
+                            "position": {
+                              "shrink": 0
+                            },
+                            "props": {
+                              "style": {
+                                "color": "#18332f",
+                                "fontFamily": "Segoe UI, sans-serif",
+                                "fontSize": "12px",
+                                "lineHeight": "1.5",
+                                "textAlign": "center"
+                              },
+                              "text": "DEPÓSITO"
+                            },
+                            "type": "ia.display.label"
+                          },
+                          {
+                            "meta": {
+                              "name": "VesselValue"
+                            },
+                            "position": {
+                              "shrink": 0
+                            },
+                            "props": {
+                              "style": {
+                                "color": "#18332f",
+                                "fontFamily": "Segoe UI, sans-serif",
+                                "fontSize": "18px",
+                                "fontWeight": "600",
+                                "lineHeight": "1.5",
+                                "textAlign": "center"
+                              },
+                              "text": "50 %"
+                            },
+                            "type": "ia.display.label"
+                          }
+                        ],
+                        "meta": {
+                          "name": "Vessel"
+                        },
+                        "position": {
+                          "height": 152,
+                          "width": 128,
+                          "x": 16,
+                          "y": 24
+                        },
+                        "props": {
+                          "direction": "column",
+                          "justify": "center",
+                          "style": {
+                            "backgroundColor": "#ffffff",
+                            "border": "2px solid #21685b",
+                            "borderRadius": "24px",
+                            "gap": "8px",
+                            "justifyContent": "center",
+                            "minWidth": "0px"
+                          }
+                        },
+                        "type": "ia.container.flex"
+                      },
+                      {
+                        "children": [
+                          {
+                            "meta": {
+                              "name": "MotorName"
+                            },
+                            "position": {
+                              "shrink": 0
+                            },
+                            "props": {
+                              "style": {
+                                "color": "#18332f",
+                                "fontFamily": "Segoe UI, sans-serif",
+                                "fontSize": "12px",
+                                "lineHeight": "1.5",
+                                "textAlign": "center"
+                              },
+                              "text": "MOTOR"
+                            },
+                            "type": "ia.display.label"
+                          },
+                          {
+                            "meta": {
+                              "name": "MotorValue"
+                            },
+                            "position": {
+                              "shrink": 0
+                            },
+                            "props": {
+                              "style": {
+                                "color": "#18332f",
+                                "fontFamily": "Segoe UI, sans-serif",
+                                "fontSize": "18px",
+                                "fontWeight": "600",
+                                "lineHeight": "1.5",
+                                "textAlign": "center"
+                              },
+                              "text": "Disponible"
+                            },
+                            "type": "ia.display.label"
+                          }
+                        ],
+                        "meta": {
+                          "name": "Motor"
+                        },
+                        "position": {
+                          "height": 80,
+                          "width": 128,
+                          "x": 176,
+                          "y": 80
+                        },
+                        "props": {
+                          "direction": "column",
+                          "justify": "center",
+                          "style": {
+                            "backgroundColor": "#ffffff",
+                            "border": "2px solid #21685b",
+                            "borderRadius": "6px",
+                            "gap": "8px",
+                            "justifyContent": "center",
+                            "minWidth": "0px"
+                          }
+                        },
+                        "type": "ia.container.flex"
+                      },
+                      {
+                        "meta": {
+                          "name": "BoundsCaption"
+                        },
+                        "position": {
+                          "height": 24,
+                          "width": 288,
+                          "x": 16,
+                          "y": 208
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#405b55",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "12px",
+                            "lineHeight": "1.5"
+                          },
+                          "text": "Bounds relativos al contenedor"
+                        },
+                        "type": "ia.display.label"
+                      }
+                    ],
+                    "meta": {
+                      "name": "FixedDiagram"
+                    },
+                    "position": {
+                      "basis": "240px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "backgroundColor": "#eaf0e6",
+                        "width": "320px"
+                      }
+                    },
+                    "type": "ia.container.coord"
+                  },
+                  {
+                    "meta": {
+                      "name": "VariantCaption"
+                    },
+                    "position": {
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "color": "#405b55",
+                        "fontFamily": "Segoe UI, sans-serif",
+                        "fontSize": "14px",
+                        "lineHeight": "1.5",
+                        "whiteSpace": "normal"
+                      },
+                      "text": "Variante small: lectura vertical para móvil."
+                    },
+                    "type": "ia.display.label"
+                  }
+                ],
+                "meta": {
+                  "name": "Equipment"
+                },
+                "position": {
+                  "shrink": 0
+                },
+                "props": {
+                  "direction": "column",
+                  "style": {
+                    "backgroundColor": "#ffffff",
+                    "border": "1px solid #abbeb5",
+                    "borderRadius": "8px",
+                    "gap": "8px",
+                    "minWidth": "0px",
+                    "padding": "16px"
+                  }
+                },
+                "type": "ia.container.flex"
+              },
+              {
+                "children": [
+                  {
+                    "meta": {
+                      "name": "ReadingsTitle"
+                    },
+                    "position": {
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "color": "#18332f",
+                        "fontFamily": "Segoe UI, sans-serif",
+                        "fontSize": "21px",
+                        "fontWeight": "600",
+                        "lineHeight": "1.5",
+                        "paddingBottom": "10px"
+                      },
+                      "text": "Rendering de referencia"
+                    },
+                    "type": "ia.display.label"
+                  },
+                  {
+                    "children": [
+                      {
+                        "children": [
+                          {
+                            "meta": {
+                              "name": "Image"
+                            },
+                            "position": {
+                              "basis": "100px",
+                              "shrink": 0
+                            },
+                            "props": {
+                              "altText": "Icono de información del Gateway · contain",
+                              "fit": {
+                                "mode": "contain"
+                              },
+                              "source": "/system/images/Builtin/icons/48/about.png",
+                              "style": {
+                                "backgroundColor": "#eaf0e6"
+                              }
+                            },
+                            "type": "ia.display.image"
+                          },
+                          {
+                            "meta": {
+                              "name": "FitCaption"
+                            },
+                            "position": {
+                              "shrink": 0
+                            },
+                            "props": {
+                              "style": {
+                                "color": "#405b55",
+                                "fontFamily": "Segoe UI, sans-serif",
+                                "fontSize": "13px",
+                                "lineHeight": "1.5",
+                                "textAlign": "center"
+                              },
+                              "text": "contain"
+                            },
+                            "type": "ia.display.label"
+                          }
+                        ],
+                        "meta": {
+                          "name": "Image_contain"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "direction": "column",
+                          "style": {
+                            "gap": "8px",
+                            "minWidth": "0px"
+                          }
+                        },
+                        "type": "ia.container.flex"
+                      },
+                      {
+                        "children": [
+                          {
+                            "meta": {
+                              "name": "Image"
+                            },
+                            "position": {
+                              "basis": "100px",
+                              "shrink": 0
+                            },
+                            "props": {
+                              "altText": "Icono de información del Gateway · cover",
+                              "fit": {
+                                "mode": "cover"
+                              },
+                              "source": "/system/images/Builtin/icons/48/about.png",
+                              "style": {
+                                "backgroundColor": "#eaf0e6"
+                              }
+                            },
+                            "type": "ia.display.image"
+                          },
+                          {
+                            "meta": {
+                              "name": "FitCaption"
+                            },
+                            "position": {
+                              "shrink": 0
+                            },
+                            "props": {
+                              "style": {
+                                "color": "#405b55",
+                                "fontFamily": "Segoe UI, sans-serif",
+                                "fontSize": "13px",
+                                "lineHeight": "1.5",
+                                "textAlign": "center"
+                              },
+                              "text": "cover"
+                            },
+                            "type": "ia.display.label"
+                          }
+                        ],
+                        "meta": {
+                          "name": "Image_cover"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "direction": "column",
+                          "style": {
+                            "gap": "8px",
+                            "minWidth": "0px"
+                          }
+                        },
+                        "type": "ia.container.flex"
+                      },
+                      {
+                        "children": [
+                          {
+                            "meta": {
+                              "name": "Image"
+                            },
+                            "position": {
+                              "basis": "100px",
+                              "shrink": 0
+                            },
+                            "props": {
+                              "altText": "Icono de información del Gateway · fill",
+                              "fit": {
+                                "mode": "fill"
+                              },
+                              "source": "/system/images/Builtin/icons/48/about.png",
+                              "style": {
+                                "backgroundColor": "#eaf0e6"
+                              }
+                            },
+                            "type": "ia.display.image"
+                          },
+                          {
+                            "meta": {
+                              "name": "FitCaption"
+                            },
+                            "position": {
+                              "shrink": 0
+                            },
+                            "props": {
+                              "style": {
+                                "color": "#405b55",
+                                "fontFamily": "Segoe UI, sans-serif",
+                                "fontSize": "13px",
+                                "lineHeight": "1.5",
+                                "textAlign": "center"
+                              },
+                              "text": "fill"
+                            },
+                            "type": "ia.display.label"
+                          }
+                        ],
+                        "meta": {
+                          "name": "Image_fill"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "direction": "column",
+                          "style": {
+                            "gap": "8px",
+                            "minWidth": "0px"
+                          }
+                        },
+                        "type": "ia.container.flex"
+                      }
+                    ],
+                    "meta": {
+                      "name": "ImageFits"
+                    },
+                    "position": {
+                      "basis": "132px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "gap": "10px",
+                        "minWidth": "0px"
+                      }
+                    },
+                    "type": "ia.container.flex"
+                  },
+                  {
+                    "meta": {
+                      "name": "ImageCaption"
+                    },
+                    "position": {
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "color": "#405b55",
+                        "fontFamily": "Segoe UI, sans-serif",
+                        "fontSize": "13px",
+                        "lineHeight": "1.5",
+                        "whiteSpace": "normal"
+                      },
+                      "text": "Image · recurso existente; los tres ajustes requieren medición real."
+                    },
+                    "type": "ia.display.label"
+                  },
+                  {
+                    "meta": {
+                      "name": "DefaultRangeTitle"
+                    },
+                    "position": {
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "color": "#18332f",
+                        "fontFamily": "Segoe UI, sans-serif",
+                        "fontSize": "17px",
+                        "fontWeight": "600",
+                        "lineHeight": "1.5",
+                        "paddingTop": "12px"
+                      },
+                      "text": "Progress · rango 0–100"
+                    },
+                    "type": "ia.display.label"
+                  },
+                  {
+                    "children": [
+                      {
+                        "meta": {
+                          "name": "Caption"
+                        },
+                        "position": {
+                          "basis": "85px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5"
+                          },
+                          "text": "Mínimo"
+                        },
+                        "type": "ia.display.label"
+                      },
+                      {
+                        "meta": {
+                          "name": "Progress"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "style": {
+                            "height": "12px",
+                            "minWidth": "0px"
+                          },
+                          "value": 0
+                        },
+                        "type": "ia.display.progress"
+                      },
+                      {
+                        "meta": {
+                          "name": "Fraction"
+                        },
+                        "position": {
+                          "basis": "40px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5",
+                            "textAlign": "right"
+                          },
+                          "text": "0 %"
+                        },
+                        "type": "ia.display.label"
+                      }
+                    ],
+                    "meta": {
+                      "name": "DefaultMin"
+                    },
+                    "position": {
+                      "basis": "28px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "alignItems": "center",
+                      "style": {
+                        "gap": "10px",
+                        "minWidth": "0px"
+                      }
+                    },
+                    "type": "ia.container.flex"
+                  },
+                  {
+                    "children": [
+                      {
+                        "meta": {
+                          "name": "Caption"
+                        },
+                        "position": {
+                          "basis": "85px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5"
+                          },
+                          "text": "Intermedio"
+                        },
+                        "type": "ia.display.label"
+                      },
+                      {
+                        "meta": {
+                          "name": "Progress"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "style": {
+                            "height": "12px",
+                            "minWidth": "0px"
+                          }
+                        },
+                        "type": "ia.display.progress"
+                      },
+                      {
+                        "meta": {
+                          "name": "Fraction"
+                        },
+                        "position": {
+                          "basis": "40px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5",
+                            "textAlign": "right"
+                          },
+                          "text": "50 %"
+                        },
+                        "type": "ia.display.label"
+                      }
+                    ],
+                    "meta": {
+                      "name": "DefaultMiddle"
+                    },
+                    "position": {
+                      "basis": "28px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "alignItems": "center",
+                      "style": {
+                        "gap": "10px",
+                        "minWidth": "0px"
+                      }
+                    },
+                    "type": "ia.container.flex"
+                  },
+                  {
+                    "children": [
+                      {
+                        "meta": {
+                          "name": "Caption"
+                        },
+                        "position": {
+                          "basis": "85px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5"
+                          },
+                          "text": "Máximo"
+                        },
+                        "type": "ia.display.label"
+                      },
+                      {
+                        "meta": {
+                          "name": "Progress"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "style": {
+                            "height": "12px",
+                            "minWidth": "0px"
+                          },
+                          "value": 100
+                        },
+                        "type": "ia.display.progress"
+                      },
+                      {
+                        "meta": {
+                          "name": "Fraction"
+                        },
+                        "position": {
+                          "basis": "40px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5",
+                            "textAlign": "right"
+                          },
+                          "text": "100 %"
+                        },
+                        "type": "ia.display.label"
+                      }
+                    ],
+                    "meta": {
+                      "name": "DefaultMax"
+                    },
+                    "position": {
+                      "basis": "28px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "alignItems": "center",
+                      "style": {
+                        "gap": "10px",
+                        "minWidth": "0px"
+                      }
+                    },
+                    "type": "ia.container.flex"
+                  },
+                  {
+                    "meta": {
+                      "name": "OffsetRangeTitle"
+                    },
+                    "position": {
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "color": "#18332f",
+                        "fontFamily": "Segoe UI, sans-serif",
+                        "fontSize": "17px",
+                        "fontWeight": "600",
+                        "lineHeight": "1.5",
+                        "paddingTop": "12px"
+                      },
+                      "text": "Rango desplazado 20–80"
+                    },
+                    "type": "ia.display.label"
+                  },
+                  {
+                    "children": [
+                      {
+                        "meta": {
+                          "name": "Caption"
+                        },
+                        "position": {
+                          "basis": "85px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5"
+                          },
+                          "text": "Valor 20"
+                        },
+                        "type": "ia.display.label"
+                      },
+                      {
+                        "meta": {
+                          "name": "Progress"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "max": 80,
+                          "min": 20,
+                          "style": {
+                            "height": "12px",
+                            "minWidth": "0px"
+                          },
+                          "value": 20
+                        },
+                        "type": "ia.display.progress"
+                      },
+                      {
+                        "meta": {
+                          "name": "Fraction"
+                        },
+                        "position": {
+                          "basis": "40px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5",
+                            "textAlign": "right"
+                          },
+                          "text": "0 %"
+                        },
+                        "type": "ia.display.label"
+                      }
+                    ],
+                    "meta": {
+                      "name": "OffsetMin"
+                    },
+                    "position": {
+                      "basis": "28px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "alignItems": "center",
+                      "style": {
+                        "gap": "10px",
+                        "minWidth": "0px"
+                      }
+                    },
+                    "type": "ia.container.flex"
+                  },
+                  {
+                    "children": [
+                      {
+                        "meta": {
+                          "name": "Caption"
+                        },
+                        "position": {
+                          "basis": "85px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5"
+                          },
+                          "text": "Valor 50"
+                        },
+                        "type": "ia.display.label"
+                      },
+                      {
+                        "meta": {
+                          "name": "Progress"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "max": 80,
+                          "min": 20,
+                          "style": {
+                            "height": "12px",
+                            "minWidth": "0px"
+                          }
+                        },
+                        "type": "ia.display.progress"
+                      },
+                      {
+                        "meta": {
+                          "name": "Fraction"
+                        },
+                        "position": {
+                          "basis": "40px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5",
+                            "textAlign": "right"
+                          },
+                          "text": "50 %"
+                        },
+                        "type": "ia.display.label"
+                      }
+                    ],
+                    "meta": {
+                      "name": "OffsetMiddle"
+                    },
+                    "position": {
+                      "basis": "28px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "alignItems": "center",
+                      "style": {
+                        "gap": "10px",
+                        "minWidth": "0px"
+                      }
+                    },
+                    "type": "ia.container.flex"
+                  },
+                  {
+                    "children": [
+                      {
+                        "meta": {
+                          "name": "Caption"
+                        },
+                        "position": {
+                          "basis": "85px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5"
+                          },
+                          "text": "Valor 80"
+                        },
+                        "type": "ia.display.label"
+                      },
+                      {
+                        "meta": {
+                          "name": "Progress"
+                        },
+                        "position": {
+                          "basis": "0px",
+                          "grow": 1
+                        },
+                        "props": {
+                          "max": 80,
+                          "min": 20,
+                          "style": {
+                            "height": "12px",
+                            "minWidth": "0px"
+                          },
+                          "value": 80
+                        },
+                        "type": "ia.display.progress"
+                      },
+                      {
+                        "meta": {
+                          "name": "Fraction"
+                        },
+                        "position": {
+                          "basis": "40px",
+                          "shrink": 0
+                        },
+                        "props": {
+                          "style": {
+                            "color": "#18332f",
+                            "fontFamily": "Segoe UI, sans-serif",
+                            "fontSize": "14px",
+                            "lineHeight": "1.5",
+                            "textAlign": "right"
+                          },
+                          "text": "100 %"
+                        },
+                        "type": "ia.display.label"
+                      }
+                    ],
+                    "meta": {
+                      "name": "OffsetMax"
+                    },
+                    "position": {
+                      "basis": "28px",
+                      "shrink": 0
+                    },
+                    "props": {
+                      "alignItems": "center",
+                      "style": {
+                        "gap": "10px",
+                        "minWidth": "0px"
+                      }
+                    },
+                    "type": "ia.container.flex"
+                  },
+                  {
+                    "meta": {
+                      "name": "StyleCaption"
+                    },
+                    "position": {
+                      "shrink": 0
+                    },
+                    "props": {
+                      "style": {
+                        "color": "#405b55",
+                        "fontFamily": "Segoe UI, sans-serif",
+                        "fontSize": "13px",
+                        "lineHeight": "1.5",
+                        "whiteSpace": "normal"
+                      },
+                      "text": "Padding, fondo y borde acotados; datos sintéticos sin conexión operativa."
+                    },
+                    "type": "ia.display.label"
+                  }
+                ],
+                "meta": {
+                  "name": "Readings"
+                },
+                "position": {
+                  "shrink": 0
+                },
+                "props": {
+                  "direction": "column",
+                  "style": {
+                    "backgroundColor": "#ffffff",
+                    "border": "1px solid #abbeb5",
+                    "borderRadius": "8px",
+                    "gap": "8px",
+                    "minWidth": "0px",
+                    "padding": "16px"
+                  }
+                },
+                "type": "ia.container.flex"
+              }
+            ],
+            "meta": {
+              "name": "Composition"
+            },
+            "position": {
+              "shrink": 0
+            },
+            "props": {
+              "direction": "column",
+              "style": {
+                "gap": "20px",
+                "minWidth": "0px",
+                "padding": "20px 16px"
+              }
+            },
+            "type": "ia.container.flex"
+          },
+          {
+            "meta": {
+              "name": "Footer"
+            },
+            "position": {
+              "shrink": 0
+            },
+            "props": {
+              "style": {
+                "color": "#405b55",
+                "fontFamily": "Segoe UI, sans-serif",
+                "fontSize": "13px",
+                "lineHeight": "1.5",
+                "padding": "0px 16px 20px",
+                "whiteSpace": "normal"
+              },
+              "text": "1366×768 y 390×844 · candidato auxiliar; el preview no prueba persistencia ni runtime Perspective."
+            },
+            "type": "ia.display.label"
+          }
+        ],
+        "meta": {
+          "name": "Small"
+        },
+        "props": {
+          "direction": "column",
+          "style": {
+            "backgroundColor": "#f2f5ef",
+            "gap": "8px",
+            "minWidth": "0px"
+          }
+        },
+        "type": "ia.container.flex"
+      }
+    ],
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "breakpoint": 768,
+      "currentBreakpoint": "large",
+      "style": {
+        "backgroundColor": "#f2f5ef"
+      }
+    },
+    "type": "ia.container.breakpt"
+  }
+}

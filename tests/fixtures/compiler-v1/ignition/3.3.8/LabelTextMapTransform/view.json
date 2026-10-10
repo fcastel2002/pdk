@@ -1,0 +1,106 @@
+{
+  "custom": {},
+  "params": {},
+  "props": {},
+  "root": {
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column"
+    },
+    "type": "ia.container.flex",
+    "children": [
+      {
+        "events": {
+          "component": {
+            "onActionPerformed": {
+              "config": {
+                "script": "\tsystem.tag.writeBlocking(['[default]Demo/Pump01/CmdStart'], [True])"
+              },
+              "scope": "G",
+              "type": "script"
+            }
+          }
+        },
+        "meta": {
+          "name": "Button"
+        },
+        "position": {
+          "basis": "34px"
+        },
+        "props": {
+          "text": "Start"
+        },
+        "type": "ia.input.button"
+      },
+      {
+        "meta": {
+          "name": "Label"
+        },
+        "position": {
+          "basis": "32px"
+        },
+        "propConfig": {
+          "props.text": {
+            "binding": {
+              "config": {
+                "fallbackDelay": 2.5,
+                "mode": "direct",
+                "tagPath": "[default]Demo/Pump01/CmdStart"
+              },
+              "type": "tag",
+              "transforms": [
+                {
+                  "inputType": "scalar",
+                  "mappings": [
+                    {
+                      "input": false,
+                      "output": "STOPPED"
+                    },
+                    {
+                      "input": true,
+                      "output": "RUNNING"
+                    }
+                  ],
+                  "outputType": "scalar",
+                  "type": "map",
+                  "fallback": "UNKNOWN"
+                }
+              ]
+            }
+          }
+        },
+        "type": "ia.display.label"
+      },
+      {
+        "meta": {
+          "name": "Label_0"
+        },
+        "position": {
+          "basis": "32px"
+        },
+        "propConfig": {
+          "props.text": {
+            "binding": {
+              "config": {
+                "fallbackDelay": 2.5,
+                "mode": "direct",
+                "tagPath": "[default]Demo/Pump01/SpeedSetpoint"
+              },
+              "type": "tag",
+              "transforms": [
+                {
+                  "formatType": "numeric",
+                  "formatValue": "number",
+                  "type": "format"
+                }
+              ]
+            }
+          }
+        },
+        "type": "ia.display.label"
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<modules>
+	<module>
+		<name>PDK Gateway</name>
+		<id>dev.pdk.gateway</id>
+		<version>@VERSION@</version>
+		<description>Perspective DevKit: loopback-only, token-protected resource API for agent-built views. Development gateways only.</description>
+		<requiredIgnitionVersion>8.3.8</requiredIgnitionVersion>
+		<freeModule>true</freeModule>
+		<hook scope="G">dev.pdk.gateway.GatewayHook</hook>
+		<depends scope="G" required="true">com.inductiveautomation.perspective</depends>
+		<requiredFrameworkVersion>8</requiredFrameworkVersion>
+		<jar scope="G">@JAR@</jar>
+	</module>
+</modules>

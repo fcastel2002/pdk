@@ -1,0 +1,92 @@
+{
+  "custom": {},
+  "params": {},
+  "propConfig": {},
+  "props": {
+    "defaultSize": {
+      "height": 696,
+      "width": 1200
+    }
+  },
+  "root": {
+    "children": [
+      {
+        "meta": {
+          "name": "AlarmJournalTable"
+        },
+        "position": {
+          "basis": "100%"
+        },
+        "props": {
+          "columns": {
+            "ackNotes": {
+              "enabled": true
+            },
+            "displayPath": {
+              "enabled": true,
+              "order": 5
+            },
+            "eventId": {
+              "enabled": false
+            },
+            "eventState": {
+              "order": 3,
+              "sort": "none"
+            },
+            "eventTime": {
+              "sort": "descending"
+            },
+            "eventValue": {
+              "enabled": true,
+              "order": 2
+            },
+            "label": {
+              "enabled": true
+            },
+            "priority": {
+              "enabled": false,
+              "order": 4
+            },
+            "source": {
+              "order": 1
+            }
+          },
+          "dateRange": {
+            "realtime": {
+              "interval": 3,
+              "unit": "days"
+            }
+          },
+          "filter": {
+            "conditions": {
+              "displayPath": "SDC*"
+            },
+            "priorities": {
+              "low": false,
+              "medium": false
+            }
+          },
+          "pager": {
+            "initialOption": 15,
+            "options": [
+              5,
+              10,
+              15,
+              20,
+              100
+            ]
+          },
+          "refreshRate": 1000
+        },
+        "type": "ia.display.alarmjournaltable"
+      }
+    ],
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column"
+    },
+    "type": "ia.container.flex"
+  }
+}

@@ -1,0 +1,1353 @@
+{
+  "custom": {
+    "supervision": {
+      "allow": true,
+      "mode": "Sandbox",
+      "threshold": 5
+    }
+  },
+  "params": {
+    "panel": {
+      "active": false,
+      "caption": "Shift",
+      "scale": 1
+    },
+    "tagName": "UptimeSeconds"
+  },
+  "props": {
+    "defaultSize": {
+      "height": 768,
+      "width": 1366
+    }
+  },
+  "root": {
+    "children": [
+      {
+        "meta": {
+          "name": "Label"
+        },
+        "position": {
+          "basis": "40px",
+          "shrink": 0
+        },
+        "props": {
+          "style": {
+            "classes": "hmi-typography-heading"
+          },
+          "text": "Reactive supervision dashboard"
+        },
+        "type": "ia.display.label"
+      },
+      {
+        "children": [
+          {
+            "meta": {
+              "name": "Label"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-heading"
+              },
+              "text": "Supervision inputs"
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_0"
+            },
+            "position": {
+              "basis": "20px",
+              "shrink": 0
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-caption"
+              },
+              "text": "A"
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "NumericEntry"
+            },
+            "position": {
+              "basis": "36px",
+              "shrink": 0
+            },
+            "props": {
+              "format": "0.0",
+              "mode": "direct",
+              "placeholder": "A",
+              "spinner": {
+                "enabled": false
+              },
+              "value": 7
+            },
+            "type": "ia.input.numeric-entry-field"
+          },
+          {
+            "meta": {
+              "name": "Label_1"
+            },
+            "position": {
+              "basis": "20px",
+              "shrink": 0
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-caption"
+              },
+              "text": "B"
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "NumericEntry_0"
+            },
+            "position": {
+              "basis": "36px",
+              "shrink": 0
+            },
+            "props": {
+              "format": "0.0",
+              "mode": "direct",
+              "placeholder": "B",
+              "spinner": {
+                "enabled": false
+              },
+              "value": 2
+            },
+            "type": "ia.input.numeric-entry-field"
+          },
+          {
+            "meta": {
+              "name": "Label_2"
+            },
+            "position": {
+              "basis": "20px",
+              "shrink": 0
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-caption"
+              },
+              "text": "Operator"
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "TextField"
+            },
+            "position": {
+              "basis": "36px",
+              "shrink": 0
+            },
+            "props": {
+              "deferUpdates": false,
+              "placeholder": "Operator",
+              "text": "Ada"
+            },
+            "type": "ia.input.text-field"
+          },
+          {
+            "meta": {
+              "name": "Label_3"
+            },
+            "position": {
+              "basis": "20px",
+              "shrink": 0
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-caption"
+              },
+              "text": "Shift note"
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "TextArea"
+            },
+            "position": {
+              "basis": "64px",
+              "shrink": 0
+            },
+            "props": {
+              "deferUpdates": false,
+              "placeholder": "Shift note",
+              "resize": "none",
+              "text": "Ready",
+              "wrap": "soft"
+            },
+            "type": "ia.input.text-area"
+          },
+          {
+            "meta": {
+              "name": "Checkbox"
+            },
+            "position": {
+              "basis": "36px",
+              "shrink": 0
+            },
+            "props": {
+              "selected": true,
+              "text": "Permit supervision"
+            },
+            "type": "ia.input.checkbox"
+          }
+        ],
+        "meta": {
+          "name": "FlexContainer"
+        },
+        "position": {
+          "basis": "368px",
+          "shrink": 0
+        },
+        "props": {
+          "direction": "column",
+          "style": {
+            "classes": "hmi-spacing-xs"
+          }
+        },
+        "type": "ia.container.flex"
+      },
+      {
+        "children": [
+          {
+            "meta": {
+              "name": "Label"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-heading"
+              },
+              "text": "Calculated readings"
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_0"
+            },
+            "position": {
+              "basis": "48px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "expression": "if(isNull({view.params.panel.caption}), \"Composition unavailable\", if(isNull({/root/FlexContainer/TextField.props.text}), \"Composition unavailable\", if(isNull({/root/FlexContainer/TextArea.props.text}), \"Composition unavailable\", ({view.params.panel.caption} + \": \" + {/root/FlexContainer/TextField.props.text} + \" | \" + {/root/FlexContainer/TextArea.props.text}))))"
+                  },
+                  "type": "expr"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_1"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "expression": "if(isNull({/root/FlexContainer/NumericEntry.props.value}), 0, if(isNull({/root/FlexContainer/NumericEntry_0.props.value}), 0, if({/root/FlexContainer/NumericEntry_0.props.value} = 0, 0, ({/root/FlexContainer/NumericEntry.props.value} / {/root/FlexContainer/NumericEntry_0.props.value}))))"
+                  },
+                  "transforms": [
+                    {
+                      "expression": "\"Quotient A/B: \" + numberFormat({value}, \"0.0\")",
+                      "type": "expression"
+                    }
+                  ],
+                  "type": "expr"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_2"
+            },
+            "position": {
+              "basis": "24px",
+              "shrink": 0
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-caption"
+              },
+              "text": "Quotient read-only"
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "NumericEntry"
+            },
+            "position": {
+              "basis": "36px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.value": {
+                "binding": {
+                  "config": {
+                    "expression": "if(isNull({/root/FlexContainer/NumericEntry.props.value}), 0, if(isNull({/root/FlexContainer/NumericEntry_0.props.value}), 0, if({/root/FlexContainer/NumericEntry_0.props.value} = 0, 0, ({/root/FlexContainer/NumericEntry.props.value} / {/root/FlexContainer/NumericEntry_0.props.value}))))"
+                  },
+                  "type": "expr"
+                }
+              }
+            },
+            "props": {
+              "enabled": false,
+              "format": "0.0",
+              "mode": "direct",
+              "spinner": {
+                "enabled": false
+              }
+            },
+            "type": "ia.input.numeric-entry-field"
+          },
+          {
+            "meta": {
+              "name": "Label_3"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "expression": "if(isNull({/root/FlexContainer/NumericEntry.props.value}), -1, if(isNull({/root/FlexContainer/NumericEntry_0.props.value}), -1, if({/root/FlexContainer/NumericEntry.props.value} = 0, -1, if(({/root/FlexContainer/NumericEntry_0.props.value} / {/root/FlexContainer/NumericEntry.props.value}) = 0, -1, ({/root/FlexContainer/NumericEntry.props.value} / ({/root/FlexContainer/NumericEntry_0.props.value} / {/root/FlexContainer/NumericEntry.props.value}))))))"
+                  },
+                  "transforms": [
+                    {
+                      "expression": "\"Nested A/(B/A): \" + numberFormat({value}, \"0.0\")",
+                      "type": "expression"
+                    }
+                  ],
+                  "type": "expr"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_4"
+            },
+            "position": {
+              "basis": "24px",
+              "shrink": 0
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-caption"
+              },
+              "text": "Load A (0–100)"
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Progress"
+            },
+            "position": {
+              "basis": "24px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.value": {
+                "binding": {
+                  "config": {
+                    "path": "/root/FlexContainer/NumericEntry.props.value"
+                  },
+                  "type": "property"
+                }
+              }
+            },
+            "props": {},
+            "type": "ia.display.progress"
+          },
+          {
+            "meta": {
+              "name": "Label_5"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "path": "/root/FlexContainer/NumericEntry.props.value"
+                  },
+                  "transforms": [
+                    {
+                      "expression": "\"Source A: \" + numberFormat({value}, \"0.0\")",
+                      "type": "expression"
+                    }
+                  ],
+                  "type": "property"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_6"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "path": "/root/FlexContainer/NumericEntry_0.props.value"
+                  },
+                  "transforms": [
+                    {
+                      "expression": "\"Source B: \" + numberFormat({value}, \"0.0\")",
+                      "type": "expression"
+                    }
+                  ],
+                  "type": "property"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_7"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "path": "/root/FlexContainer/TextField.props.text"
+                  },
+                  "type": "property"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_8"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "path": "/root/FlexContainer/TextArea.props.text"
+                  },
+                  "type": "property"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_9"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "path": "/root/FlexContainer/Checkbox.props.selected"
+                  },
+                  "transforms": [
+                    {
+                      "fallback": "Source permit unavailable",
+                      "inputType": "scalar",
+                      "mappings": [
+                        {
+                          "input": true,
+                          "output": "Source permit: true"
+                        },
+                        {
+                          "input": false,
+                          "output": "Source permit: false"
+                        }
+                      ],
+                      "outputType": "scalar",
+                      "type": "map"
+                    }
+                  ],
+                  "type": "property"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          }
+        ],
+        "meta": {
+          "name": "FlexContainer_0"
+        },
+        "position": {
+          "basis": "492px",
+          "shrink": 0
+        },
+        "props": {
+          "direction": "column",
+          "style": {
+            "classes": "hmi-spacing-xs"
+          }
+        },
+        "type": "ia.container.flex"
+      },
+      {
+        "children": [
+          {
+            "meta": {
+              "name": "Label"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-heading"
+              },
+              "text": "Supervision states"
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_0"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.style.classes": {
+                "binding": {
+                  "config": {
+                    "expression": "if(isNull({/root/FlexContainer/NumericEntry.props.value}), false, if(isNull({view.custom.supervision.threshold}), false, ({/root/FlexContainer/NumericEntry.props.value} >= {view.custom.supervision.threshold})))"
+                  },
+                  "transforms": [
+                    {
+                      "fallback": "hmi-command-primary",
+                      "inputType": "scalar",
+                      "mappings": [
+                        {
+                          "input": true,
+                          "output": "hmi-command-destructive"
+                        },
+                        {
+                          "input": false,
+                          "output": "hmi-command-primary"
+                        }
+                      ],
+                      "outputType": "scalar",
+                      "type": "map"
+                    }
+                  ],
+                  "type": "expr"
+                }
+              },
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "expression": "if(isNull({/root/FlexContainer/NumericEntry.props.value}), false, if(isNull({view.custom.supervision.threshold}), false, ({/root/FlexContainer/NumericEntry.props.value} >= {view.custom.supervision.threshold})))"
+                  },
+                  "transforms": [
+                    {
+                      "fallback": "Threshold unavailable",
+                      "inputType": "scalar",
+                      "mappings": [
+                        {
+                          "input": true,
+                          "output": "Threshold: reached"
+                        },
+                        {
+                          "input": false,
+                          "output": "Threshold: below"
+                        }
+                      ],
+                      "outputType": "scalar",
+                      "type": "map"
+                    }
+                  ],
+                  "type": "expr"
+                }
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_1"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "expression": "if(isNull({/root/FlexContainer/Checkbox.props.selected}), false, if(isNull({view.custom.supervision.allow}), false, ({/root/FlexContainer/Checkbox.props.selected} && {view.custom.supervision.allow})))"
+                  },
+                  "transforms": [
+                    {
+                      "fallback": "AND unavailable",
+                      "inputType": "scalar",
+                      "mappings": [
+                        {
+                          "input": true,
+                          "output": "AND: allowed"
+                        },
+                        {
+                          "input": false,
+                          "output": "AND: blocked"
+                        }
+                      ],
+                      "outputType": "scalar",
+                      "type": "map"
+                    }
+                  ],
+                  "type": "expr"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_2"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "expression": "if(isNull({/root/FlexContainer/Checkbox.props.selected}), false, if(isNull({view.params.panel.active}), false, ({/root/FlexContainer/Checkbox.props.selected} || {view.params.panel.active})))"
+                  },
+                  "transforms": [
+                    {
+                      "fallback": "OR unavailable",
+                      "inputType": "scalar",
+                      "mappings": [
+                        {
+                          "input": true,
+                          "output": "OR: active"
+                        },
+                        {
+                          "input": false,
+                          "output": "OR: inactive"
+                        }
+                      ],
+                      "outputType": "scalar",
+                      "type": "map"
+                    }
+                  ],
+                  "type": "expr"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_3"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "expression": "if(isNull({/root/FlexContainer/Checkbox.props.selected}), false, (!{/root/FlexContainer/Checkbox.props.selected}))"
+                  },
+                  "transforms": [
+                    {
+                      "fallback": "NOT unavailable",
+                      "inputType": "scalar",
+                      "mappings": [
+                        {
+                          "input": true,
+                          "output": "NOT: inhibited"
+                        },
+                        {
+                          "input": false,
+                          "output": "NOT: permitted"
+                        }
+                      ],
+                      "outputType": "scalar",
+                      "type": "map"
+                    }
+                  ],
+                  "type": "expr"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "NumericEntry"
+            },
+            "position": {
+              "basis": "36px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.enabled": {
+                "binding": {
+                  "config": {
+                    "expression": "if(isNull({/root/FlexContainer/Checkbox.props.selected}), false, if(isNull({view.custom.supervision.allow}), false, ({/root/FlexContainer/Checkbox.props.selected} && {view.custom.supervision.allow})))"
+                  },
+                  "type": "expr"
+                }
+              }
+            },
+            "props": {
+              "mode": "direct",
+              "placeholder": "Permit-controlled entry",
+              "spinner": {
+                "enabled": false
+              },
+              "value": 0
+            },
+            "type": "ia.input.numeric-entry-field"
+          },
+          {
+            "children": [
+              {
+                "meta": {
+                  "name": "Label"
+                },
+                "position": {
+                  "basis": "40px",
+                  "shrink": 0
+                },
+                "props": {
+                  "style": {
+                    "classes": "hmi-typography-body"
+                  },
+                  "text": "Permit detail visible"
+                },
+                "type": "ia.display.label"
+              }
+            ],
+            "meta": {
+              "name": "FlexContainer"
+            },
+            "position": {
+              "basis": "40px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "position.display": {
+                "binding": {
+                  "config": {
+                    "path": "/root/FlexContainer/Checkbox.props.selected"
+                  },
+                  "type": "property"
+                }
+              }
+            },
+            "props": {
+              "direction": "column",
+              "style": {
+                "classes": "hmi-spacing-none"
+              }
+            },
+            "type": "ia.container.flex"
+          }
+        ],
+        "meta": {
+          "name": "FlexContainer_1"
+        },
+        "position": {
+          "basis": "284px",
+          "shrink": 0
+        },
+        "props": {
+          "direction": "column",
+          "style": {
+            "classes": "hmi-spacing-xs"
+          }
+        },
+        "type": "ia.container.flex"
+      },
+      {
+        "children": [
+          {
+            "meta": {
+              "name": "Label"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-heading"
+              },
+              "text": "Gateway read-only tags"
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_0"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "fallbackDelay": 2.5,
+                    "mode": "direct",
+                    "tagPath": "[System]Gateway/UptimeSeconds"
+                  },
+                  "transforms": [
+                    {
+                      "expression": "\"Direct uptime: \" + numberFormat({value}, \"0\")",
+                      "type": "expression"
+                    }
+                  ],
+                  "type": "tag"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_1"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "fallbackDelay": 2.5,
+                    "mode": "indirect",
+                    "references": {
+                      "name": "{view.params.tagName}"
+                    },
+                    "tagPath": "[System]Gateway/{name}"
+                  },
+                  "transforms": [
+                    {
+                      "expression": "\"Indirect uptime: \" + numberFormat({value}, \"0\")",
+                      "type": "expression"
+                    }
+                  ],
+                  "type": "tag"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_2"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "expression": "if(isNull({[System]Gateway/UptimeSeconds}), -1, if(isNull({view.params.panel.scale}), -1, (toDouble({[System]Gateway/UptimeSeconds}) * {view.params.panel.scale})))"
+                  },
+                  "transforms": [
+                    {
+                      "expression": "\"Typed uptime: \" + numberFormat({value}, \"0\")",
+                      "type": "expression"
+                    }
+                  ],
+                  "type": "expr"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_3"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "expression": "if(isNull({[System]Gateway/SystemName}), \"System unavailable\", (\"System: \" + toStr({[System]Gateway/SystemName})))"
+                  },
+                  "type": "expr"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_4"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "expression": "if(isNull({[System]Gateway/UptimeSeconds}), false, (toBoolean({[System]Gateway/UptimeSeconds}) = true))"
+                  },
+                  "transforms": [
+                    {
+                      "fallback": "Typed boolean unavailable",
+                      "inputType": "scalar",
+                      "mappings": [
+                        {
+                          "input": true,
+                          "output": "Typed uptime boolean: true"
+                        },
+                        {
+                          "input": false,
+                          "output": "Typed uptime boolean: false"
+                        }
+                      ],
+                      "outputType": "scalar",
+                      "type": "map"
+                    }
+                  ],
+                  "type": "expr"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          }
+        ],
+        "meta": {
+          "name": "FlexContainer_2"
+        },
+        "position": {
+          "basis": "212px",
+          "shrink": 0
+        },
+        "props": {
+          "direction": "column",
+          "style": {
+            "classes": "hmi-spacing-xs"
+          }
+        },
+        "type": "ia.container.flex"
+      },
+      {
+        "children": [
+          {
+            "meta": {
+              "name": "Label"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-heading"
+              },
+              "text": "Session source readback"
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_0"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "path": "view.params.panel.caption"
+                  },
+                  "type": "property"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_1"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "path": "view.custom.supervision.threshold"
+                  },
+                  "transforms": [
+                    {
+                      "expression": "\"Source threshold: \" + numberFormat({value}, \"0.0\")",
+                      "type": "expression"
+                    }
+                  ],
+                  "type": "property"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_2"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "path": "view.custom.supervision.allow"
+                  },
+                  "transforms": [
+                    {
+                      "fallback": "Source allow unavailable",
+                      "inputType": "scalar",
+                      "mappings": [
+                        {
+                          "input": true,
+                          "output": "Source allow: true"
+                        },
+                        {
+                          "input": false,
+                          "output": "Source allow: false"
+                        }
+                      ],
+                      "outputType": "scalar",
+                      "type": "map"
+                    }
+                  ],
+                  "type": "property"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_3"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "path": "view.custom.supervision.mode"
+                  },
+                  "type": "property"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_4"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "path": "view.params.panel.scale"
+                  },
+                  "transforms": [
+                    {
+                      "expression": "\"Source scale: \" + numberFormat({value}, \"0.0\")",
+                      "type": "expression"
+                    }
+                  ],
+                  "type": "property"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_5"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "path": "view.params.panel.active"
+                  },
+                  "transforms": [
+                    {
+                      "fallback": "Source active unavailable",
+                      "inputType": "scalar",
+                      "mappings": [
+                        {
+                          "input": true,
+                          "output": "Source active: true"
+                        },
+                        {
+                          "input": false,
+                          "output": "Source active: false"
+                        }
+                      ],
+                      "outputType": "scalar",
+                      "type": "map"
+                    }
+                  ],
+                  "type": "property"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          },
+          {
+            "meta": {
+              "name": "Label_6"
+            },
+            "position": {
+              "basis": "32px",
+              "shrink": 0
+            },
+            "propConfig": {
+              "props.text": {
+                "binding": {
+                  "config": {
+                    "path": "view.params.tagName"
+                  },
+                  "type": "property"
+                }
+              }
+            },
+            "props": {
+              "style": {
+                "classes": "hmi-typography-body"
+              }
+            },
+            "type": "ia.display.label"
+          }
+        ],
+        "meta": {
+          "name": "FlexContainer_3"
+        },
+        "position": {
+          "basis": "284px",
+          "shrink": 0
+        },
+        "props": {
+          "direction": "column",
+          "style": {
+            "classes": "hmi-spacing-xs"
+          }
+        },
+        "type": "ia.container.flex"
+      }
+    ],
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column",
+      "style": {
+        "backgroundColor": "#eef2f5",
+        "classes": "hmi-spacing-md",
+        "color": "#18332f",
+        "padding": "16px"
+      }
+    },
+    "type": "ia.container.flex"
+  }
+}

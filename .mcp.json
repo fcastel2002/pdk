@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "pdk": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "--quiet", "pdk-mcp"]
+    }
+  }
+}

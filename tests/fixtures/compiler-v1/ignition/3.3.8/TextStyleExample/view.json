@@ -1,0 +1,78 @@
+{
+  "custom": {},
+  "params": {},
+  "props": {},
+  "root": {
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column"
+    },
+    "type": "ia.container.flex",
+    "children": [
+      {
+        "meta": {
+          "name": "Label"
+        },
+        "position": {
+          "basis": "56px"
+        },
+        "props": {
+          "style": {
+            "classes": "hmi-typography-body"
+          },
+          "textStyle": {
+            "fontSize": 40,
+            "fontWeight": "bolder",
+            "color": "#808080",
+            "textAlign": "center"
+          },
+          "text": "Estado del tanque"
+        },
+        "type": "ia.display.label"
+      },
+      {
+        "meta": {
+          "name": "Label_0"
+        },
+        "position": {
+          "basis": "32px"
+        },
+        "props": {
+          "style": {
+            "classes": "hmi-typography-body"
+          },
+          "textStyle": {
+            "backgroundColor": "#F5E0B8",
+            "textTransform": "uppercase",
+            "textIndent": "4px",
+            "borderRadius": "5px",
+            "margin": "10px",
+            "padding": "10px"
+          },
+          "text": "Alarma activa"
+        },
+        "type": "ia.display.label"
+      },
+      {
+        "meta": {
+          "name": "Button"
+        },
+        "position": {
+          "basis": "34px"
+        },
+        "props": {
+          "style": {
+            "classes": "hmi-control-height-normal hmi-command-secondary"
+          },
+          "textStyle": {
+            "paddingRight": "10px"
+          },
+          "text": "ACK"
+        },
+        "type": "ia.input.button"
+      }
+    ]
+  }
+}

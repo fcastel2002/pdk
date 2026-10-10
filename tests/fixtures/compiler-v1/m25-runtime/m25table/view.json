@@ -1,0 +1,125 @@
+{
+  "custom": {},
+  "params": {
+    "rows": [
+      {
+        "flow": 12.5,
+        "name": "Bomba A",
+        "running": true
+      },
+      {
+        "flow": null,
+        "name": "Bomba B",
+        "running": false
+      }
+    ]
+  },
+  "props": {},
+  "root": {
+    "children": [
+      {
+        "meta": {
+          "name": "Table"
+        },
+        "position": {
+          "basis": "300px"
+        },
+        "propConfig": {
+          "props.data": {
+            "binding": {
+              "config": {
+                "path": "view.params.rows"
+              },
+              "type": "property"
+            }
+          }
+        },
+        "props": {
+          "columns": [
+            {
+              "editable": false,
+              "field": "name",
+              "header": {
+                "title": "Bomba"
+              },
+              "render": "string",
+              "sortable": true
+            },
+            {
+              "editable": false,
+              "field": "flow",
+              "header": {
+                "title": "Caudal"
+              },
+              "numberFormat": "0.0",
+              "render": "number",
+              "sort": "descending",
+              "sortable": true
+            },
+            {
+              "editable": false,
+              "field": "running",
+              "header": {
+                "title": "En marcha"
+              },
+              "render": "boolean",
+              "sortable": true
+            }
+          ],
+          "filter": {
+            "enabled": true
+          },
+          "pager": {
+            "activeOption": 10,
+            "initialOption": 10,
+            "options": [
+              10,
+              10,
+              25,
+              50,
+              100
+            ]
+          },
+          "sortOrder": [
+            "flow"
+          ]
+        },
+        "type": "ia.display.table"
+      },
+      {
+        "meta": {
+          "name": "Label"
+        },
+        "position": {
+          "basis": "32px"
+        },
+        "propConfig": {
+          "props.text": {
+            "binding": {
+              "config": {
+                "expression": "if(isNull({/root/Table.props.selection.data}), \"\", if(len({/root/Table.props.selection.data}) \u003d 0, \"\", coalesce({/root/Table.props.selection.data[0].name}, \"\")))"
+              },
+              "type": "expr"
+            }
+          }
+        },
+        "props": {
+          "style": {
+            "classes": "hmi-typography-body"
+          }
+        },
+        "type": "ia.display.label"
+      }
+    ],
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column",
+      "style": {
+        "classes": "hmi-spacing-md"
+      }
+    },
+    "type": "ia.container.flex"
+  }
+}

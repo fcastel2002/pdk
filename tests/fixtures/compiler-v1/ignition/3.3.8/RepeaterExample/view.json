@@ -1,0 +1,51 @@
+{
+  "custom": {},
+  "params": {},
+  "props": {},
+  "root": {
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column"
+    },
+    "type": "ia.container.flex",
+    "children": [
+      {
+        "meta": {
+          "name": "Repeater"
+        },
+        "position": {},
+        "props": {
+          "path": "Pump/AlarmInfoCard",
+          "instances": [
+            {
+              "Descripcion": "Alarma prioridad 1",
+              "Equipo": "LH/LI_SG101/PV",
+              "Activa": true,
+              "instancePosition": {
+                "basis": "180px",
+                "grow": 1,
+                "shrink": 0
+              },
+              "instanceStyle": {
+                "classes": [
+                  "pump-alarm-card"
+                ]
+              }
+            },
+            {
+              "Descripcion": "Alarma prioridad 2",
+              "Equipo": "LH/LI_SG102/PV",
+              "Activa": false,
+              "HistoryHours": 12
+            }
+          ],
+          "useDefaultViewWidth": true,
+          "useDefaultViewHeight": false
+        },
+        "type": "ia.display.flex-repeater"
+      }
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "tags": [
+    {
+      "name": "Sandbox",
+      "tagType": "Folder",
+      "tags": [
+        {"name": "Setpoint", "tagType": "AtomicTag", "valueSource": "memory", "dataType": "Float8", "value": 0},
+        {"name": "Message", "tagType": "AtomicTag", "valueSource": "memory", "dataType": "String", "value": ""}
+      ]
+    },
+    {
+      "name": "North Area",
+      "tagType": "Folder",
+      "tags": [
+        {
+          "name": "Tank 1 Level",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Float8",
+          "value": 40,
+          "alarms": [
+            {"name": "High level", "mode": "AboveValue", "setpointA": 80, "priority": "High",
+             "displayPath": "North Area/Tank 1"}
+          ]
+        },
+        {
+          "name": "Pump 1 Fault",
+          "tagType": "AtomicTag",
+          "valueSource": "memory",
+          "dataType": "Boolean",
+          "value": false,
+          "alarms": [
+            {"name": "Fault", "mode": "Equality", "setpointA": 1, "priority": "Critical",
+             "displayPath": "North Area/Pump 1"}
+          ]
+        }
+      ]
+    }
+  ]
+}

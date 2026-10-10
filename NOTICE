@@ -1,0 +1,13 @@
+PDK for Ignition Perspective
+Copyright 2026 Francisco Castel
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Parts of this product derive from perspective-compiler v1.0, an earlier project by the same author,
+contributed here under the same license: the test fixtures in tests/fixtures/compiler-v1/ and the
+page-loading and measuring harness in pdk/eyes/browser.py.
+
+PDK is not affiliated with, endorsed by or supported by Inductive Automation. Ignition and Perspective
+are trademarks of Inductive Automation. No Inductive Automation software, schemas or client code is
+distributed with PDK: the schema bundle is extracted locally from the user's own Ignition install
+(`pdk schemas extract`), and the gateway module is compiled against the user's own installed jars.

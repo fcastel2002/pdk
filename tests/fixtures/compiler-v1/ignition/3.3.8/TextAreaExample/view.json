@@ -1,0 +1,37 @@
+{
+  "custom": {},
+  "params": {},
+  "props": {},
+  "root": {
+    "children": [
+      {
+        "meta": {
+          "name": "TextArea"
+        },
+        "position": {
+          "basis": "120px",
+          "grow": 1
+        },
+        "props": {
+          "deferUpdates": false,
+          "enabled": true,
+          "placeholder": "Enter log...",
+          "resize": "none",
+          "style": {
+            "classes": "log-area"
+          },
+          "text": "Notes line 1\nLine 2",
+          "wrap": "soft"
+        },
+        "type": "ia.input.text-area"
+      }
+    ],
+    "meta": {
+      "name": "root"
+    },
+    "props": {
+      "direction": "column"
+    },
+    "type": "ia.container.flex"
+  }
+}
