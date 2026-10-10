@@ -13,3 +13,7 @@ First public release.
 - MCP server (`pdk-mcp`), Claude Code skill, validation hook and subagents.
 - `pdk doctor` and the `install.ps1` / `install.sh` installers.
 - Benchmark briefs and the validator's mutation score (`bench/`).
+- Documentation site built with Sphinx (`docs/`): introduction, installation, tutorial, user guide, architecture, troubleshooting and the reference of the CLI, diagnostic codes, MCP tools, REST API and Python API.
+
+### Fixed
+- Schema extraction on Windows: retry the final rename when a just-written file is still held, and never treat a leftover staging folder as a bundle version.

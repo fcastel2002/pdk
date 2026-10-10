@@ -112,7 +112,7 @@ The project stylesheet is edited in the sandbox too: `uv run pdk pull stylesheet
 {"mcpServers": {"pdk": {"command": "uv", "args": ["--directory", "/path/to/pdk", "run", "--quiet", "pdk-mcp"]}}}
 ```
 
-Every command is listed in [AGENTS.md](AGENTS.md).
+The full documentation, with a step-by-step tutorial and the reference of every command and diagnostic, is at **https://fcastel2002.github.io/pdk/**.
 
 ### Diagnostics
 Codes are stable; each diagnostic reads `E|W|I CODE /json/pointer (component path) | message | hint`.
@@ -150,7 +150,7 @@ An AI review lowers the risk, it does not remove it: models can miss things. For
 | `.claude/` | Claude Code integration: the `perspective-views` skill with snippets, Haiku subagents, the validation hook |
 | `tests/` | pytest suite; `tests/fixtures/compiler-v1/` are views saved by the Designer (Perspective 3.3.8) |
 | `bench/` | Benchmark briefs, simulated tags and the validator's mutation score |
-| `docs/design/` | Design notes (in Spanish) |
+| `docs/` | The documentation (Sphinx), published at https://fcastel2002.github.io/pdk/ |
 
 ## Contributing
 Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). External contributions need a signed [CLA](CLA.md).

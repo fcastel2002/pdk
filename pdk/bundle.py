@@ -14,6 +14,7 @@ import json
 import os
 import re
 import shutil
+import time
 import zipfile
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -32,6 +33,7 @@ URN_PREFIX = "urn:ignition-schema:"
 BUNDLE_FORMAT = "pdk-schema-bundle-v1"
 _COMPONENT_FILE = re.compile(r"^[^/]+\.components?\.json$")
 _JAR = "perspective-{kind}-{version}.jar"
+RENAME_ATTEMPTS = 10
 _DEFAULT_IGNITION_HOMES = (
     Path(r"C:\Program Files\Inductive Automation\Ignition"),
     Path("/usr/local/bin/ignition"),
@@ -125,7 +127,14 @@ def extract_bundle(modl_path: Path, out_root: Path, ignition_home: Path | None =
         path.write_bytes(data)
     (staging / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     shutil.rmtree(target, ignore_errors=True)
-    staging.rename(target)
+    for attempt in range(RENAME_ATTEMPTS):
+        try:
+            staging.rename(target)
+            break
+        except PermissionError:  # Windows: an antivirus or the indexer still holds a file that was just written
+            if attempt == RENAME_ATTEMPTS - 1:
+                raise
+            time.sleep(0.5)
     load_bundle.cache_clear()
     return target
 
@@ -227,7 +236,7 @@ def available_versions(root: Path | None = None) -> list[str]:
     root = root or schemas_root()
     if not root.is_dir():
         return []
-    versions = [p.name for p in root.iterdir() if (p / "manifest.json").is_file()]
+    versions = [p.name for p in root.iterdir() if not p.name.startswith(".") and (p / "manifest.json").is_file()]
     return sorted(versions, key=_version_key)
 
 

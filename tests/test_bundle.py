@@ -5,7 +5,14 @@ from pathlib import Path
 
 import pytest
 
-from pdk.bundle import Bundle, extract_bundle, find_ignition_home, find_perspective_modl, load_bundle
+from pdk.bundle import (
+    Bundle,
+    available_versions,
+    extract_bundle,
+    find_ignition_home,
+    find_perspective_modl,
+    load_bundle,
+)
 from pdk.shape import SchemaRef, resolve
 
 
@@ -59,3 +66,10 @@ def test_extract_round_trip(bundle: Bundle, tmp_path: Path) -> None:
     copy = load_bundle(target.name, tmp_path)
     assert len(copy.components) == len(bundle.components)
     load_bundle.cache_clear()
+
+
+def test_a_leftover_staging_folder_is_not_a_version(tmp_path: Path) -> None:
+    for name in ("3.3.8", ".3.3.9.partial"):
+        (tmp_path / name).mkdir()
+        (tmp_path / name / "manifest.json").write_text("{}", encoding="utf-8")
+    assert available_versions(tmp_path) == ["3.3.8"]

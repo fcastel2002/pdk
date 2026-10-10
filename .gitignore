@@ -11,6 +11,9 @@ build/
 # Schema bundles extracted from the local Ignition install (Inductive Automation content, regenerate with `pdk schemas extract`)
 /schemas/
 
+# Built documentation
+/docs/_build/
+
 # Local benchmark and demo output
 /bench/out/
 

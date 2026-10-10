@@ -22,6 +22,10 @@ Every pull request must pass:
 uv run ruff check .
 uv run pytest
 ```
+If you changed a command, a diagnostic or a behavior, update the matching page in `docs/` and check that it builds:
+```bash
+uv run --group docs sphinx-build -W -b html docs docs/_build/html
+```
 If you changed the validator, also run `uv run python -m bench.mutations` and keep the mutation score at 100%. Live tests (`uv run pytest -m gateway`) need the module installed on a development gateway; run them if you touched `gateway/`, `pdk/gateway/`, `pdk/sync.py`, `pdk/tags.py` or `pdk/eyes/`, and say so in the pull request.
 
 ## Conventions

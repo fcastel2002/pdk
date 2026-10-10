@@ -1,0 +1,59 @@
+MCP tools
+=========
+
+``pdk-mcp`` is an MCP server over standard input/output (see :doc:`../guide/agents` to register it). Each tool
+mirrors a command of the :doc:`command line <cli>` and returns the same text report. Tools are annotated for the
+client: *read-only*, *writes* (signed, non-destructive) or *destructive*.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 12 70
+
+   * - Tool
+     - Kind
+     - Arguments and behavior
+   * - ``pdk_validate``
+     - read-only
+     - ``path`` (a ``view.json`` or a folder) or ``view`` (JSON text); ``project`` (folder or local gateway project,
+       enables reference checks); ``focus`` (code, component path or pointer prefix); ``profile`` (``"hmi"`` for
+       design-token lint). See :doc:`../guide/validation`.
+   * - ``pdk_catalog``
+     - read-only
+     - ``type`` (component id or name), ``prop`` (nested path such as ``columns[].render``), ``search`` (text),
+       ``topic`` (``bindings``, ``transforms``, ``events``, ``view``, ``style``, ``codes``). See
+       :doc:`../guide/catalog`.
+   * - ``pdk_pull``
+     - writes locally
+     - ``path`` (view or folder in the project, or ``stylesheet``), ``project`` (default: the sandbox), ``force``
+       (overwrite local edits).
+   * - ``pdk_deploy``
+     - writes
+     - ``path`` (local folder or ``view.json``, a sandbox path ``PDK/X``, or the ``_stylesheet`` folder);
+       ``resolved`` (after a ``G008``, write over the reviewed gateway version). Validates first; returns the
+       preview URL.
+   * - ``pdk_promote``
+     - destructive
+     - ``path`` (local folder of a deployed ``PDK/`` view, or the ``_stylesheet`` folder), ``to`` (destination
+       path, default without ``PDK/``), ``to_project`` (``"target"`` for the target project), ``resolved``.
+   * - ``pdk_delete``
+     - destructive
+     - ``path`` (local folder of a pulled view), ``resolved``.
+   * - ``pdk_tags``
+     - destructive
+     - ``action`` (``list``, ``read``, ``write``, ``apply``, ``delete``, ``alarms``), ``path``, ``value``,
+       ``quality``, ``file`` (tag export JSON for ``apply``), ``to`` (folder under ``PDK/``), ``depth``. See
+       :doc:`../guide/tags`.
+   * - ``pdk_open``
+     - read-only
+     - ``path`` (sandbox path or local folder), ``viewport`` (``WIDTHxHEIGHT``). Renders the view and reports load
+       time, components rendered and browser errors.
+   * - ``pdk_inspect``
+     - read-only
+     - ``path``, ``viewport``, ``focus``, ``query``, ``expect``, ``act``. See :doc:`../guide/inspection`.
+   * - ``pdk_screenshot``
+     - read-only
+     - ``path``, ``viewport``, ``component`` (name path such as ``root/Panel``). Returns a PNG image.
+
+The server's instructions describe the whole cycle (catalog, write, validate, deploy, inspect, fix), so a client
+learns the workflow from the server itself. The browser used by ``pdk_open``, ``pdk_inspect`` and
+``pdk_screenshot`` stays open between calls and closes after ``PDK_EYES_IDLE_S`` seconds without use.

@@ -1,6 +1,6 @@
 # PDK for Ignition Perspective
 
-A kit for an agent to build and fix Ignition Perspective views (`view.json`), verified against the exact installed schemas and a development gateway. Design notes: `docs/design/`.
+A kit for an agent to build and fix Ignition Perspective views (`view.json`), verified against the exact installed schemas and a development gateway. Documentation: `docs/` (Sphinx, https://fcastel2002.github.io/pdk/).
 
 ## Commands
 - `uv sync` · `uv run pdk doctor [--fix]` (see `README.md`) · `uv run pytest` · `uv run ruff check .`
@@ -14,9 +14,10 @@ A kit for an agent to build and fix Ignition Perspective views (`view.json`), ve
 - `uv run pdk gateway build|install [--restart]|restart|health|sessions|logs|…`: the `gateway/` module (javac 17, REST).
 - `uv run pytest -m gateway`: live tests (only under `PDK/_selftest/`).
 - `uv run python -m bench.mutations`: the validator's mutation score.
+- `uv run --group docs sphinx-build -W -b html docs docs/_build/html`: the documentation (published from `main` to GitHub Pages).
 
 ## Layout
-`pdk/` (validate/, eyes/, catalog, sync, live, mcp_server, hook, gateway/) · `tests/` · `bench/` · `.claude/skills/perspective-views/` · `gateway/` (Java 17 module) · `docs/design/` · `install.ps1`, `install.sh`.
+`pdk/` (validate/, eyes/, catalog, sync, live, mcp_server, hook, gateway/) · `tests/` · `bench/` · `.claude/skills/perspective-views/` · `gateway/` (Java 17 module) · `docs/` (Sphinx) · `install.ps1`, `install.sh`.
 
 ## Rules
 - Development only: never production gateways; write to the sandbox (`-Dpdk.sandbox`) and, only with promote and the user's OK, to the target (`-Dpdk.target`).
@@ -26,4 +27,4 @@ A kit for an agent to build and fix Ignition Perspective views (`view.json`), ve
 - What cannot be validated is flagged (warning), not blocked.
 - Every diagnostic carries a `pointer` (RFC 6901) and a `hint`; codes are stable.
 - Never copy views from real projects into the repo; fixtures come from perspective-compiler v1.0 or are synthetic.
-- Code, diagnostics and user docs in English; design notes in `docs/design/` may stay in Spanish.
+- Code, diagnostics and docs in English. A new diagnostic code goes in `docs/reference/diagnostics.rst` (a test checks it); a changed command or behavior, in the matching page of `docs/`.

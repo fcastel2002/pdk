@@ -385,7 +385,7 @@ def build_parser() -> argparse.ArgumentParser:
                                                "script errors, browser errors")
     inspector.add_argument("--focus", help="expand anomalies by code, component path or pointer prefix")
     inspector.add_argument("--query", help="also print what was measured of these components: name paths (with their "
-                                           "subtree), types, pointer prefixes or *, comma-separated")
+                                           "subtree), types, pointer prefixes, or * for all; comma-separated")
     inspector.add_argument("--expect", help="expectations, ;-separated: 'root/B below root/A; root/T width 100%%; "
                                             "root/T text \"Pump\"; tag Sandbox/Setpoint = 42; "
                                             "alarm North/Level active'; failures are A001 diagnostics")
