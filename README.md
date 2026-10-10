@@ -3,7 +3,7 @@
 [![CI](https://github.com/fcastel2002/pdk/actions/workflows/ci.yml/badge.svg)](https://github.com/fcastel2002/pdk/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-Tools for an AI agent (Claude Code or any MCP client) to build and fix Ignition Perspective views (`view.json`) — and to prove they work before you open them. PDK closes the loop *generate → validate → deploy → inspect → fix*:
+PDK (Perspective DevKit) is a set of tools for an AI agent (Claude Code or any MCP client) to build and fix Ignition Perspective views (`view.json`) — and to prove they work before you open them. PDK closes the loop *generate → validate → deploy → inspect → fix*:
 
 - **Validate** views against the exact schemas of the Perspective version you have installed: props, bindings, events, expressions and scripts, with a JSON pointer and a hint on every diagnostic.
 - **Deploy** them to a sandbox project on your development gateway without ever overwriting a Designer edit (signed writes, 409 with a diff on conflict).
