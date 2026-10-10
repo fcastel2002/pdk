@@ -395,14 +395,15 @@ def expr_word_operator(view: dict[str, Any], rng: random.Random, bundle: Bundle)
 def script_unindented(view: dict[str, Any], rng: random.Random, bundle: Bundle) -> tuple[str, str] | None:
     candidates = []
     for pointer, body in _scripts(view):
-        first = next((line for line in body.split("\n") if line.strip()), "")
+        # The first statement line: a comment at column 0 is valid Python, so it would not be an E007.
+        first = next((line for line in body.split("\n") if line.strip() and not line.lstrip().startswith("#")), "")
         if first.startswith("\t"):
             candidates.append((pointer, body))
     if not candidates:
         return None
     pointer, body = rng.choice(candidates)
     lines = body.split("\n")
-    i = next(i for i, line in enumerate(lines) if line.strip())
+    i = next(i for i, line in enumerate(lines) if line.strip() and not line.lstrip().startswith("#"))
     lines[i] = lines[i].lstrip(" \t")
     _set_at(view, pointer, "\n".join(lines))
     return "E007", pointer

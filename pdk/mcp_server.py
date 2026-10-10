@@ -39,6 +39,10 @@ INSTRUCTIONS = (
     "'tag Sandbox/Setpoint = 42; alarm North/Level active' checks the result."
 )
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+# ensure_preview adds page-config on the gateway: additive and idempotent, not read-only
+PREVIEW_WRITE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+# act runs the view's event scripts on the gateway, which can write tags or databases
+ACTS = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False)
 LOCAL_WRITE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 SIGNED_WRITE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
 DESTRUCTIVE = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False)
@@ -265,7 +269,7 @@ VIEW_ARG = ("path: the local view folder or view.json under work/<sandbox>/, or 
         "layout is stable. Reports load time, components rendered vs in the view.json and browser errors. The "
         "browser stays open for pdk_inspect/pdk_screenshot. Args: " + VIEW_ARG
     ),
-    annotations=READ_ONLY,
+    annotations=PREVIEW_WRITE,
     structured_output=False,
 )
 def pdk_open(path: str, viewport: str | None = None) -> str:
@@ -301,10 +305,12 @@ def pdk_open(path: str, viewport: str | None = None) -> str:
         "qualities and logged script errors see the state after them), one per ; or line: `click root/Save`, "
         "`type root/Name \"P-2\"` (commits with Tab), `row root/Table 1` (first row shown), `wait 500`, "
         "`tag Sandbox/Setpoint 42 [quality Bad_Stale]` (a simulated tag under PDK/, see pdk_tags); "
-        "a step that cannot be done stops there as A004. Popups open after the steps are inspected too: expect "
+        "a step that cannot be done stops there as A004. act runs the view's own event scripts on the gateway (a click "
+        "on a button that writes tags writes them): use it only on sandbox views meant for it. Popups open after the "
+        "steps are inspected too: expect "
         "`popup <id> open|closed`, and their components as popup:<id>/root/... in act, expect, query and anomalies."
     ),
-    annotations=READ_ONLY,
+    annotations=ACTS,
     structured_output=False,
 )
 def pdk_inspect(path: str, viewport: str | None = None, focus: str | None = None, query: str | None = None,
@@ -321,7 +327,7 @@ def pdk_inspect(path: str, viewport: str | None = None, focus: str | None = None
         "PNG of a deployed sandbox view (reloaded) or of one component. Args: " + VIEW_ARG + "; component: name "
         "path like root/Panel/Label (or DOM path C.0:1) to capture only that component."
     ),
-    annotations=READ_ONLY,
+    annotations=PREVIEW_WRITE,
     structured_output=False,
 )
 def pdk_screenshot(path: str, viewport: str | None = None, component: str | None = None) -> list[Any] | str:

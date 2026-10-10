@@ -22,7 +22,7 @@ def _target(event: dict[str, Any]) -> Path | None:
     tool_input = event.get("tool_input") if isinstance(event.get("tool_input"), dict) else {}
     raw = tool_input.get("file_path") or tool_input.get("path")
     name = raw.replace("\\", "/").rsplit("/", 1)[-1] if isinstance(raw, str) else ""
-    if not name.endswith(("view.json", "stylesheet.css")):
+    if name not in ("view.json", "stylesheet.css"):
         return None
     path = Path(raw)
     if not path.is_absolute():

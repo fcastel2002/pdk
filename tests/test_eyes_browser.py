@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import time
+from typing import Any
 
 import pytest
 
@@ -41,6 +42,52 @@ def test_geometry_delta() -> None:
     mounted = {**a, "C.0:1": [0, 20, 100, 20]}
     delta, where = browser.geometry_delta(a, mounted)
     assert math.isinf(delta) and where == "C.0:1"
+
+
+class _FakePage:
+    """evaluate() answers by the script's identity: scripted animations, scripted geometry, a no-op rAF wait."""
+
+    def __init__(self, animations: list[dict]) -> None:
+        self.animations = animations
+        self.geometry_args: list[Any] = []
+
+    def evaluate(self, script: str, arg: Any = None) -> Any:
+        if script == browser.ANIMATIONS_JS:
+            return list(self.animations)
+        if script == browser.GEOMETRY_JS:
+            self.geometry_args.append(arg)
+            return {"C.0": [0, 0, 100, 50], "C.0:0": [0, 0, 100, 20]}
+        return None
+
+
+@pytest.fixture
+def fast_wait(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(browser, "POLL_S", 0)
+    monkeypatch.setattr(browser, "STABILITY_MS", 50)
+
+
+def test_endless_animations_do_not_raise_and_are_returned(fast_wait: None) -> None:
+    page = _FakePage([{"name": "blink", "path": "C.0:1", "endless": True},
+                      {"name": "spin", "path": "C.0:2", "endless": True},
+                      {"name": "spin", "path": "C.0:2", "endless": True},
+                      {"name": None, "path": None, "endless": True}])
+    assert browser._wait_stable(page) == ["C.0:1", "C.0:2"]
+    assert page.geometry_args[-1] == {"sel": browser.SELECTORS, "skip": ["C.0:1", "C.0:2"]}
+
+
+def test_no_animations_return_nothing_and_skip_nothing(fast_wait: None) -> None:
+    page = _FakePage([])
+    assert browser._wait_stable(page) == []
+    assert page.geometry_args[-1] == {"sel": browser.SELECTORS, "skip": []}
+
+
+def test_a_finite_animation_still_raises_after_the_deadline(fast_wait: None) -> None:
+    fade = {"name": "fade", "path": "C.0:0", "endless": False}
+    page = _FakePage([fade, {"name": "blink", "path": "C.0:1", "endless": True}])
+    with pytest.raises(browser.EyesError) as caught:
+        browser._wait_stable(page)
+    assert caught.value.status == browser.LAYOUT_UNSTABLE
+    assert caught.value.evidence == {"animations": [fade]}
 
 
 def test_extract_js_reports_computed_style() -> None:

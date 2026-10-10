@@ -408,7 +408,25 @@ def test_the_target_takes_views_only_through_promote(tgw: FakeGateway, tmp_path:
 
     sync.pull(tgw, "Menu", project=TARGET, force=True, root=tmp_path)
     deleted = sync.delete(tgw, target_dir, root=tmp_path)
-    assert deleted.ok and "Menu" not in tgw.projects[TARGET] and tgw.page_writes == 0
+    assert not deleted.ok and "Menu" in tgw.projects[TARGET] and tgw.page_writes == 0
+
+
+def test_delete_never_reaches_the_target_project(tgw: FakeGateway, tmp_path: Path, bundle,
+                                                 monkeypatch: pytest.MonkeyPatch) -> None:
+    sync.pull(tgw, "PDK/Menu", root=tmp_path)
+    assert sync.promote(tgw, tmp_path / PROJECT / "PDK" / "Menu", bundle, to_project="target", root=tmp_path).ok
+    target_dir = tmp_path / TARGET / "Menu"
+    calls: list[str] = []
+    real_delete = tgw.delete_resource
+
+    def spy(project: str, *args: Any) -> dict[str, Any]:
+        calls.append(project)
+        return real_delete(project, *args)
+
+    monkeypatch.setattr(tgw, "delete_resource", spy)
+    refused = sync.delete(tgw, target_dir, root=tmp_path)
+    assert not refused.ok and f"{TARGET} is the target project" in refused.text and calls == []
+    assert "Menu" in tgw.projects[TARGET] and (target_dir / SIDECAR).exists()
 
 
 def test_promote_to_the_target_checks_references(tgw: FakeGateway, tmp_path: Path, bundle) -> None:

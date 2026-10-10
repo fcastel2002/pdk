@@ -26,7 +26,7 @@ from typing import Any
 
 from pdk import REPO_ROOT, __version__
 from pdk.bundle import BundleError, find_ignition_home, find_perspective_modl
-from pdk.gateway.client import OPENER, Gateway, GatewayError, gateway_url, read_token
+from pdk.gateway.client import OPENER, Gateway, GatewayError, gateway_url, read_token_file
 
 MODULE_ID = "dev.pdk.gateway"
 MODULE_FILE = "pdk-gateway.modl"
@@ -262,14 +262,14 @@ def gateway_state(base: str, timeout: float = 5) -> str | None:
 def restart(base: str | None = None, timeout: float = 300, poll: float = 2.0) -> dict[str, Any]:
     """Restart the gateway, wait for RUNNING, then for the module's /health with its new token."""
     base, key = base or gateway_url(), api_key()
-    old_token = read_token()
+    old_token = read_token_file()  # the file, not PDK_GATEWAY_TOKEN: the env value never changes on restart
     try:
         _api(base, "POST", "/data/api/v1/restart-tasks/restart?confirm=true", key)
     except ModuleError:
         if gateway_state(base) == "RUNNING":
             raise  # a real refusal, not the connection dropping because the restart already began
     deadline = time.monotonic() + timeout
-    _wait(lambda: gateway_state(base) != "RUNNING" or read_token() != old_token,
+    _wait(lambda: gateway_state(base) != "RUNNING" or read_token_file() != old_token,
           min(deadline, time.monotonic() + 60), poll)
     if not _wait(lambda: gateway_state(base) in ("RUNNING", "COMMISSIONING"), deadline, poll):
         raise ModuleError(f"The gateway did not reach RUNNING within {timeout:.0f} s")
@@ -279,7 +279,7 @@ def restart(base: str | None = None, timeout: float = 300, poll: float = 2.0) ->
     health: dict[str, Any] = {}
 
     def module_ready() -> bool:
-        token = read_token()
+        token = read_token_file()
         if not token or token == old_token:
             return False
         try:

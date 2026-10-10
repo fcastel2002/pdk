@@ -94,6 +94,12 @@ def _preview(gateway: Gateway, target: Target) -> str:
     return sync.preview_url(gateway.url, target.project, target.path)
 
 
+def _endless_note(opened: Opened) -> str:
+    """A plain note, not a diagnostic: the stability wait did not wait for these infinite animations."""
+    return (f"note: {len(opened.endless)} endless animation(s) left out of the stability wait "
+            f"({', '.join(opened.endless[:5])})")
+
+
 def _failed(target: Target | None, location: str, error: Exception) -> Result:
     where = f"{target.project}:{target.path}" if target else location
     if isinstance(error, EyesError):
@@ -193,6 +199,8 @@ def open_view(eyes: Eyes, gateway: Gateway, location: str, viewport: str | None 
              "next: pdk_inspect for anomalies, pdk_screenshot to look at it"]
     if target.note:
         lines.insert(1, f"note: {target.note}")
+    if opened.endless:
+        lines.insert(1, _endless_note(opened))
     return Result(True, "\n".join(lines))
 
 
@@ -278,6 +286,8 @@ def inspect_view(eyes: Eyes, gateway: Gateway, location: str, viewport: str | No
         text += "\n" + measure.describe(joined, query)
     if target.note:
         text += f"\nnote: {target.note}"
+    if opened.endless:
+        text += "\n" + _endless_note(opened)
     errors = counts(diagnostics)["error"]
     return Result(errors == 0, text, errors)
 

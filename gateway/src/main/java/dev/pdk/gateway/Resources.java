@@ -57,6 +57,7 @@ final class Resources {
     private static final long SCAN_TIMEOUT_MS = 60_000;
     private static final Pattern FILE_NAME = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]*");
     private static final Pattern HEX = Pattern.compile("(?:[0-9a-fA-F]{2})+");
+    private static final Pattern SCOPE = Pattern.compile("[GCD]{1,3}|A|N");
     private static final Set<String> TEXT_SUFFIXES =
             Set.of(".json", ".py", ".txt", ".css", ".js", ".md", ".xml", ".svg", ".html");
 
@@ -418,7 +419,18 @@ final class Resources {
             String signature = optionalString(json, "signature");
             String scope = optionalString(json, "scope");
             return new WriteRequest(files, signature == null ? null : normalizeSignature(signature),
-                    scope == null ? "G" : scope);
+                    scope == null ? "G" : checkScope(scope));
+        }
+
+        /** G, C, D (each at most once, any order), A for all or N for none; anything else is a 400, not a 500. */
+        static String checkScope(String scope) {
+            String code = scope.strip().toUpperCase(Locale.ROOT);
+            boolean valid = SCOPE.matcher(code).matches() && code.chars().distinct().count() == code.length();
+            if (!valid) {
+                throw new ApiError(400, "BAD_REQUEST",
+                        "'scope' is a combination of G, C and D (or A, N), got '" + scope + "'.");
+            }
+            return code;
         }
 
         private static String optionalString(JsonObject json, String key) {

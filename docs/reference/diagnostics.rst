@@ -179,7 +179,8 @@ Events and scripts (E)
    * - ``E007``
      - script-not-indented
      - A script body line without a leading tab. Ignition wraps every body in a function, so it would fail to
-       parse at runtime.
+       parse at runtime. Only lines that start a Python statement count: lines inside a triple-quoted string or
+       open brackets, after a backslash continuation, or holding only a comment may start at column 0.
 
 References (R)
 --------------

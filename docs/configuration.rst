@@ -52,7 +52,9 @@ Other variables
 
 ``PDK_GATEWAY_TOKEN``
    The module's access token. Normally PDK reads it from ``<ignition_home>/data/pdk-gateway.token``, which the module
-   rewrites on every start; set this variable only if that file is not readable by your user.
+   rewrites on every start; set this variable only if that file is not readable by your user. On Linux and macOS
+   the file is readable only by the gateway's user and group: join that group, or set this variable.
+   ``pdk gateway restart`` still waits for the new token in the file, since this value does not change on restart.
 ``PDK_EYES_IDLE_S``
    Seconds without use after which the MCP server closes its browser (default 120), releasing its Perspective
    session.

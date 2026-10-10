@@ -92,6 +92,7 @@ public final class SelfTest {
         token.rotate(directory);
         String value = Files.readString(directory.resolve(Token.FILE_NAME), StandardCharsets.UTF_8);
         check(value.length() >= 40 && token.matches(value) && token.matches(value + "\n"), "token file matches");
+        check(!Files.exists(directory.resolve(Token.FILE_NAME + ".tmp")), "no temporary token file left");
         check(!token.matches(value.substring(1)) && !token.matches(null), "wrong token rejected");
         token.rotate(directory);
         check(!token.matches(value), "rotation invalidates the old token");
@@ -114,6 +115,11 @@ public final class SelfTest {
         expect("INVALID_FILE_NAME", () -> Resources.WriteRequest.parse("{\"files\": {\"../x.json\": \"x\"}}"));
         expect("BAD_SIGNATURE", () -> Resources.WriteRequest.parse("{\"files\": {\"a.json\": \"x\"}, \"signature\": \"xyz\"}"));
         expect("BAD_SIGNATURE", () -> Resources.normalizeSignature("abc"));
+        check(Resources.WriteRequest.checkScope("gcd").equals("GCD") && Resources.WriteRequest.checkScope("A").equals("A"),
+                "scope codes");
+        expect("BAD_REQUEST", () -> Resources.WriteRequest.checkScope("GG"));
+        expect("BAD_REQUEST", () -> Resources.WriteRequest.checkScope("X"));
+        expect("BAD_REQUEST", () -> Resources.WriteRequest.parse("{\"files\": {\"a.json\": \"x\"}, \"scope\": \"Z\"}"));
     }
 
     private static void ancestors() {

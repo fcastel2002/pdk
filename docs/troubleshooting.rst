@@ -34,7 +34,8 @@ Gateway and module
 
 ``G002`` module not running
    Install it with ``uv run pdk gateway install --restart``. If it is installed, check *Platform → Modules* on the
-   gateway web page; the gateway log explains why a module did not start.
+   gateway web page; the gateway log explains why a module did not start. On Linux the token file is readable
+   only by the gateway's user and group: join that group or set ``PDK_GATEWAY_TOKEN``.
 
 ``G003`` token rejected
    The token changes on every gateway restart. PDK reads it from ``<ignition>/data/pdk-gateway.token``; on Linux,
@@ -88,8 +89,9 @@ Session refused
    time out; PDK reuses a single session between inspections.
 
 ``layout-unstable``
-   Something keeps moving (an animation or a component that keeps growing). Inspect again, or check the component
-   named in the message.
+   Something keeps moving (a finite animation or a component that keeps growing). Inspect again, or check the
+   component named in the message. Endless animations (a blinking alarm, a spinner) are not waited for: their
+   components are left out of the stability check and the report notes them.
 
 Bindings stay ``Q003`` (uncertain)
    The source has not delivered a value yet. Check the tag or query, and inspect again.

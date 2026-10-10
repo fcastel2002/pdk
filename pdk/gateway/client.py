@@ -42,7 +42,8 @@ CODES: dict[str, str] = {
 }
 HINTS: dict[str, str] = {
     "G001": "Start the Ignition service, or set PDK_GATEWAY_URL.",
-    "G002": "Install the module (`uv run pdk gateway install --restart`) and check it is running.",
+    "G002": ("Install the module (`uv run pdk gateway install --restart`) and check it is running. On Linux the "
+             "token file is readable only by the gateway's user and group: join that group or set PDK_GATEWAY_TOKEN."),
     "G003": "The token changes on every gateway restart and is read from the token file; check PDK_GATEWAY_TOKEN.",
     "G004": "The module only answers loopback connections without proxy headers.",
     "G005": "Add -Dpdk.sandbox=<project> to ignition.conf and restart the gateway.",
@@ -111,6 +112,11 @@ def read_token(ignition_home: Path | None = None) -> str | None:
     """The current token: PDK_GATEWAY_TOKEN, else the file the module rewrites on every startup."""
     if os.environ.get(TOKEN_ENV):
         return os.environ[TOKEN_ENV].strip()
+    return read_token_file(ignition_home)
+
+
+def read_token_file(ignition_home: Path | None = None) -> str | None:
+    """The token the module wrote on its last startup, ignoring PDK_GATEWAY_TOKEN."""
     path = token_path(ignition_home)
     if path is None:
         return None
@@ -161,9 +167,13 @@ class Gateway:
     url: str = field(default_factory=gateway_url)
     token: str | None = None  # None: read the token file on every call (it rotates on restart)
     timeout: float = 30.0
+    _health: dict[str, Any] | None = field(default=None, init=False, repr=False, compare=False)
 
-    def health(self) -> dict[str, Any]:
-        return self.call("GET", "/health")
+    def health(self, refresh: bool = False) -> dict[str, Any]:
+        """The module's /health, asked once per instance unless refresh is set."""
+        if refresh or self._health is None:
+            self._health = self.call("GET", "/health")
+        return self._health
 
     def resource(self, project: str, type_key: str, path: str = "") -> dict[str, Any]:
         """A resource with its files and signature, or the listing of a folder."""
