@@ -20,8 +20,8 @@ First public release.
   directory.
 - R010's hint looks for the missing view in its own folder first; a near name elsewhere (another run's copy) is
   offered after "create the view first", not as the fix.
-- `--expect` reads an embedded view or a repeater through the text its views render, so `text ~` can check what a
-  binding passed into it.
+- `--expect text` reads an embedded view or a repeater through the text its views render, and a text field or text
+  area through its value (it read `''` before).
 - `--expect` percentages of width and height are shares of the parent's content box (inside its border and padding,
   like CSS; a coordinate container's padding box), so `width 100%` holds for a child that fills a padded parent.
 - Schema extraction on Windows: retry the final rename when a just-written file is still held, and never treat a leftover staging folder as a bundle version.

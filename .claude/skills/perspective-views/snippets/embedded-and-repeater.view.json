@@ -1,7 +1,7 @@
 {
   "custom": {},
   "params": {
-    "area": "Norte",
+    "area": "North",
     "enabled": true,
     "limit": 20,
     "pumps": [
@@ -77,7 +77,7 @@
         },
         "props": {
           "params": {
-            "area": "Norte"
+            "area": "North"
           },
           "path": "Templates/Summary"
         },

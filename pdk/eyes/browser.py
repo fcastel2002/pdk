@@ -239,6 +239,12 @@ EXTRACT_JS = r"""
     for (const s of el.querySelectorAll('.view-state-display')) if (s.closest('[data-component-path]') === el) n++;
     return n;
   };
+  const inputValue = (el) => {
+    const field = 'input:not([type=checkbox]):not([type=radio]), textarea';
+    for (const i of [el, ...el.querySelectorAll(field)])
+      if (i.matches(field) && i.closest('[data-component-path]') === el) return i.value.trim() || null;
+    return null;
+  };
   const nodes = [];
   for (const el of [root, ...root.querySelectorAll('[data-component-path]')]) {
     const cs = getComputedStyle(el), r = el.getBoundingClientRect(), text = ownText(el);
@@ -254,9 +260,9 @@ EXTRACT_JS = r"""
       white_space: cs.whiteSpace, text_overflow: cs.textOverflow,
       flex_grow: Number(cs.flexGrow), flex_shrink: Number(cs.flexShrink), flex_basis: cs.flexBasis,
       text: text.text, text_rects: text.rects, clip_rect: clipRect(el, false),
-      // An embedded view or repeater has no text of its own: what its views render, for `text` expectations.
+      // No text of its own, for `text` expectations: what an embedded view or repeater renders, an input's value.
       inner_text: /^ia\.display\.(view|flex-repeater)$/.test(el.getAttribute('data-component') || '')
-        ? el.innerText.trim() || null : null,
+        ? el.innerText.trim() || null : inputValue(el),
       cut_rect: clipRect(el, true), overlay: overlay(el), failed_views: failedViews(el),
       disabled: el.matches(':disabled') || !!el.querySelector('input:disabled, button:disabled, textarea:disabled'),
       color: ts.color, background_color: cs.backgroundColor,

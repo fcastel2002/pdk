@@ -21,6 +21,7 @@ Shapes observed in real Perspective 3.3.x views. When in doubt, `pdk_catalog` ru
 Keys per level:
 - **View:** `root`, `props`, `custom`, `params`, `propConfig`, `events` (only `system.onStartup` and `onShutdown`), `permissions`.
 - **Component:** `type`, `meta`, `props`, `position`, `custom`, `propConfig`, `events`, `scripts`, `children` (the latter only in containers).
+- **Showing and hiding:** `meta.visible` (boolean; to bind it, `propConfig["meta.visible"]`), not a prop. `meta` also holds `tooltip` and `domId`.
 
 ## Layout
 - **Flex** (`ia.container.flex`):
@@ -63,7 +64,7 @@ Expressions (`expr`, `expression` transforms):
 Transforms (`binding.transforms`, in order; `{value}` is the incoming value):
 - `{"type": "expression", "expression": "{value} > 50"}`
 - `{"type": "map", "inputType": "scalar", "outputType": "scalar", "mappings": [{"input": true, "output": "RUNNING"}], "fallback": "UNKNOWN"}`
-- `{"type": "format", "formatType": "numeric", "formatValue": "number"}`
+- `{"type": "format", "formatType": "numeric", "formatValue": "number"}`: numeric formats (and `numberFormat()`) follow the session's locale, so the browser can show `20,00`; write `text` expectations as the screen shows them.
 - `{"type": "script", "code": "\treturn value * 2"}`: every line of the body starts with a tab (Ignition wraps it in a function); without it, Q002 "Parse Error in script transform".
 
 Examples: `snippets/tag-transforms-script.view.json`, `snippets/table.view.json` (expr with absolute paths) and `snippets/template-with-params.view.json`.
@@ -94,6 +95,7 @@ Examples: `snippets/tag-transforms-script.view.json`, `snippets/table.view.json`
 - Params passed to a view that does not declare them are silently ignored.
 - `onSelect` on an alarm table is the DOM text-selection event, not row selection. That table has no row event: to navigate, use a button. `ia.display.table` does have `onRowClick`.
 - Alarm tables show several columns by default (`activeTime`, `source`, `name`…) even if you do not configure them, and `order` alone does not reorder them: set `enabled` explicitly on **all** of `columns.active` (`true` with its `order` on the ones you want, `false` on the rest). To show the path and the priority **first**: `displayPath` order 0 and `priority` order 1, both `enabled: true`, and the rest with a higher `order` or `enabled: false`; confirm it with a screenshot.
+- Alarm tables refresh every `props.refreshRate` ms, not on the tag change: after `--act "tag ..."`, add a `wait` longer than that before expecting rows.
 - The status table also lists cleared-but-unacknowledged alarms by default (`filters.active.states.clearUnacked: true`): for "active only", set it to `false`.
 - Filtering alarms by area: `displayPath` (`"North Area/*"`) in `filters.active.conditions` (status) and in `filter.conditions` (journal); it falls back to the source path when the alarm has no displayPath. `source` uses the qualified path, `prov:default:/tag:Folder/*`, not `[default]Folder/*`; do not add it if the request is by area: conditions are combined and leave out alarms of the area that have another source.
 - Trend (`ia.chart.timeseries`): the legend shows the **value key** in `series[].data` (the one in `trends[].columns[].key`), not `series[].name`. If the param brings `{time, value}`, the series shows up as "value": to make it read "Flow", rename the key in the binding and use it in the trend:

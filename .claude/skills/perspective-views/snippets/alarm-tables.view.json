@@ -27,7 +27,7 @@
           "filters": {
             "active": {
               "conditions": {
-                "displayPath": "Area Norte/*"
+                "displayPath": "North Area/*"
               }
             }
           },
@@ -52,7 +52,7 @@
           },
           "filter": {
             "conditions": {
-              "displayPath": "Area Norte/*"
+              "displayPath": "North Area/*"
             }
           },
           "name": "Sample_Alarm_Journal_Profile",

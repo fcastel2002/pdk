@@ -192,3 +192,5 @@ def test_embedded_views_are_read_through_their_rendered_text() -> None:
     assert _codes('root/Box text ~ "Area North P-205"', joined) == []
     [failure] = expect.check(joined, 'root/Box text ~ "P-101"').diagnostics
     assert failure["code"] == "A001" and "'Summary Area North P-205'" in failure["message"]
+    # An input's value comes the same way: its own text is empty.
+    assert _codes('root/Box text "P-205"', _joined(**{"C.0:2": {"inner_text": "P-205"}})) == []
