@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from pdk.project import PERSPECTIVE_DIR, load_project, locate
+from pdk.project import NAMED_QUERY_DIR, PERSPECTIVE_DIR, load_project, locate
 from pdk.validate import validate_file
 from pdk.validate.refs import _missing_view_hint
 from tests.helpers import label, view
@@ -84,6 +84,75 @@ def test_inherited_views_resolve_through_the_parent(bundle, tmp_path) -> None:
     child.mkdir()
     (child / "project.json").write_text(json.dumps({"parent": parent.name}), encoding="utf-8")
     assert load_project(child).find_view("Templates/Pump") is not None
+
+
+def _query(root: Path, path: str) -> None:
+    file = root / NAMED_QUERY_DIR / path / "query.sql"
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text("SELECT 1", encoding="utf-8")
+
+
+def _query_binding(query: object, **config: object) -> dict:
+    return {"type": "query", "config": {"queryPath": query, **config}}
+
+
+def _r016(bundle, file: Path) -> list[dict]:
+    return [d for d in validate_file(file, bundle).diagnostics if d["code"] == "R016"]
+
+
+def test_named_query_bindings_are_checked_against_the_project(bundle, tmp_path) -> None:
+    root = _project(tmp_path)
+    _query(root, "Plant/GetPumps")
+    good = label("Good", propConfig={"props.text": {"binding": _query_binding("/Plant/GetPumps")}})
+    typo = label("Typo", propConfig={"props.text": {"binding": _query_binding("Plant/GetPump")}})
+    [d] = _r016(bundle, _view(root, "Bench/Screen", view(good, typo)))
+    assert d["severity"] == "error" and d["component"] == "root/Typo"
+    assert d["message"] == ("named query 'Plant/GetPump' does not exist in project sandbox; "
+                            "did you mean 'Plant/GetPumps'?")
+    assert d["pointer"].endswith("/propConfig/props.text/binding/config/queryPath")
+    assert "Data > Named Queries" in d["hint"]
+
+
+def test_named_query_view_level_bindings_are_checked(bundle, tmp_path) -> None:
+    root = _project(tmp_path)
+    rows = {"custom.rows": {"binding": _query_binding("Plant/Nope")}}
+    file = _view(root, "Bench/Screen", view(label(), propConfig=rows))
+    [d] = _r016(bundle, file)
+    assert d["pointer"] == "/propConfig/custom.rows/binding/config/queryPath" and d["component"] == ""
+    assert "did you mean" not in d["message"]  # no named queries at all, so nothing to suggest
+
+
+def test_named_query_skips_expression_mode_and_unusable_paths(bundle, tmp_path) -> None:
+    root = _project(tmp_path)
+    bindings = [_query_binding("Plant/Missing", mode="expression"), _query_binding(""), _query_binding(None),
+                _query_binding(7), {"type": "query", "config": {}}]
+    nodes = [label(f"N{i}", propConfig={"props.text": {"binding": b}}) for i, b in enumerate(bindings)]
+    assert _r016(bundle, _view(root, "Bench/Screen", view(*nodes))) == []
+
+
+def test_named_query_needs_a_project(bundle, tmp_path) -> None:
+    file = tmp_path / "loose" / "view.json"
+    file.parent.mkdir()
+    typo = label("Typo", propConfig={"props.text": {"binding": _query_binding("Plant/GetPump")}})
+    file.write_text(json.dumps(view(typo)), encoding="utf-8")
+    assert _r016(bundle, file) == []
+
+
+def test_named_queries_are_inherited_from_the_parent(bundle, tmp_path) -> None:
+    parent = _project(tmp_path)
+    _query(parent, "Plant/GetPumps")
+    child = tmp_path / "child"
+    child.mkdir()
+    (child / "project.json").write_text(json.dumps({"parent": parent.name}), encoding="utf-8")
+    _query(child, "Plant/Tanks")
+    inherited = load_project(child)
+    assert inherited.named_queries() == ["Plant/GetPumps", "Plant/Tanks"]
+    assert inherited.has_named_query("/Plant/GetPumps") and not inherited.has_named_query("Plant/Pumps")
+    ok = label("Pumps", propConfig={"props.text": {"binding": _query_binding("Plant/GetPumps")}})
+    assert _r016(bundle, _view(child, "Bench/Screen", view(ok))) == []
+    bad = label("Typo", propConfig={"props.text": {"binding": _query_binding("Plant/Tank")}})
+    [d] = _r016(bundle, _view(child, "Bench/Other", view(bad)))
+    assert "did you mean 'Plant/Tanks'?" in d["message"]
 
 
 def test_percent_encoded_folders_resolve_by_their_resource_name(tmp_path) -> None:

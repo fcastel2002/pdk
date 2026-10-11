@@ -69,6 +69,43 @@ The project's ``stylesheet.css`` (style classes written as ``.psc-<name>``) is h
 On a conflict the gateway version is saved as ``stylesheet.gateway.css`` and the report is a unified diff. The
 Claude Code hook also checks the CSS on every save.
 
+Style classes and project scripts
+---------------------------------
+
+Style classes (``com.inductiveautomation.perspective/style-classes``) and project scripts
+(``ignition/script-python``) are handled like views: the agent's live under ``PDK/`` in the sandbox, every write
+is signed, a conflict saves the gateway version (``style.gateway.json``, ``code.gateway.py``) and reports a unified
+diff, and ``promote`` copies ``PDK/X`` to ``X`` in the sandbox or, with ``--to-project target``, to the target.
+Promote does not rewrite references: a view that uses ``PDK/Card`` keeps using it.
+
+.. code-block:: bash
+
+   uv run pdk pull style-classes/PDK/Card     # -> work/<sandbox>/_style-classes/PDK/Card/style.json
+   uv run pdk deploy work/<sandbox>/_style-classes/PDK/Card
+   uv run pdk pull scripts/PDK/format         # -> work/<sandbox>/_scripts/PDK/format/code.py
+   uv run pdk deploy work/<sandbox>/_scripts/PDK/format
+
+A style class is ``{"base": {"style": {...}}, "variants": [{"pseudo": "hover", "style": {...}}]}`` and is used
+in a view as ``"style": {"classes": "PDK/Card"}``; its structure is checked (``P005``) and its property names too
+(``P006``). A script is compiled by the gateway's Jython before it is written (``E009``), its ``system.*`` names
+are checked (``E008``), and view scripts call it by its package path: ``PDK.format.label(value)``.
+
+Page routes
+-----------
+
+A ``nav`` action that opens a page needs a route from its URL to a view. ``pdk pages`` lists and changes the routes
+of the sandbox's page configuration: ``add`` needs the view deployed first, and ``remove`` only takes routes to views
+under ``PDK/``. The project's other routes are only listed; change them in the Designer.
+
+.. code-block:: bash
+
+   uv run pdk pages list                                    # one line per route: URL -> view
+   uv run pdk pages add /detail PDK/Detail --title Detail   # refuses a URL that already opens another view
+   uv run pdk pages remove /detail                          # only routes to views under PDK/
+
+URLs under ``/pdk/`` are reserved for the preview pages that ``pdk deploy`` and the eyes map: ``pages add`` refuses
+them, and ``list`` only counts them.
+
 .. _target-project:
 
 The target project

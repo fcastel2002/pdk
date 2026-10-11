@@ -178,7 +178,7 @@ def _print_health(health: dict) -> None:
         print(f"sandbox {sandbox} ({state}), writes {'enabled' if health.get('writeEnabled') else 'disabled'}")
     if health.get("target"):
         print(f"target {health['target']} ({'exists' if health.get('targetExists') else 'MISSING'}): finished "
-              "views and the stylesheet only, through promote --to-project")
+              "views, style classes, scripts and the stylesheet only, through promote --to-project")
     if health.get("targetIgnored"):
         print(f"warning: -Dpdk.target={health['targetIgnored']} is ignored: it needs a sandbox and must differ "
               "from it")
@@ -271,6 +271,25 @@ def _cmd_sync(args: argparse.Namespace) -> int:
                                    to_project=args.to_project, resolved=args.resolved, budget=args.budget)
         else:
             outcome = sync.delete(gateway, Path(args.path), resolved=args.resolved, budget=args.budget)
+    except GatewayError as exc:
+        print(f"pdk: {exc}", file=sys.stderr)
+        return EXIT_FINDINGS
+    print(outcome.text)
+    return EXIT_OK if outcome.ok else EXIT_FINDINGS
+
+
+def _cmd_pages(args: argparse.Namespace) -> int:
+    from pdk import pages
+    from pdk.gateway.client import Gateway, GatewayError
+
+    gateway = Gateway(url=args.url) if args.url else Gateway()
+    try:
+        if args.action == "list":
+            outcome = pages.list(gateway)
+        elif args.action == "add":
+            outcome = pages.add(gateway, args.route, args.view, args.title)
+        else:
+            outcome = pages.remove(gateway, args.route)
     except GatewayError as exc:
         print(f"pdk: {exc}", file=sys.stderr)
         return EXIT_FINDINGS
@@ -423,8 +442,10 @@ def build_parser() -> argparse.ArgumentParser:
     gateway.set_defaults(func=_cmd_gateway)
 
     work = "work/<project>/<view path> (PDK_WORK_DIR)"
-    pull = sub.add_parser("pull", help=f"download a view, a folder or `stylesheet` with its signature to {work}")
-    pull.add_argument("path", help="view path or folder in the project (e.g. PDK/Menu), `stylesheet`, or a local copy")
+    pull = sub.add_parser("pull", help=f"download a view, a folder, `stylesheet`, a style class or a project script "
+                                       f"with its signature to {work}")
+    pull.add_argument("path", help="view path or folder in the project (e.g. PDK/Menu), `stylesheet`, "
+                                   "style-classes/<path>, scripts/<path>, or a local copy")
     pull.add_argument("--project", help="project to read from (default: the sandbox)")
     pull.add_argument("--force", action="store_true", help="overwrite local edits")
     deploy = sub.add_parser("deploy", help="validate a local view (or the stylesheet) and write it, signed")
@@ -455,6 +476,19 @@ def build_parser() -> argparse.ArgumentParser:
     tagger.add_argument("--to", help="apply: folder under PDK/ to import into (default: PDK)")
     tagger.add_argument("--url", help="gateway URL (default: PDK_GATEWAY_URL or http://127.0.0.1:8088)")
     tagger.set_defaults(func=_cmd_tags)
+
+    pager = sub.add_parser("pages", help="routes of the sandbox's page configuration (URL -> view): list, add, remove")
+    pager_actions = pager.add_subparsers(dest="action", required=True)
+    page_list = pager_actions.add_parser("list", help="one line per route, sorted by URL")
+    page_add = pager_actions.add_parser("add", help="route a URL to a view of the sandbox (deployed first)")
+    page_add.add_argument("route", metavar="url", help="URL path of the page, like /detail (not under /pdk/)")
+    page_add.add_argument("view", help="view path in the sandbox, like PDK/Detail")
+    page_add.add_argument("--title", help="title of the page")
+    page_remove = pager_actions.add_parser("remove", help="remove a route to a view under PDK/")
+    page_remove.add_argument("route", metavar="url", help="URL path of the route to remove, like /detail")
+    for command in (page_list, page_add, page_remove):
+        command.add_argument("--url", help="gateway URL (default: PDK_GATEWAY_URL or http://127.0.0.1:8088)")
+        command.set_defaults(func=_cmd_pages)
 
     view_arg = f"local view folder or view.json under {work}, or a view path in the sandbox (e.g. PDK/Menu)"
     opener = sub.add_parser("open", help="open a deployed view in headless Chromium and check that it renders")

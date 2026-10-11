@@ -124,9 +124,12 @@ def _parsed(text: str | None) -> Any:
 def pull(gateway: Gateway, path: str, project: str | None = None, *, force: bool = False,
          root: Path | None = None) -> Outcome:
     """Download a view, or every view below a folder, with its signature. `path` may be a local copy."""
-    from pdk import stylesheet
+    from pdk import resources, stylesheet
     if stylesheet.is_pull_path(path):
         return stylesheet.pull(gateway, project, force=force, root=root, path=path)
+    other = resources.pull_path(gateway, path, project, force=force, root=root)
+    if other is not None:
+        return other
     local = Path(path)
     if ((local.parent if local.name == VIEW_FILE else local) / SIDECAR).is_file():
         _, _, project, path = _target(local, root)
@@ -173,7 +176,9 @@ def deploy(gateway: Gateway, location: Path, bundle: Bundle, *, resolved: bool =
     The target project only gets views through promote, and never a preview page. The stylesheet goes to
     `pdk.stylesheet`.
     """
-    from pdk import stylesheet
+    from pdk import resources, stylesheet
+    if kind := resources.kind_for(location, root):
+        return resources.deploy(gateway, kind, location, bundle, resolved=resolved, root=root, budget=budget)
     location = _local(gateway, location, root)
     if stylesheet.is_stylesheet(location):
         return stylesheet.deploy(gateway, location, resolved=resolved, root=root, budget=budget)
@@ -254,7 +259,10 @@ def promote(gateway: Gateway, location: Path, bundle: Bundle, *, to: str | None 
     The target's own sidecar holds the signature it was promoted or pulled at: a target someone edited since
     gives the usual 409; a target that exists but was never pulled gives a create conflict.
     """
-    from pdk import stylesheet
+    from pdk import resources, stylesheet
+    if kind := resources.kind_for(location, root):
+        return resources.promote(gateway, kind, location, bundle, to=to, to_project=to_project, resolved=resolved,
+                                 root=root, budget=budget)
     location = _local(gateway, location, root)
     if stylesheet.is_stylesheet(location):
         return stylesheet.promote(gateway, location, to_project=to_project, resolved=resolved, root=root,
@@ -339,7 +347,9 @@ def _missing_views(gateway: Gateway, view_text: str, source: str, destination: s
 def delete(gateway: Gateway, location: Path, *, resolved: bool = False, root: Path | None = None,
            budget: int = DEFAULT_BUDGET) -> Outcome:
     """Delete a pulled view on the gateway, only if it is still the version you pulled."""
-    from pdk import stylesheet
+    from pdk import resources, stylesheet
+    if kind := resources.kind_for(location, root):
+        return resources.delete(gateway, kind, location, resolved=resolved, root=root, budget=budget)
     location = _local(gateway, location, root)
     if stylesheet.is_stylesheet(location):
         return stylesheet.delete(gateway, location, resolved=resolved, root=root, budget=budget)

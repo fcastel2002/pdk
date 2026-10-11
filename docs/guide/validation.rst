@@ -86,7 +86,7 @@ The validator runs six groups of checks, each with its own code family:
 Project-aware checks
 --------------------
 
-References to other views, their parameters and style classes can only be checked against a project. Pass
+References to other views, their parameters, style classes and named queries can only be checked against a project. Pass
 ``--project`` with either a project folder or the name of a project on the local gateway; inside a project tree
 (including ``work/<project>/``) the project is detected automatically. The gateway's projects are only read.
 

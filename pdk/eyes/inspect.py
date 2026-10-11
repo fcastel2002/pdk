@@ -287,11 +287,15 @@ def _inspect_one(eyes: Eyes, gateway: Gateway, location: str, viewport: str | No
             extracted = eyes.extract(opened)
         except EyesError:
             where = eyes.location(opened) if steps else ""
-            if not where or page_location(where).startswith("/"):
+            if not where:
                 raise
-            # A step left Perspective (a nav action with a url): only the page and the console can be read.
+            # A step left Perspective (a nav action with a url), or went to a page with no view (a URL without a
+            # route): only the page and the console can be read.
             extracted = {"url": where, "viewport": {}, "nodes": [], "console": list(opened.console)}
-            view, view_path, navigated = {}, "", f"a step left Perspective for {where}"
+            inside = page_location(where)
+            view, view_path = {}, ""
+            navigated = (f"a step left Perspective for {where}" if not inside.startswith("/") else
+                         f"after the steps the page {inside} shows no view: a URL without a route? (pdk pages list)")
         routed = mounted_view(page)
         if steps and routed and routed != target.path:
             text = gateway.resource(target.project, VIEWS, routed).get("files", {}).get(sync.VIEW_FILE)

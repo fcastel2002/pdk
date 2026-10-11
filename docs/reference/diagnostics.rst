@@ -197,7 +197,7 @@ Events and scripts (E)
 References (R)
 --------------
 
-``R010`` to ``R015`` need a project (``--project``, or a view inside a project tree).
+``R010`` to ``R016`` need a project (``--project``, or a view inside a project tree).
 
 .. list-table::
    :header-rows: 1
@@ -247,6 +247,9 @@ References (R)
    * - ``R015``
      - style-class-not-found
      - A style class that the project does not define.
+   * - ``R016``
+     - named-query-not-found
+     - A query binding whose named query (``config.queryPath``) the project, or a parent project, does not define.
 
 Design lint (HMI)
 -----------------

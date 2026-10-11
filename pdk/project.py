@@ -12,6 +12,7 @@ from typing import Any
 from pdk.bundle import find_ignition_home
 
 PERSPECTIVE_DIR = "com.inductiveautomation.perspective"
+NAMED_QUERY_DIR = "ignition/named-query"
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,7 @@ class Project:
     _views: dict[str, Path] | None = field(default=None, repr=False)
     _params: dict[str, dict[str, ViewParam]] = field(default_factory=dict, repr=False)
     _stylesheet_classes: set[str] | None = field(default=None, repr=False)
+    _named_queries: list[str] | None = field(default=None, repr=False)
 
     @property
     def name(self) -> str:
@@ -83,6 +85,19 @@ class Project:
         if name in self.stylesheet_classes:
             return True
         return bool(self.parent and self.parent.has_style_class(name))
+
+    def named_queries(self) -> list[str]:
+        """Named query paths (`Folder/Name`) of this project and its parents, from ignition/named-query/**/query.sql."""
+        if self._named_queries is None:
+            base = self.root / NAMED_QUERY_DIR
+            own = {_resource_path(f.parent.relative_to(base).parts) for f in base.rglob("query.sql")} \
+                if base.is_dir() else set()
+            inherited = self.parent.named_queries() if self.parent else []
+            self._named_queries = sorted(own | set(inherited))
+        return self._named_queries
+
+    def has_named_query(self, path: str) -> bool:
+        return path.strip("/") in self.named_queries()
 
 
 _PSC = re.compile(r"\.psc-((?:[A-Za-z0-9_-]|\\(?:[0-9a-fA-F]{1,6}\s?|.))+)", re.S)

@@ -32,6 +32,7 @@ def check(ctx: Context) -> list[Diagnostic]:
         out += _resolve(ctx, node, ref, pointer)
     if ctx.project is not None:
         out += _project_refs(ctx)
+        out += _named_query_refs(ctx)
     return out
 
 
@@ -83,12 +84,15 @@ def _binding_refs(binding: Any, pointer: str) -> Iterator[tuple[str, str]]:
         yield from _expression_refs(text, epointer, skip_value=in_transform)
 
 
-def _references(ctx: Context) -> Iterator[tuple[Node | None, str, str]]:
+def _prop_configs(ctx: Context) -> list[tuple[Node | None, dict[str, Any], str]]:
+    """Every propConfig that can hold bindings: the view's own (node None) and each component's, with its pointer."""
     owners: list[tuple[Node | None, Any, str]] = [(None, ctx.view.get("propConfig"), "/propConfig")]
     owners += [(n, n.component.get("propConfig"), join(n.pointer, "propConfig")) for n in ctx.nodes]
-    for node, config, base in owners:
-        if not isinstance(config, dict):
-            continue
+    return [(node, config, base) for node, config, base in owners if isinstance(config, dict)]
+
+
+def _references(ctx: Context) -> Iterator[tuple[Node | None, str, str]]:
+    for node, config, base in _prop_configs(ctx):
         for path, entry in config.items():
             if isinstance(entry, dict):
                 for ref, pointer in _binding_refs(entry.get("binding"), join(base, path, "binding")):
@@ -345,6 +349,36 @@ def _project_refs(ctx: Context) -> list[Diagnostic]:
                                        join(node.pointer, "props", "instances", i), node.path, embedded=True)
         out += _event_views(ctx, node)
         out += _style_classes(ctx, node, props, join(node.pointer, "props"), "props")
+    return out
+
+
+def _named_query_refs(ctx: Context) -> list[Diagnostic]:
+    """R016: a query binding names a named query that neither the project nor its parents define."""
+    project = ctx.project
+    assert project is not None
+    out: list[Diagnostic] = []
+    for node, config, base in _prop_configs(ctx):
+        for prop, entry in config.items():
+            binding = entry.get("binding") if isinstance(entry, dict) else None
+            if not isinstance(binding, dict) or not isinstance(binding.get("config"), dict):
+                continue
+            if BINDING_ALIASES.get(str(binding.get("type")), binding.get("type")) != "query":
+                continue
+            bconf = binding["config"]
+            query = bconf.get("queryPath")
+            # Expression mode computes the path at runtime; a missing or empty path has nothing to look up.
+            if bconf.get("mode") == "expression" or not isinstance(query, str) or not query.strip("/"):
+                continue
+            wanted = query.strip("/")
+            if not project.has_named_query(wanted):
+                match = closest(wanted, project.named_queries(), cutoff=0.6)
+                out.append(make("R016", "error", join(base, prop, "binding", "config", "queryPath"),
+                                node.path if node else "",
+                                f"named query {wanted!r} does not exist in project {project.name}"
+                                + (f"; did you mean '{match}'?" if match else ""),
+                                "Create the named query in the Designer (Data > Named Queries) or fix "
+                                "config.queryPath; PDK cannot run it without a database, so pdk_inspect shows "
+                                "its result quality (Q001/Q002)."))
     return out
 
 

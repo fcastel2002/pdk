@@ -134,8 +134,10 @@ def _sync(action) -> str:
     description=(
         "Download a view (or every view below a folder) from the gateway to work/<project>/<view path>/view.json, "
         "with the signature it was read at. path='stylesheet' pulls the project stylesheet to "
-        "work/<sandbox>/_stylesheet/stylesheet.css. Args: path (view path like PDK/Menu, "
-        "'stylesheet', or a local copy); project "
+        "work/<sandbox>/_stylesheet/stylesheet.css; 'style-classes/PDK/Card' a style class (or a folder of them) "
+        "to work/<sandbox>/_style-classes/PDK/Card/style.json; 'scripts/PDK/util' a project script to "
+        "work/<sandbox>/_scripts/PDK/util/code.py. Args: path (view path like PDK/Menu, "
+        "'stylesheet', style-classes/..., scripts/..., or a local copy); project "
         "(default: the sandbox); force=true discards local edits."
     ),
     annotations=LOCAL_WRITE,
@@ -153,9 +155,14 @@ def pdk_pull(path: str, project: str | None = None, force: bool = False) -> str:
         "Validate a local view and write it to the sandbox with the signature of its pull (creates it if it was "
         "never pulled: put new views in work/<sandbox>/PDK/<name>/view.json). Refuses views with errors. Prints "
         "a preview URL. On G008 (changed on the gateway since the pull) nothing is written and you get a diff by "
-        "JSON pointer. Also deploys the stylesheet (sandbox only; CSS syntax is checked, 409 gives a unified diff). "
-        "Args: path (the view folder or its view.json, its sandbox view path like PDK/X, or "
-        "work/<sandbox>/_stylesheet); " + RESOLVED
+        "JSON pointer. Every script of the view is compiled by the gateway's Jython first (E009). Also deploys "
+        "the stylesheet (sandbox only; CSS syntax is checked, 409 gives a unified diff), style classes "
+        "(work/<sandbox>/_style-classes/PDK/<name>/style.json: {\"base\": {\"style\": {...}}, \"variants\": "
+        "[{\"pseudo\": \"hover\", \"style\": {...}}]}, referenced as PDK/<name> in style.classes) and project "
+        "scripts (work/<sandbox>/_scripts/PDK/<name>/code.py, compiled first; called as PDK.<name>.fn() from view "
+        "scripts). Args: path (the view folder or its view.json, its sandbox view path like PDK/X, "
+        "work/<sandbox>/_stylesheet, a _style-classes or _scripts folder, or style-classes/PDK/X / "
+        "scripts/PDK/X); " + RESOLVED
     ),
     annotations=SIGNED_WRITE,
     structured_output=False,
@@ -172,8 +179,10 @@ def pdk_deploy(path: str, resolved: bool = False) -> str:
         "Copy a deployed sandbox view PDK/X to X (or `to`) in the same project, replacing the target only if it "
         "is still the version promoted or pulled before (else G008 with a diff). With to_project='target' the copy "
         "goes to the target project (the final one: ask the user first); it may not reference PDK/ views. A "
-        "_stylesheet folder promotes the project stylesheet (to_project='target' only). Args: "
-        "path (local folder of the deployed PDK/ view); to (target view path); to_project; " + RESOLVED
+        "_stylesheet folder promotes the project stylesheet (to_project='target' only); a style class or script "
+        "folder promotes PDK/X to X the same way (references to PDK/X in views are not rewritten). Args: "
+        "path (local folder of the deployed PDK/ view, style class or script); to (destination path); to_project; "
+        + RESOLVED
     ),
     annotations=DESTRUCTIVE,
     structured_output=False,
@@ -188,8 +197,9 @@ def pdk_promote(path: str, to: str | None = None, to_project: str | None = None,
 @server.tool(
     name="pdk_delete",
     description=(
-        "Delete a pulled view on the gateway if nobody changed it since (else G008 with a diff); empty folders "
-        "and its preview page go too, the local copy stays. Args: path (local folder of the view); " + RESOLVED
+        "Delete a pulled view, style class or script on the sandbox if nobody changed it since (else G008 with a "
+        "diff); empty folders and a view's preview page go too, the local copy stays. Args: path (local folder); "
+        + RESOLVED
     ),
     annotations=DESTRUCTIVE,
     structured_output=False,
@@ -245,6 +255,32 @@ def pdk_tags(action: str, path: str | None = None, value: str | None = None, qua
     except (ValueError, OSError) as exc:
         return f"pdk: {exc}"
     return f"pdk: unknown action {action!r} (list, read, write, apply, delete, alarms)"
+
+
+@server.tool(
+    name="pdk_pages",
+    description=(
+        "Routes of the sandbox's page configuration (URL -> view), so a nav action to a page has somewhere to go: "
+        "action list, add (url like /detail, view like PDK/Detail, optional title) or remove (only routes to views "
+        "under PDK/). /pdk/... is reserved for preview pages."
+    ),
+    annotations=SIGNED_WRITE,
+    structured_output=False,
+)
+def pdk_pages(action: str, url: str | None = None, view: str | None = None, title: str | None = None) -> str:
+    from pdk import pages
+
+    gateway = Gateway()
+    try:
+        if action == "list":
+            return pages.list(gateway).text
+        if action == "add" and url and view:
+            return pages.add(gateway, url, view, title).text
+        if action == "remove" and url:
+            return pages.remove(gateway, url).text
+    except GatewayError as exc:
+        return str(exc)
+    return "pdk: usage: action 'list', or 'add' with url and view (and title), or 'remove' with url"
 
 
 _eyes: Any = None

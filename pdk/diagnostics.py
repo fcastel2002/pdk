@@ -80,6 +80,7 @@ CODES: dict[str, str] = {
     "R013": "required-param-missing",
     "R014": "param-type-mismatch",
     "R015": "style-class-not-found",
+    "R016": "named-query-not-found",
     "HMI001": "inconsistent-button-sizing",
     "HMI002": "missing-command-variant",
     "HMI003": "multiple-primary-actions",

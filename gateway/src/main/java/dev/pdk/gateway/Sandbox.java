@@ -4,14 +4,18 @@ import java.util.Optional;
 
 /**
  * The projects PDK may write to. -Dpdk.sandbox=<project> takes any resource; without it the module is read-only.
- * -Dpdk.target=<project> (optional, never the sandbox) takes only finished work: Perspective views outside PDK/
- * and the project stylesheet.
+ * -Dpdk.target=<project> (optional, never the sandbox) takes only finished work: Perspective views, style classes
+ * and project scripts outside PDK/, and the project stylesheet.
  */
 final class Sandbox {
     static final String PROPERTY = "pdk.sandbox";
     static final String TARGET_PROPERTY = "pdk.target";
     static final String VIEWS = "com.inductiveautomation.perspective/views";
     static final String STYLESHEET = "com.inductiveautomation.perspective/stylesheet";
+    static final String STYLE_CLASSES = "com.inductiveautomation.perspective/style-classes";
+    static final String SCRIPTS = "ignition/script-python";
+    /** What the target takes outside PDK/, through promote. */
+    static final java.util.Set<String> FINISHED = java.util.Set.of(VIEWS, STYLE_CLASSES, SCRIPTS);
     static final String WORK_FOLDER = "PDK";
 
     private final String name;
@@ -74,7 +78,7 @@ final class Sandbox {
         }
     }
 
-    /** Writes and deletes of a resource: anything in the sandbox; finished views and the stylesheet in the target. */
+    /** Writes and deletes of a resource: anything in the sandbox; finished work and the stylesheet in the target. */
     void requireWritable(String project, Target resource) {
         requireEnabled();
         if (name.equals(project)) {
@@ -89,11 +93,11 @@ final class Sandbox {
         if (STYLESHEET.equals(resource.typeKey()) && path.isEmpty()) {
             return;
         }
-        if (!VIEWS.equals(resource.typeKey()) || path.isEmpty()
+        if (!FINISHED.contains(resource.typeKey()) || path.isEmpty()
                 || path.equals(WORK_FOLDER) || path.startsWith(WORK_FOLDER + "/")) {
             throw new ApiError(403, "OUTSIDE_TARGET",
-                    "The target '" + target + "' only takes Perspective views outside " + WORK_FOLDER + "/ and the stylesheet, not "
-                            + resource.display() + ".");
+                    "The target '" + target + "' only takes views, style classes and scripts outside " + WORK_FOLDER
+                            + "/ and the stylesheet, not " + resource.display() + ".");
         }
     }
 }

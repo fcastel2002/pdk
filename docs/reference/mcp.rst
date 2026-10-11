@@ -57,6 +57,12 @@ its ``act`` steps run the view's own event scripts on the gateway, which can wri
      - ``path``, ``viewport``, ``component`` (name path such as ``root/Panel``, or ``popup:<id>/root/...`` after
        ``act``), ``act`` (steps run before capturing, as in ``pdk_inspect``), ``compare`` (a PNG taken before:
        reports what changed and where, and adds a diff image). Returns a PNG image.
+   * - ``pdk_pages``
+     - writes
+     - ``action`` (``list``, ``add`` or ``remove``), ``url`` (a route like ``/detail``), ``view`` (for ``add``, a
+       view of the sandbox like ``PDK/Detail``), ``title`` (optional, for ``add``). Routes of the page configuration,
+       so a ``nav`` action has a destination; ``remove`` only takes routes to views under ``PDK/``. See
+       :doc:`../guide/gateway`.
 
 The server's instructions describe the whole cycle (catalog, write, validate, deploy, inspect, fix), so a client
 learns the workflow from the server itself. The browser used by ``pdk_open``, ``pdk_inspect`` and

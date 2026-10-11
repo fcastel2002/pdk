@@ -63,6 +63,12 @@ public final class SelfTest {
         both.requireWritable("Planta", Target.parse("com.inductiveautomation.perspective/stylesheet"));
         expect("OUTSIDE_TARGET", () -> both.requireWritable("Planta", Target.parse("com.inductiveautomation.perspective/stylesheet/x")));
         both.requireWritable("Planta", Target.parse("com.inductiveautomation.perspective/views/PDKX/Resumen"));
+        both.requireWritable("Planta", Target.parse("com.inductiveautomation.perspective/style-classes/Card"));
+        both.requireWritable("Planta", Target.parse("ignition/script-python/util/format"));
+        expect("OUTSIDE_TARGET", () -> both.requireWritable("Planta",
+                Target.parse("com.inductiveautomation.perspective/style-classes/PDK/Card")));
+        expect("OUTSIDE_TARGET", () -> both.requireWritable("Planta", Target.parse("ignition/script-python/PDK/util")));
+        expect("OUTSIDE_TARGET", () -> both.requireWritable("Planta", Target.parse("ignition/named-query/q")));
         expect("OUTSIDE_SANDBOX", () -> both.requireWritable("Planta"));
         expect("OUTSIDE_SANDBOX", () -> both.requireWritable("Otro", finished));
         check(Sandbox.of("pdk_sandbox", "pdk_sandbox").target().isEmpty(), "target equal to sandbox is ignored");

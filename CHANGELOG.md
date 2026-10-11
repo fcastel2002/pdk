@@ -19,6 +19,13 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
   them, B011 (unknown expression function) and E008 (unknown `system.*` name), with "did you mean".
 - E009: `pdk deploy` compiles every script with the gateway's Jython before writing (`pdk validate --compile`,
   `compile` in `pdk_validate`); module routes `GET /functions` and `POST /scripts/compile`.
+- Style classes and project scripts are pulled, deployed, promoted and deleted like views
+  (`style-classes/PDK/X`, `scripts/PDK/X`; `work/<sandbox>/_style-classes/`, `_scripts/`), checked before every
+  write; the target project takes them through promote.
+- R016: a query binding names a named query the project does not have.
+- `pdk pages list|add|remove` (and `pdk_pages`): the routes of the sandbox's page configuration, so a `nav` to a
+  page has somewhere to go.
+- When a step navigates to a URL without a route, `inspect` says so instead of failing to open the view.
 
 ### Changed
 - Closing PDK's browser also closes its Perspective sessions on the gateway (`DELETE /sessions`), so they no longer
