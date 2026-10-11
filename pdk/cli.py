@@ -516,8 +516,8 @@ def build_parser() -> argparse.ArgumentParser:
                                             "alarm North/Level active'; failures are A001 diagnostics")
     inspector.add_argument("--act", help="steps to perform before measuring, ;-separated: 'click root/Save; "
                                          "type root/Name \"P-2\"; row root/Table 1; select root/Mode \"Auto\"; "
-                                         "slide root/Level 7; key [root/Name] Enter; hover root/X; double-click "
-                                         "root/X; scroll root/List bottom; wait 500; "
+                                         "slide root/Level 7; key Enter; key root/Name Enter; hover root/X; "
+                                         "double-click root/X; scroll root/List bottom; wait 500; "
                                          "tag Sandbox/Setpoint 42 [quality Bad_Stale]'; failures are A004")
     inspector.add_argument("--budget", type=int, default=DEFAULT_BUDGET, help="output budget in tokens")
     shooter = sub.add_parser("screenshot", help="PNG of a deployed view, or of one of its components")

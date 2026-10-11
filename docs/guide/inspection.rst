@@ -66,8 +66,9 @@ Anomalies
    * - ``V013``
      - Low contrast
      - Text too close in color to what is behind it (WCAG AA: 4.5:1, or 3:1 for large text). The background is
-       the first opaque one from the text outwards; text over an image is not judged, and disabled controls are
-       exempt.
+       the first opaque one from the text outwards. Only text components whose colors the view chose are judged
+       (not the theme's defaults, nor text drawn inside charts or tables); text over an image is not judged, and
+       disabled controls are exempt.
    * - ``Q001``
      - Bad quality
      - A binding delivers a *Bad* quality, for example ``Bad_NotFound`` for a tag that does not exist.

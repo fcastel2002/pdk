@@ -12,7 +12,8 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
 - `--act` steps `select` (dropdown option), `slide` (slider), `key`, `hover`, `double-click` and `scroll`.
 - `--viewport` presets (`desktop`, `tablet`, `phone`, `wide`); `inspect` takes several, comma-separated, with one
   report each.
-- V013: text with low contrast against what is behind it (WCAG AA).
+- V013: text with low contrast against what is behind it (WCAG AA), on text components whose colors the view
+  chose (the theme's defaults and text drawn inside charts are not judged).
 - `pdk screenshot --compare before.png` (and `compare` in `pdk_screenshot`): the share of pixels that changed, the
   components where, and a diff image.
 - `pdk schemas functions` saves the gateway's expression functions and `system.*` names next to the bundle; with

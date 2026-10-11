@@ -28,9 +28,10 @@ from pdk.validate.tree import Node
 
 GRAMMAR = ('steps, ;-separated: `click <component>`, `type <component> "text"`, `row <table> N` (1 = first row '
            'shown), `select <dropdown> "Label" ["Label2" ...]`, `hover <component>`, `double-click <component>`, '
-           '`scroll <component> down|up|top|bottom|<N>`, `slide <slider> <N>`, `key [<component>] <Key>` (Enter, '
-           'Control+A), `wait <ms>`, `tag <path> <value> [quality <Code>]`, `tag <path> quality <Code>` (keeps the '
-           'value); components by name path like root/Panel/Save, tags under PDK/ like Sandbox/Setpoint')
+           '`scroll <component> down|up|top|bottom|<N>`, `slide <slider> <N>`, `key <Key>` or '
+           '`key <component> <Key>` (Enter, Control+A), `wait <ms>`, `tag <path> <value> [quality <Code>]`, '
+           '`tag <path> quality <Code>` (keeps the value); components by name path like root/Panel/Save, tags under '
+           'PDK/ like Sandbox/Setpoint')
 TAG_HINT = ("Simulated tags live under [provider]PDK/: create them first (pdk tags apply <file>) and check the path "
             "with pdk tags list; a quality name is like Good, Bad_Stale or Bad_Disabled.")
 ROW = ".ia_table__body__row"
@@ -166,7 +167,8 @@ def _dom_path(name: str, nodes: dict[str, Node]) -> str | None:
 
 
 def _key_step(item: str, args: list[str], nodes: dict[str, Node]) -> Step:
-    usage = "expected `key [<component>] <Key>` (a Playwright key name such as Enter, Escape or Control+A)"
+    usage = ("expected `key <Key>` or `key <component> <Key>` (a Playwright key name such as Enter, Escape or "
+             "Control+A)")
     if len(args) == 1:
         if args[0].startswith(POPUP_PREFIX) or args[0] in nodes:
             raise Malformed(usage)  # a component without a key

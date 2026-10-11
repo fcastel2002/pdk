@@ -65,7 +65,7 @@ def test_new_verbs_that_cannot_be_read_are_a005() -> None:
             'scroll root/T sideways; slide root/S abc')
     steps, malformed = act.parse(text, _widgets())
     assert steps == [] and [d["code"] for d in malformed] == ["A005"] * 7
-    assert "expected `key [<component>] <Key>`" in malformed[1]["message"]
+    assert "expected `key <Key>` or `key <component> <Key>`" in malformed[1]["message"]
     assert "expected `slide <slider> <N>`" in malformed[6]["message"]
 
 

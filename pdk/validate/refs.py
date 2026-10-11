@@ -306,8 +306,9 @@ def _view_paths(ctx: Context, instance: Any, ref: SchemaRef, pointer: str, path:
 
 def _missing_view_hint(target: str, views: list[str]) -> str:
     """Suggest a view for a missing one, searching its own folder first and then the ancestors up to the root."""
+    deployed = "references resolve against the project on the gateway: a view only in work/ counts once deployed"
     if not views:
-        return "create the view first"
+        return f"create the view first ({deployed})"
     folders = target.split("/")[:-1]
     for depth in range(len(folders), -1, -1):
         prefix = "".join(f"{part}/" for part in folders[:depth])
@@ -315,8 +316,8 @@ def _missing_view_hint(target: str, views: list[str]) -> str:
         if match:
             if depth == len(folders):
                 return f"did you mean '{match}'?"
-            return f"create the view first (deploy the views it uses before it); closest elsewhere: '{match}'"
-    return did_you_mean(target, views, cutoff=0.5)
+            return f"create the view first ({deployed}); closest elsewhere: '{match}'"
+    return f"{did_you_mean(target, views, cutoff=0.5)} ({deployed})"
 
 
 def _project_refs(ctx: Context) -> list[Diagnostic]:

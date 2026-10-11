@@ -284,6 +284,10 @@ def repeater_overflow(joined: Joined) -> list[Diagnostic]:
 _RGBA = re.compile(r"rgba?\(([^)]*)\)")
 LARGE_TEXT_PX = 24.0  # WCAG "large": 18pt, or 14pt bold
 LARGE_BOLD_TEXT_PX = 18.66
+# Components whose text is their content and takes props.style.color; the text inside charts, tables or other
+# widgets is drawn by the component itself, so a contrast warning there could not be acted on.
+CONTRAST_TYPES = TEXT_TYPES | {"ia.display.markdown", "ia.input.checkbox", "ia.input.toggle-switch",
+                               "ia.input.radio-group"}
 
 
 def _rgba(value: str | None) -> tuple[float, float, float, float] | None:
@@ -315,16 +319,39 @@ def contrast_ratio(color: str | None, background: str | None) -> float | None:
     return (lighter + 0.05) / (darker + 0.05)
 
 
+STYLED_KEYS = ("color", "backgroundColor", "background", "classes")
+
+
+def _chooses_colors(part: Part) -> bool:
+    """Whether the view.json sets the colors of this component or of an ancestor (a style color or background, a
+    style class, or a binding on its style): otherwise they are the theme's, not the view's to fix."""
+    node: Any = part.node
+    while node is not None:
+        props = node.props()
+        for key in ("style", "textStyle"):
+            style = props.get(key)
+            if isinstance(style, dict) and any(style.get(k) for k in STYLED_KEYS):
+                return True
+        configs = node.component.get("propConfig")
+        if isinstance(configs, dict) and any(str(k).startswith(("props.style", "props.textStyle"))
+                                             for k in configs):
+            return True
+        node = node.parent
+    return False
+
+
 def low_contrast(joined: Joined) -> list[Diagnostic]:
-    """V013: text whose color is too close to what is behind it (WCAG AA: 4.5:1, or 3:1 for large text). Disabled
-    controls are exempt, and text over a background image is not judged."""
+    """V013: text whose color is too close to what is behind it (WCAG AA: 4.5:1, or 3:1 for large text), on the
+    components whose text is theirs to color (CONTRAST_TYPES), when the view chose those colors (the theme's
+    defaults are not judged). Disabled controls are exempt, and text over a background image is not judged."""
     found: list[Diagnostic] = []
     for part in joined.parts:
         dom = part.dom
-        if not dom or not dom.get("text") or dom.get("disabled") or not dom.get("visible", True):
+        if part.type not in CONTRAST_TYPES or not dom or not dom.get("text") or dom.get("disabled") \
+                or not dom.get("visible", True):
             continue
         ratio = contrast_ratio(dom.get("color"), dom.get("text_bg"))
-        if ratio is None:
+        if ratio is None or not _chooses_colors(part):
             continue
         size = dom.get("font_size") or 0
         bold = str(dom.get("font_weight") or "400").isdigit() and int(dom["font_weight"]) >= 700

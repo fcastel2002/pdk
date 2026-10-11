@@ -189,8 +189,8 @@ def test_missing_view_hint_prefers_a_match_in_its_own_folder(bundle, tmp_path) -
 
 def test_missing_view_hint_points_to_a_sibling_run_when_the_folder_is_absent(bundle, tmp_path) -> None:
     hint = _r010_hint(bundle, tmp_path, "Bench/r3/Auxiliares/Popup", ["Bench/r2/Helpers/Popup"])
-    assert hint == ("create the view first (deploy the views it uses before it); "
-                    "closest elsewhere: 'Bench/r2/Helpers/Popup'")
+    assert hint == ("create the view first (references resolve against the project on the gateway: a view only in "
+                    "work/ counts once deployed); closest elsewhere: 'Bench/r2/Helpers/Popup'")
 
 
 def test_missing_view_hint_keeps_the_own_folder_over_a_closer_elsewhere(bundle, tmp_path) -> None:
@@ -208,4 +208,4 @@ def test_event_targets_share_the_missing_view_hint(bundle, tmp_path) -> None:
 
 
 def test_missing_view_hint_without_views_asks_to_create_it() -> None:
-    assert _missing_view_hint("Bench/Run/Popup", []) == "create the view first"
+    assert _missing_view_hint("Bench/Run/Popup", []).startswith("create the view first (references resolve")

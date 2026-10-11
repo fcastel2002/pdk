@@ -387,7 +387,10 @@ Produced by ``pdk inspect`` on a running view. See :doc:`../guide/inspection` fo
    * - ``V013``
      - low-contrast
      - Text whose color is too close to what is behind it: below 4.5:1, or 3:1 for large text (24px, or 18.66px
-       bold), as WCAG AA asks. Disabled controls are exempt; text over a background image is not judged.
+       bold), as WCAG AA asks. Only text components (labels, buttons, links, markdown, checkboxes, toggles, radio
+       groups) whose colors the view chose (a style color, background or class, on it or an ancestor) are judged:
+       the theme's defaults and text drawn inside charts or tables are not. Disabled controls are exempt; text over a
+       background image is not judged.
    * - ``Q001``
      - bad-quality
      - A binding with a *Bad* quality, such as ``Bad_NotFound``.

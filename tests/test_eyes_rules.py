@@ -355,10 +355,26 @@ def test_v012_ignores_sub_pixel_overflow_on_the_checked_axis() -> None:
 
 
 def _contrast(color: str, background: str | None, **dom: Any) -> list[dict[str, Any]]:
-    """The V013 findings for the Title label drawn in `color` over `background`."""
+    """The V013 findings for the Title label drawn in `color` over `background`, colors the view chose."""
     page = _dom()
     page["nodes"][1].update({"color": color, "text_bg": background, "font_size": 14, "font_weight": "400", **dom})
-    return [d for d in _run(page) if d["code"] == "V013"]
+    view = _view()
+    view["root"]["children"][0]["props"]["style"] = {"color": color}
+    return [d for d in _run(page, view=view) if d["code"] == "V013"]
+
+
+def test_v013_leaves_the_themes_colors_alone() -> None:
+    page = _dom()
+    page["nodes"][1].update({"color": "rgb(204, 204, 204)", "text_bg": "rgb(255, 255, 255)", "font_size": 14,
+                             "font_weight": "400"})
+    assert [d for d in _run(page) if d["code"] == "V013"] == []  # no color, background or class in the view
+    view = _view()
+    view["root"]["props"]["style"] = {"classes": "dim"}  # an ancestor's class counts
+    assert len([d for d in _run(page, view=view) if d["code"] == "V013"]) == 1
+    view = _view()
+    view["root"]["children"][0]["propConfig"]["props.style.color"] = {"binding": {"type": "expr",
+                                                                                  "config": {"expression": "'#ccc'"}}}
+    assert len([d for d in _run(page, view=view) if d["code"] == "V013"]) == 1
 
 
 def test_contrast_ratio_follows_wcag() -> None:
@@ -389,3 +405,12 @@ def test_v013_skips_disabled_controls_and_unknown_backgrounds() -> None:
     faint = "rgb(230, 230, 230)"
     assert _contrast(faint, None) == []  # a background image on the way: not judged
     assert _contrast(faint, "rgb(255, 255, 255)", disabled=True) == []
+
+
+def test_v013_judges_only_components_whose_text_is_theirs_to_color() -> None:
+    page = _dom()
+    page["nodes"][1].update({"type": "ia.chart.timeseries", "color": "rgb(170, 170, 170)",
+                             "text_bg": "rgb(250, 250, 250)", "font_size": 12, "font_weight": "400"})
+    view = _view()
+    view["root"]["children"][0]["type"] = "ia.chart.timeseries"
+    assert [d for d in _run(page, view=view) if d["code"] == "V013"] == []
