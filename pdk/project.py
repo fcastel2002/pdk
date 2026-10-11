@@ -87,7 +87,8 @@ class Project:
         return bool(self.parent and self.parent.has_style_class(name))
 
     def named_queries(self) -> list[str]:
-        """Named query paths (`Folder/Name`) of this project and its parents, from ignition/named-query/**/query.sql."""
+        """Named query paths (`Folder/Name`) of this project and its parents: each
+        `ignition/named-query/<path>/query.sql`."""
         if self._named_queries is None:
             base = self.root / NAMED_QUERY_DIR
             own = {_resource_path(f.parent.relative_to(base).parts) for f in base.rglob("query.sql")} \

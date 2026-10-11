@@ -16,7 +16,7 @@ Every request must:
   start; otherwise the answer is ``401``.
 
 Writes are further limited to the sandbox (``-Dpdk.sandbox``), the target project's finished views
-(``-Dpdk.target``) and tags under ``[provider]PDK/``.
+(``-Dpdk.target``) and tags under ``[provider]PDK/`` (UDT definitions under ``[provider]_types_/PDK/``).
 
 Endpoints
 ---------
@@ -79,7 +79,8 @@ Endpoints
      - Browse tags under a folder (any provider): type, value and quality.
    * - PUT
      - ``/tags?path=``
-     - Import a tag export JSON (folders and memory tags only) under ``PDK/``.
+     - Import a tag export JSON under ``PDK/`` (folders, memory tags, instances of ``PDK/`` UDTs) or
+       ``_types_/PDK/`` (UDT definitions with memory members).
    * - DELETE
      - ``/tags?path=``
      - Delete tags under ``PDK/``.
@@ -95,6 +96,13 @@ Endpoints
    * - POST
      - ``/alarms/ack?path=``
      - Acknowledge the alarms of the tags under a path.
+   * - GET
+     - ``/history``
+     - The gateway's tag history providers.
+   * - POST
+     - ``/history``
+     - Store synthetic history points for tags under ``PDK/``: ``{"provider", "points": [{"path", "value",
+       "timestamp" (ms), "quality"?}]}`` (at most 10,000), through ``system.tag.storeTagHistory``.
 
 Errors
 ------

@@ -26,6 +26,11 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
 - `pdk pages list|add|remove` (and `pdk_pages`): the routes of the sandbox's page configuration, so a `nav` to a
   page has somewhere to go.
 - When a step navigates to a URL without a route, `inspect` says so instead of failing to open the view.
+- Simulated UDTs: definitions under `[default]_types_/PDK/` (memory members, bindings only to parameters) and
+  instances under `PDK/`.
+- Simulated history: `historyEnabled` on `PDK/` memory tags, and `pdk tags history <path> <values> --every 1m`
+  (`history` in `pdk_tags`; module routes `GET`/`POST /history`) stores synthetic points through
+  `system.tag.storeTagHistory`, so trends and tag-history bindings have data.
 
 ### Changed
 - Closing PDK's browser also closes its Perspective sessions on the gateway (`DELETE /sessions`), so they no longer

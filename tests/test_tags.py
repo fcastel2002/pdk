@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from pdk import tags
+from pdk import mcp_server, tags
 from pdk.cli import main
 from pdk.eyes import act, expect
 from pdk.gateway import client
@@ -230,3 +230,192 @@ def test_apply_acknowledges_the_alarms_it_resets(tmp_path: Path) -> None:
     event = {"tag": "[default]PDK/A", "name": "High", "state": "ClearUnacked", "cleared": True}
     assert "1 alarm events acknowledged" in tags.apply(FakeTags(alarms=[event]), file)
     assert "reinstall it" in tags.apply(FakeTags(), file)  # an older module without the route
+
+
+class BrowseTags(FakeTags):
+    """A FakeTags whose tree lists the given nodes, for the bad-node report of an apply."""
+
+    def __init__(self, nodes: list[dict[str, Any]], **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.nodes = nodes
+
+    def tags(self, path: str | None = None, depth: int = 1) -> dict[str, Any]:
+        return {"path": path, "nodes": self.nodes}
+
+
+class NoLiveTags(FakeTags):
+    """A gateway for an apply into _types_/PDK: acknowledging or reading tags there would be a bug."""
+
+    def acknowledge_alarms(self, path: str) -> dict[str, Any]:
+        raise AssertionError("definitions have no alarm events to acknowledge")
+
+    def tags(self, path: str | None = None, depth: int = 1) -> dict[str, Any]:
+        raise AssertionError("definitions have no values to read back")
+
+
+class FakeHistory:
+    """The history routes of the gateway: its providers, and the points of each store call."""
+
+    def __init__(self, providers: list[str] | None = None) -> None:
+        self.providers = ["Hist"] if providers is None else providers
+        self.stored: list[tuple[str, list[dict[str, Any]]]] = []
+
+    def history_providers(self) -> list[str]:
+        return list(self.providers)
+
+    def store_history(self, provider: str, points: list[dict[str, Any]]) -> dict[str, Any]:
+        self.stored.append((provider, points))
+        return {"stored": len(points), "tagProvider": "default"}
+
+
+END_MS = 1_700_000_000_000  # the fixed end of the stored points
+
+
+def _gateway_as(monkeypatch: pytest.MonkeyPatch, gateway: Any) -> None:
+    monkeypatch.setattr(client, "Gateway", lambda *args, **kwargs: gateway)
+
+
+def test_full_path_keeps_types_and_providers() -> None:
+    assert tags.full_path("_types_/PDK/Motor") == "_types_/PDK/Motor"
+    assert tags.full_path("_types_") == "_types_"
+    assert tags.full_path("Sandbox/X") == "PDK/Sandbox/X"
+    assert tags.full_path("[default]X") == "[default]X"
+
+
+@pytest.mark.parametrize(("text", "ms"), [("500ms", 500), ("30s", 30_000), ("1m", 60_000), ("2h", 7_200_000),
+                                          ("1d", 86_400_000), ("1.5m", 90_000), ("10", 10_000)])
+def test_durations_are_milliseconds(text: str, ms: int) -> None:
+    assert tags.duration_ms(text) == ms
+
+
+@pytest.mark.parametrize("text", ["abc", ""])
+def test_bad_durations_raise(text: str) -> None:
+    with pytest.raises(ValueError, match="is not a duration"):
+        tags.duration_ms(text)
+
+
+def test_history_stores_the_values_ending_at_the_end() -> None:
+    gateway = FakeHistory()
+    text = tags.history(gateway, "Sandbox/Flow", ["1", "2", "3"], every="1m", end_ms=END_MS)
+    [(provider, points)] = gateway.stored
+    assert provider == "Hist"
+    assert [point["timestamp"] for point in points] == [END_MS - 120_000, END_MS - 60_000, END_MS]
+    assert [point["value"] for point in points] == [1, 2, 3]
+    assert all(type(point["value"]) is int for point in points)
+    assert {point["path"] for point in points} == {"PDK/Sandbox/Flow"}
+    assert "stored 3 point(s)" in text and "every 1m" in text
+
+
+def test_history_adds_the_quality_only_when_given() -> None:
+    gateway = FakeHistory()
+    tags.history(gateway, "Sandbox/Flow", ["1", "2"], end_ms=END_MS)
+    tags.history(gateway, "Sandbox/Flow", ["3"], quality="Bad_Stale", end_ms=END_MS)
+    plain, marked = gateway.stored
+    assert all("quality" not in point for point in plain[1])
+    assert [point.get("quality") for point in marked[1]] == ["Bad_Stale"]
+
+
+def test_history_provider_defaults_to_the_only_one_or_takes_the_given() -> None:
+    gateway = FakeHistory(["Hist"])
+    tags.history(gateway, "Sandbox/Flow", ["1"], end_ms=END_MS)
+    assert gateway.stored[-1][0] == "Hist"
+    several = FakeHistory(["Hist", "Other"])
+    with pytest.raises(ValueError, match="Hist, Other"):
+        tags.history(several, "Sandbox/Flow", ["1"], end_ms=END_MS)
+    assert several.stored == []
+    tags.history(several, "Sandbox/Flow", ["1"], provider="Other", end_ms=END_MS)
+    assert several.stored[0][0] == "Other"
+
+
+def test_history_needs_values() -> None:
+    gateway = FakeHistory()
+    with pytest.raises(ValueError, match="no values"):
+        tags.history(gateway, "Sandbox/Flow", [], end_ms=END_MS)
+    with pytest.raises(ValueError, match="2 are empty"):
+        tags.history(gateway, "Sandbox/Flow", ["10", " ", "12"], end_ms=END_MS)
+    assert gateway.stored == []
+
+
+def test_list_hides_udt_parameters_and_marks_instances() -> None:
+    result = {"path": "[default]PDK", "nodes": [
+        {"type": "Node", "path": "[default]PDK/Motor 1/Parameters"},
+        {"type": "UdtInstance", "path": "[default]PDK/Motor 1", "typeId": "PDK/Motor"},
+        {"type": "AtomicTag", "path": "[default]PDK/Sandbox/Setpoint", "dataType": "Int4", "value": 42,
+         "quality": "Good"},
+    ]}
+    assert tags.list_text(result).splitlines() == [
+        "[default]PDK: 2 nodes",
+        "  [default]PDK/Motor 1/ (UdtInstance)",
+        "  [default]PDK/Sandbox/Setpoint Int4 = 42 (Good)",
+    ]
+
+
+def test_apply_into_types_reports_the_import_only(tmp_path: Path) -> None:
+    file = tmp_path / "motor.json"
+    file.write_text('{"tags": []}', encoding="utf-8")
+    event = {"tag": "[default]PDK/A", "name": "High", "state": "ClearUnacked", "cleared": True}
+    assert tags.apply(NoLiveTags(alarms=[event]), file, to="_types_/PDK") == \
+        "motor.json -> [default]_types_/PDK: 1 tags (Good 1)"
+    assert "1 alarm events acknowledged" in tags.apply(FakeTags(alarms=[event]), file, to="PDK")
+
+
+def test_apply_reports_only_the_bad_atomic_tags(tmp_path: Path) -> None:
+    file = tmp_path / "bad.json"
+    file.write_text('{"tags": []}', encoding="utf-8")
+    event = {"tag": "[default]PDK/A", "name": "High", "state": "ClearUnacked", "cleared": True}
+    nodes = [
+        {"type": "AtomicTag", "path": "[default]PDK/Sandbox/Missing", "dataType": "Int4", "value": None,
+         "quality": "Bad_NotFound"},
+        {"type": "UdtInstance", "path": "[default]PDK/Motor 1", "quality": "Bad_Unsupported"},
+        {"type": "AtomicTag", "path": "[default]PDK/Sandbox/Setpoint", "dataType": "Int4", "value": 42,
+         "quality": "Good"},
+    ]
+    assert tags.apply(BrowseTags(nodes, alarms=[event]), file).splitlines() == [
+        "bad.json -> [default]PDK: 1 tags (Good 1)",
+        "  1 alarm events acknowledged",
+        "  [default]PDK/Sandbox/Missing Int4 = null (Bad_NotFound)",
+    ]
+
+
+def test_cli_history_lists_the_providers(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    _gateway_as(monkeypatch, FakeHistory())
+    assert main(["tags", "history"]) == 0
+    assert capsys.readouterr().out.strip() == "history providers: Hist"
+
+
+def test_cli_history_takes_a_path_and_a_value(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    _gateway_as(monkeypatch, FakeHistory())
+    assert main(["tags", "history", "Sandbox/Flow"]) == 2
+    assert "pdk tags history <path> <v1,v2,...>" in capsys.readouterr().err
+
+
+def test_cli_history_passes_the_values_and_options(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    calls: list[tuple[str, list[str], dict[str, Any]]] = []
+
+    def record(gateway: Any, path: str, values: list[str], *, every: str, provider: str | None,
+               quality: str | None) -> str:
+        calls.append((path, values, {"every": every, "provider": provider, "quality": quality}))
+        return "stored 3 point(s)"
+
+    _gateway_as(monkeypatch, FakeHistory())
+    monkeypatch.setattr(tags, "history", record)
+    assert main(["tags", "history", "Sandbox/Flow", "1,2,3", "--every", "30s", "--provider", "Other",
+                 "--quality", "Bad_Stale"]) == 0
+    assert main(["tags", "history", "Sandbox/Flow", "4"]) == 0
+    assert calls == [
+        ("Sandbox/Flow", ["1", "2", "3"], {"every": "30s", "provider": "Other", "quality": "Bad_Stale"}),
+        ("Sandbox/Flow", ["4"], {"every": "1m", "provider": None, "quality": None}),
+    ]
+    assert capsys.readouterr().out == "stored 3 point(s)\nstored 3 point(s)\n"
+
+
+def test_mcp_history_lists_then_needs_a_value_then_stores(monkeypatch: pytest.MonkeyPatch) -> None:
+    gateway = FakeHistory()
+    monkeypatch.setattr(mcp_server, "Gateway", lambda *args, **kwargs: gateway)
+    assert mcp_server.pdk_tags(action="history") == "history providers: Hist"
+    assert mcp_server.pdk_tags(action="history", path="Sandbox/Flow") == \
+        "pdk: history needs value: comma-separated values, oldest first"
+    assert gateway.stored == []
+    text = mcp_server.pdk_tags(action="history", path="Sandbox/Flow", value="1,2,3")
+    assert text.startswith("stored 3 point(s) of [default]PDK/Sandbox/Flow in Hist, every 1m")
+    assert [point["value"] for point in gateway.stored[0][1]] == [1, 2, 3]

@@ -1,20 +1,26 @@
 """Simulated tags (F5 part B): memory tags under [provider]PDK/ of the development gateway.
 
-The module imports Ignition's own tag export JSON (folders and memory tags only), writes values with a quality and
-reads them back, and lists the alarm events of those tags. Paths without `[provider]` hang from PDK/:
-`Sandbox/Setpoint` is `[default]PDK/Sandbox/Setpoint`. Reads take any path; writes only PDK/ (G013).
+The module imports Ignition's own tag export JSON (folders, memory tags, UDT definitions under _types_/PDK/ with
+memory members and instances of them), writes values with a quality and reads them back, lists the alarm events of
+those tags, and stores synthetic history points for them. Paths without `[provider]` hang from PDK/:
+`Sandbox/Setpoint` is `[default]PDK/Sandbox/Setpoint`; `_types_/PDK/...` is where UDT definitions go. Reads take
+any path; writes only PDK/ and _types_/PDK/ (G013).
 """
 
 from __future__ import annotations
 
 import json
 import math
+import re
+import time
 from pathlib import Path
 from typing import Any
 
 from pdk.gateway.client import Gateway, GatewayError
 
 FOLDER = "PDK"
+TYPES = "_types_"
+UNITS_MS = {"ms": 1, "s": 1000, "m": 60_000, "h": 3_600_000, "d": 86_400_000}
 LICENSE_EXCEEDED = "Bad_LicenseExceeded"
 LICENSE_HINT = ("hint: the gateway is over its tag license (Maker runs 10,000 tags): tags left out stay "
                 "Bad_LicenseExceeded and take no writes (Bad_Unsupported) until tags are removed and the gateway "
@@ -25,7 +31,8 @@ MAX_LINES = 60
 def full_path(path: str) -> str:
     """`Sandbox/Setpoint` -> `PDK/Sandbox/Setpoint`; paths with [provider] or already under PDK/ stay as they are."""
     text = path.strip().strip("/")
-    if text.startswith("[") or text.lower() == FOLDER.lower() or text.lower().startswith(FOLDER.lower() + "/"):
+    if text.startswith("[") or text.lower() in (FOLDER.lower(), TYPES) \
+            or text.lower().startswith((FOLDER.lower() + "/", TYPES + "/")):
         return text
     return f"{FOLDER}/{text}"
 
@@ -107,6 +114,8 @@ def apply(gateway: Gateway, file: Path, to: str = FOLDER) -> str:
     result = gateway.import_tags(full_path(to), data)
     qualities = ", ".join(f"{name} {count}" for name, count in result.get("qualities", {}).items())
     lines = [f"{file.name} -> {result.get('path')}: {result.get('tags')} tags ({qualities})"]
+    if full_path(to).lower().startswith(TYPES):
+        return "\n".join(lines)  # definitions: no values, no alarms
     try:
         acked = gateway.acknowledge_alarms(result.get("path")).get("acknowledged", 0)
         if acked:
@@ -116,15 +125,58 @@ def apply(gateway: Gateway, file: Path, to: str = FOLDER) -> str:
             raise
         lines.append("  alarm events not acknowledged: the module predates /alarms/ack (reinstall it)")
     nodes = gateway.tags(result.get("path"), depth=10).get("nodes", [])
-    bad = [n for n in nodes if n.get("type") != "Folder" and n.get("quality") not in (None, "Good")]
+    bad = [n for n in nodes if n.get("type") == "AtomicTag" and n.get("quality") not in (None, "Good")]
     lines += [f"  {_node(n)}" for n in bad[:MAX_LINES]]
     if any(n.get("quality") == LICENSE_EXCEEDED for n in bad):
         lines.append(LICENSE_HINT)
     return "\n".join(lines)
 
 
+def duration_ms(text: str) -> int:
+    """`500ms`, `30s`, `1m`, `2h`, `1d` (a bare number is seconds) in milliseconds."""
+    match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)?\s*", text or "")
+    if not match:
+        raise ValueError(f"{text!r} is not a duration like 30s, 1m, 2h or 1d")
+    return int(float(match.group(1)) * UNITS_MS[match.group(2) or "s"])
+
+
+def history(gateway: Gateway, path: str, values: list[str], *, every: str = "1m", provider: str | None = None,
+            quality: str | None = None, end_ms: int | None = None) -> str:
+    """Store `values` as the history of a tag under PDK/, one every `every`, the last one now (or at `end_ms`), in
+    `provider` (the gateway's only history provider when not given)."""
+    providers = gateway.history_providers()
+    if provider is None:
+        if len(providers) != 1:
+            raise ValueError(f"pass a history provider: the gateway has {', '.join(providers) or 'none'}")
+        provider = providers[0]
+    if not values:
+        raise ValueError("no values to store")
+    empty = [str(i + 1) for i, raw in enumerate(values) if not raw.strip()]
+    if empty:
+        raise ValueError(f"value(s) {', '.join(empty)} are empty: write them as numbers, true/false or text")
+    step = duration_ms(every)
+    end = end_ms if end_ms is not None else int(time.time() * 1000)
+    target = full_path(path)
+    points = []
+    for i, raw in enumerate(values):
+        point: dict[str, Any] = {"path": target, "value": parse_value(raw.strip()),
+                                 "timestamp": end - (len(values) - 1 - i) * step}
+        if quality:
+            point["quality"] = quality
+        points.append(point)
+    result = gateway.store_history(provider, points)
+    first, last = points[0]["timestamp"], points[-1]["timestamp"]
+    return (f"stored {result.get('stored', len(points))} point(s) of [{result.get('tagProvider', '?')}]{target} in "
+            f"{provider}, every {every} from {_iso(first)} to {_iso(last)}"
+            + (f" ({result['result']})" if result.get("result") not in (None, "", "[]") else ""))
+
+
+def _iso(ms: int) -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(ms / 1000))
+
+
 def list_text(result: dict[str, Any]) -> str:
-    nodes = result.get("nodes", [])
+    nodes = [n for n in result.get("nodes", []) if n.get("type") != "Node"]  # a UDT's Parameters, not a tag
     lines = [f"{result.get('path')}: {len(nodes)} nodes" + (" (truncated)" if result.get("truncated") else "")]
     lines += [f"  {_node(n)}" for n in nodes[:MAX_LINES]]
     if len(nodes) > MAX_LINES:
@@ -156,6 +208,8 @@ def alarms_text(result: dict[str, Any]) -> str:
 def _node(node: dict[str, Any]) -> str:
     if node.get("type") == "Folder":
         return f"{node.get('path')}/"
+    if node.get("type") in ("UdtInstance", "UdtType"):
+        return f"{node.get('path')}/ ({node['type']})"
     return f"{node.get('path')} {node.get('dataType')} = {show(node.get('value'))} ({node.get('quality')})"
 
 

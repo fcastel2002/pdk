@@ -10,8 +10,8 @@ Paths
 -----
 
 A path without ``[provider]`` hangs from ``PDK/``: ``Sandbox/Setpoint`` means ``[default]PDK/Sandbox/Setpoint``.
-Any tag can be **read**; only tags under ``PDK/`` can be **written**, created or deleted. A write outside it is
-refused with ``G013``.
+Any tag can be **read**; only tags under ``PDK/`` can be **written**, created or deleted, and UDT definitions only
+under ``_types_/PDK/``. A write outside them is refused with ``G013``.
 
 Creating tags
 -------------
@@ -41,8 +41,36 @@ memory tags (``"valueSource": "memory"``), alarms included:
 
 Applying a file overwrites the tags it contains, which also resets their values and acknowledges their alarms: run
 it before a test to start from a known state. ``--to`` imports into a subfolder of ``PDK/``. OPC tags, reference
-tags, UDT instances, event scripts, history and alarm pipelines are refused, so a test file cannot reach a device or
-send notifications.
+and expression tags, event scripts, alarm pipelines and property bindings (other than to a UDT parameter) are
+refused, so a test file cannot reach a device, run code or send notifications.
+
+UDTs
+----
+
+Screens built on UDTs (a template per motor, pump or tank) are tested with UDTs defined under ``_types_/PDK/``,
+whose members are memory tags; property bindings are allowed only to the UDT's parameters
+(``{"bindType": "parameter", "binding": "{Area}"}``). Instances go under ``PDK/`` with
+``"typeId": "PDK/<type>"`` and may override members and parameters:
+
+.. code-block:: bash
+
+   uv run pdk tags apply motor-type.json --to _types_/PDK    # {"tags": [{"name": "Motor", "tagType": "UdtType", ...}]}
+   uv run pdk tags apply motors.json                         # {"name": "M1", "tagType": "UdtInstance",
+                                                             #  "typeId": "PDK/Motor", "parameters": {...}}
+
+History
+-------
+
+Memory tags under ``PDK/`` may have ``historyEnabled`` and a ``historyProvider``, and ``pdk tags history`` stores
+synthetic points for them, so a trend or a tag-history binding has data to show without waiting for it:
+
+.. code-block:: bash
+
+   uv run pdk tags history                                    # the gateway's history providers
+   uv run pdk tags history Sandbox/Flow 10,12,15,11 --every 5m  # four points, five minutes apart, ending now
+
+The points go through ``system.tag.storeTagHistory`` into the provider (``--provider`` when the gateway has more
+than one); a tag-history binding on ``[default]PDK/Sandbox/Flow`` then returns them.
 
 Commands
 --------

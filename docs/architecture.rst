@@ -116,7 +116,9 @@ Read-only by default
    the target project only views outside ``PDK/`` and the stylesheet. Projects and tags are named in
    ``ignition.conf``, which needs administrator rights, not by the client.
 Tags only under ``PDK/``
-   Tag imports accept only folders and memory tags (no OPC, references, UDTs, scripts, history or alarm
+   UDT definitions only under ``_types_/PDK/``; synthetic history only for tags under ``PDK/``. Tag imports accept
+   only folders, memory tags, UDT definitions whose members are memory tags and instances of them (no OPC,
+   references, expressions, scripts, bindings other than to UDT parameters or alarm
    pipelines), and writes only reach ``[provider]PDK/``.
 No lost edits
    Every write and delete carries the expected signature, so a concurrent edit is reported, never overwritten.

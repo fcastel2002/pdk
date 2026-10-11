@@ -128,7 +128,7 @@ Codes are stable; each diagnostic reads `E|W|I CODE /json/pointer (component pat
 
 ## Safety
 - The module only answers loopback connections and requires a token that changes on every start.
-- It writes only to the sandbox, and only if the gateway started with `-Dpdk.sandbox`. Tags: only under `[default]PDK/`.
+- It writes only to the sandbox, and only if the gateway started with `-Dpdk.sandbox`. Tags: only under `[default]PDK/` (UDT definitions under `[default]_types_/PDK/`), memory tags only.
 - Every write carries the expected signature, so a Designer edit is never overwritten (409 with a diff).
 - **Do not install it on a production gateway.** See [SECURITY.md](SECURITY.md).
 

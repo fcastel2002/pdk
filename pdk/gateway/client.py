@@ -260,6 +260,14 @@ class Gateway:
         """Alarm events of the tags at or under a path (default PDK/)."""
         return self.call("GET", "/alarms" + ("?" + urllib.parse.urlencode({"path": path}) if path else ""))
 
+    def history_providers(self) -> list[str]:
+        """The gateway's tag history providers."""
+        return self.call("GET", "/history").get("providers", [])
+
+    def store_history(self, provider: str, points: list[dict[str, Any]]) -> dict[str, Any]:
+        """[{path, value, timestamp (ms), quality?}] of tags under PDK/ into a history provider."""
+        return self.call("POST", "/history", {"provider": provider, "points": points})
+
     def acknowledge_alarms(self, path: str) -> dict[str, Any]:
         """Acknowledge the unacknowledged alarm events of the tags under a path in PDK/."""
         return self.call("POST", "/alarms/ack?" + urllib.parse.urlencode({"path": path}))

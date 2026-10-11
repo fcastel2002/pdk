@@ -42,9 +42,10 @@ its ``act`` steps run the view's own event scripts on the gateway, which can wri
      - ``path`` (local folder of a pulled view), ``resolved``.
    * - ``pdk_tags``
      - destructive
-     - ``action`` (``list``, ``read``, ``write``, ``apply``, ``delete``, ``alarms``), ``path``, ``value``,
-       ``quality``, ``file`` (tag export JSON for ``apply``), ``to`` (folder under ``PDK/``), ``depth``. See
-       :doc:`../guide/tags`.
+     - ``action`` (``list``, ``read``, ``write``, ``apply``, ``delete``, ``alarms``, ``history``), ``path``,
+       ``value`` (for ``history``, comma-separated values), ``quality``, ``file`` (tag export JSON for ``apply``),
+       ``to`` (folder under ``PDK/``, or ``_types_/PDK`` for UDT definitions), ``depth``, ``every`` and
+       ``provider`` (``history``). See :doc:`../guide/tags`.
    * - ``pdk_open``
      - writes (preview)
      - ``path`` (sandbox path or local folder), ``viewport`` (``WIDTHxHEIGHT``). Renders the view and reports load

@@ -222,7 +222,6 @@ public final class SelfTest {
             "{\"name\":\"..\",\"tagType\":\"Folder\"}",
             memory.replace("\"priority\"", "\"activePipeline\":\"Email\",\"priority\""),
             memory.replace("\"value\":20", "\"value\":20,\"eventScripts\":[]"),
-            memory.replace("\"value\":20", "\"value\":20,\"historyEnabled\":true"),
             memory.replace("\"setpointA\":80", "\"setpointA\":{\"bindType\":\"Expression\",\"value\":\"runScript('x')\"}"),
             "{\"name\":\"F\",\"tagType\":\"Folder\",\"tags\":[{\"name\":\"X\",\"tagType\":\"AtomicTag\",\"valueSource\":\"reference\"}]}",
         };
@@ -231,6 +230,28 @@ public final class SelfTest {
         }
         check(Tags.checkImport(memory.replace("\"value\":20", "\"value\":20,\"historyEnabled\":false")) == 1,
                 "tags: historyEnabled false is fine");
+        check(Tags.checkImport(memory.replace("\"value\":20",
+                "\"value\":20,\"historyEnabled\":true,\"historyProvider\":\"Core Historian\"")) == 1,
+                "tags: history may be enabled");
+
+        String member = "{\"name\":\"Speed\",\"tagType\":\"AtomicTag\",\"valueSource\":\"memory\",\"dataType\":\"Float8\","
+                + "\"documentation\":{\"bindType\":\"parameter\",\"binding\":\"{Area}\"}}";
+        String type = "{\"name\":\"Motor\",\"tagType\":\"UdtType\",\"parameters\":{\"Area\":{\"dataType\":\"String\","
+                + "\"value\":\"North\"}},\"tags\":[" + member + "]}";
+        check(Tags.checkImport(type, true) == 1, "tags: a UDT definition with a memory member");
+        expect("INVALID_TAGS", () -> Tags.checkImport(type, false));
+        expect("INVALID_TAGS", () -> Tags.checkImport(memory, true));
+        expect("INVALID_TAGS", () -> Tags.checkImport(type.replace("\"memory\"", "\"opc\""), true));
+        String instance = "{\"name\":\"M1\",\"tagType\":\"UdtInstance\",\"typeId\":\"PDK/Motor\",\"parameters\":"
+                + "{\"Area\":\"South\"},\"tags\":[{\"name\":\"Speed\",\"tagType\":\"AtomicTag\",\"value\":5}]}";
+        check(Tags.checkImport(instance) == 1, "tags: an instance of a PDK UDT, with a member override");
+        expect("INVALID_TAGS", () -> Tags.checkImport(instance.replace("PDK/Motor", "Motor")));
+        expect("INVALID_TAGS", () -> Tags.checkImport(instance.replace("PDK/Motor", "PDK/../Motor")));
+        expect("INVALID_TAGS", () -> Tags.checkImport(instance.replace("\"value\":5", "\"valueSource\":\"opc\"")));
+        check(Tags.ownType("pdk/Pumps/Motor") && !Tags.ownType("PDK/") && !Tags.ownType("Other/Motor"), "tags: own types");
+        check(Tags.inTypes(Tags.parse("_types_/PDK/Motor", "default"), "default"), "tags: in _types_/PDK");
+        check(!Tags.inTypes(Tags.parse("_types_/Motor", "default"), "default"), "tags: other types");
+        check(!Tags.inTypes(Tags.parse("PDK/Motor", "default"), "default"), "tags: work is not types");
         StringBuilder many = new StringBuilder("{\"tags\":[");
         for (int i = 0; i <= Tags.MAX_IMPORT; i++) {
             many.append(i == 0 ? "" : ",").append(memory.replace("Setpoint", "T" + i));

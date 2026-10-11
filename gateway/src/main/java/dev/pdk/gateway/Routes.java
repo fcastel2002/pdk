@@ -29,6 +29,7 @@ final class Routes {
     private final LogTap logs;
     private final Tags tags;
     private final Functions functions;
+    private final History history;
     private final Sandbox sandbox;
     private final Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
 
@@ -44,6 +45,7 @@ final class Routes {
         this.changes = changes;
         this.catalog = new Catalog(context);
         this.functions = new Functions(context);
+        this.history = new History(context, sandbox);
     }
 
     void mount(RouteGroup routes) {
@@ -78,6 +80,8 @@ final class Routes {
         mount(routes, HttpMethod.POST, "/tags/write", request -> tags.write(request.readBody()));
         mount(routes, HttpMethod.GET, "/alarms", request -> tags.alarms(request.getParameter("path")));
         mount(routes, HttpMethod.POST, "/alarms/ack", request -> tags.acknowledge(request.getParameter("path")));
+        mount(routes, HttpMethod.GET, "/history", request -> history.providers());
+        mount(routes, HttpMethod.POST, "/history", request -> history.store(request.readBody()));
     }
 
     private void mount(RouteGroup routes, HttpMethod method, String path, Handler handler) {

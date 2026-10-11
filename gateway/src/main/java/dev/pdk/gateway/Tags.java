@@ -45,8 +45,10 @@ import java.util.concurrent.TimeoutException;
 /**
  * Simulated tags (F5 part B): memory tags under {@code [provider]PDK/} of the provider {@code -Dpdk.tagProvider}
  * (default {@code default}). Reads and browses take any path; imports, writes and deletes need the sandbox and a
- * path under {@code PDK/}. Imports take Ignition's own tag export JSON, restricted to folders and memory tags with
- * nothing that runs or notifies on its own (event scripts, pipelines, bindings, history).
+ * path under {@code PDK/}, or {@code _types_/PDK/} for UDT definitions. Imports take Ignition's own tag export JSON,
+ * restricted to folders, memory tags, UDT definitions whose members are memory tags, and instances of those UDTs,
+ * with nothing that runs or notifies on its own (event scripts, pipelines, expression bindings). History may be
+ * enabled on them, and synthetic history points stored for them ({@link #storeHistory}).
  */
 final class Tags {
     static final String PROVIDER_PROPERTY = "pdk.tagProvider";
@@ -57,9 +59,13 @@ final class Tags {
     static final int MAX_DEPTH = 10;
     static final int MAX_ITEMS = 100;
     private static final long TIMEOUT_MS = 5000;
-    private static final Set<String> TAG_TYPES = Set.of("Folder", "AtomicTag");
+    static final String TYPES_FOLDER = "_types_";
+    static final int MAX_POINTS = 10_000;
+    private static final Set<String> TAG_TYPES = Set.of("Folder", "AtomicTag", "UdtInstance");
+    private static final Set<String> TYPE_TAG_TYPES = Set.of("Folder", "UdtType");
+    private static final Set<String> MEMBER_TAG_TYPES = Set.of("Folder", "AtomicTag", "UdtInstance");
     private static final Set<String> FORBIDDEN_KEYS = Set.of(
-            "eventScripts", "activePipeline", "clearPipeline", "ackPipeline", "bindType", "historyProvider");
+            "eventScripts", "activePipeline", "clearPipeline", "ackPipeline");
 
     private final GatewayContext context;
     private final Sandbox sandbox;
@@ -129,8 +135,11 @@ final class Tags {
     Reply importJson(String rawPath, String body) {
         sandbox.requireEnabled();
         TagPath base = parse(rawPath == null || rawPath.isBlank() ? FOLDER : rawPath, providerName);
-        requireWork(base, providerName);
-        int count = checkImport(body);
+        boolean types = inTypes(base, providerName);
+        if (!types) {
+            requireWork(base, providerName);
+        }
+        int count = checkImport(body, types);
         TagProvider provider = provider(base.getSource());
         ensureFolders(provider, base);
         List<QualityCode> qualities = await(provider.importTagsAsync(
@@ -186,7 +195,9 @@ final class Tags {
             throw new ApiError(400, "BAD_REQUEST", "'path' is required.");
         }
         TagPath path = parse(rawPath, providerName);
-        requireWork(path, providerName);
+        if (!inTypes(path, providerName)) {
+            requireWork(path, providerName);
+        }
         // A mutable list: the provider sorts it (List.of fails with UnsupportedOperationException, Error_Exception).
         List<QualityCode> qualities = await(provider(path.getSource())
                 .removeTagConfigsAsync(new ArrayList<>(List.of(path)), SecurityContext.systemContext()));
@@ -310,6 +321,22 @@ final class Tags {
         }
     }
 
+    /** At or under [provider]_types_/PDK, where PDK's UDT definitions live (no properties, no relative segments). */
+    static boolean inTypes(TagPath path, String provider) {
+        if (!path.getSource().equalsIgnoreCase(provider) || path.getPathLength() < 2 || path.getProperty() != null
+                || !TYPES_FOLDER.equalsIgnoreCase(path.getPathComponent(0))
+                || !FOLDER.equalsIgnoreCase(path.getPathComponent(1))) {
+            return false;
+        }
+        for (int i = 0; i < path.getPathLength(); i++) {
+            String part = path.getPathComponent(i);
+            if (part == null || part.isBlank() || part.equals(".") || part.equals("..")) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /** Folder at or under another, by segments and case-insensitively, as Ignition resolves tag paths. */
     static boolean under(String tag, String folder) {
         String a = tag.toLowerCase(Locale.ROOT);
@@ -317,20 +344,35 @@ final class Tags {
         return b.isEmpty() || a.equals(b) || a.startsWith(b + "/");
     }
 
-    /**
-     * Tag export JSON that may be imported: one tag object, or {"tags": [...]}; only folders and memory tags, no
-     * event scripts, pipelines, bindings or history, names without '/' or '['. Returns the number of tags.
-     */
+    /** Where a node sits, which decides the tag types it may have. */
+    enum Place {
+        WORK,       // under PDK/: folders, memory tags, instances of PDK/ UDTs
+        TYPES,      // under _types_/PDK/: folders and UDT definitions
+        MEMBER,     // inside a UDT definition: folders, memory tags, nested instances of PDK/ UDTs
+        OVERRIDE    // inside a UDT instance: overrides of its members (valueSource only if memory)
+    }
+
     static int checkImport(String body) {
+        return checkImport(body, false);
+    }
+
+    /**
+     * Tag export JSON that may be imported: one tag object, or {"tags": [...]}. Under PDK/: folders, memory tags and
+     * instances of UDTs defined under _types_/PDK/; under _types_/PDK/ (`types`): folders and UDT definitions whose
+     * members are memory tags. Nothing that runs or notifies on its own (event scripts, pipelines, bindings other
+     * than to UDT parameters); names without '/' or '['. Returns the number of tags.
+     */
+    static int checkImport(String body, boolean types) {
         JsonObject root = object(body);
         int[] count = {0};
+        Place place = types ? Place.TYPES : Place.WORK;
         if (root.has("tagType")) {
-            checkNode(root, "", count);
+            checkNode(root, "", count, place);
         } else {
             if (root.size() != 1 || !root.has("tags")) {
                 throw new ApiError(400, "INVALID_TAGS", "The body is one tag object or {\"tags\": [...]}.");
             }
-            checkChildren(root.get("tags"), "", count);
+            checkChildren(root.get("tags"), "", count, place);
         }
         if (count[0] > MAX_IMPORT) {
             throw new ApiError(413, "TOO_MANY_TAGS",
@@ -339,7 +381,7 @@ final class Tags {
         return count[0];
     }
 
-    private static void checkChildren(JsonElement tags, String where, int[] count) {
+    private static void checkChildren(JsonElement tags, String where, int[] count, Place place) {
         if (tags == null || !tags.isJsonArray()) {
             throw new ApiError(400, "INVALID_TAGS", "'tags' must be an array at '" + where + "'.");
         }
@@ -347,11 +389,11 @@ final class Tags {
             if (!child.isJsonObject()) {
                 throw new ApiError(400, "INVALID_TAGS", "Every item of 'tags' must be an object at '" + where + "'.");
             }
-            checkNode(child.getAsJsonObject(), where, count);
+            checkNode(child.getAsJsonObject(), where, count, place);
         }
     }
 
-    private static void checkNode(JsonObject node, String parent, int[] count) {
+    private static void checkNode(JsonObject node, String parent, int[] count, Place place) {
         JsonElement nameElement = node.get("name");
         String name = nameElement != null && nameElement.isJsonPrimitive() ? nameElement.getAsString() : "";
         String where = parent.isEmpty() ? name : parent + "/" + name;
@@ -360,28 +402,75 @@ final class Tags {
         }
         JsonElement typeElement = node.get("tagType");
         String type = typeElement != null && typeElement.isJsonPrimitive() ? typeElement.getAsString() : null;
-        if (!TAG_TYPES.contains(type)) {
-            throw new ApiError(400, "INVALID_TAGS", "'" + where + "': tagType must be Folder or AtomicTag, not "
-                    + type + ".");
+        Set<String> allowed = switch (place) {
+            case WORK -> TAG_TYPES;
+            case TYPES -> TYPE_TAG_TYPES;
+            case MEMBER, OVERRIDE -> MEMBER_TAG_TYPES;
+        };
+        if (!allowed.contains(type)) {
+            throw new ApiError(400, "INVALID_TAGS", "'" + where + "': tagType must be " + String.join(", ",
+                    new java.util.TreeSet<>(allowed)) + " here, not " + type + ".");
         }
         forbidden(node, where);
         if ("Folder".equals(type)) {
             if (node.has("tags")) {
-                checkChildren(node.get("tags"), where, count);
+                checkChildren(node.get("tags"), where, count, place);
+            }
+            return;
+        }
+        if ("UdtType".equals(type)) {
+            if (node.has("tags")) {
+                checkChildren(node.get("tags"), where, count, Place.MEMBER);
+            }
+            count[0]++;  // a definition
+            return;
+        }
+        if ("UdtInstance".equals(type)) {
+            JsonElement typeId = node.get("typeId");
+            boolean optional = place == Place.OVERRIDE && typeId == null;
+            if (!optional && (typeId == null || !typeId.isJsonPrimitive() || !ownType(typeId.getAsString()))) {
+                throw new ApiError(400, "INVALID_TAGS", "'" + where + "': a UDT instance's typeId must be a type "
+                        + "under " + TYPES_FOLDER + "/" + FOLDER + "/, written \"" + FOLDER + "/<type>\".");
+            }
+            if (node.has("tags")) {
+                checkChildren(node.get("tags"), where, count, Place.OVERRIDE);
+            }
+            if (place == Place.WORK) {
+                count[0]++;  // an instance; overrides and nested instances are parts of it
             }
             return;
         }
         JsonElement source = node.get("valueSource");
-        if (source == null || !source.isJsonPrimitive() || !"memory".equals(source.getAsString())) {
+        boolean inherited = place == Place.OVERRIDE && source == null;
+        if (!inherited && (source == null || !source.isJsonPrimitive() || !"memory".equals(source.getAsString()))) {
             throw new ApiError(400, "INVALID_TAGS", "'" + where + "': only memory tags (\"valueSource\": \"memory\").");
         }
         if (node.has("tags")) {
             throw new ApiError(400, "INVALID_TAGS", "'" + where + "': an AtomicTag has no 'tags'.");
         }
-        count[0]++;
+        if (place == Place.WORK) {
+            count[0]++;  // members of a definition and overrides of an instance are not new tags
+        }
     }
 
-    /** Keys that run or notify on their own, anywhere in the node except its child tags. */
+    /** A UDT definition of PDK's: "PDK/<type>" (a typeId is relative to _types_). */
+    static boolean ownType(String typeId) {
+        String id = typeId.strip();
+        if (!id.regionMatches(true, 0, FOLDER + "/", 0, FOLDER.length() + 1) || id.length() <= FOLDER.length() + 1) {
+            return false;
+        }
+        for (String part : id.split("/", -1)) {
+            if (part.isBlank() || part.equals(".") || part.equals("..") || part.contains("[")) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Keys that run or notify on their own, anywhere in the node except its child tags. A property binding is
+     * allowed only to a UDT parameter ({"bindType": "parameter"}).
+     */
     private static void forbidden(JsonElement element, String where) {
         if (element.isJsonArray()) {
             for (JsonElement item : element.getAsJsonArray()) {
@@ -391,19 +480,17 @@ final class Tags {
             for (Map.Entry<String, JsonElement> entry : element.getAsJsonObject().entrySet()) {
                 String key = entry.getKey();
                 JsonElement value = entry.getValue();
-                if (FORBIDDEN_KEYS.contains(key) || ("historyEnabled".equals(key) && !isFalse(value))) {
+                boolean binding = "bindType".equals(key) && !(value.isJsonPrimitive()
+                        && "parameter".equalsIgnoreCase(value.getAsString()));
+                if (FORBIDDEN_KEYS.contains(key) || binding) {
                     throw new ApiError(400, "INVALID_TAGS", "'" + where + "': '" + key
-                            + "' is not allowed in simulated tags.");
+                            + (binding ? "' other than a UDT parameter" : "'") + " is not allowed in simulated tags.");
                 }
                 if (!"tags".equals(key)) {
                     forbidden(value, where);
                 }
             }
         }
-    }
-
-    private static boolean isFalse(JsonElement value) {
-        return value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean() && !value.getAsBoolean();
     }
 
     /** A quality by name (Good, Bad_Stale, Bad_Disabled, Uncertain_LastKnownValue, ...). */
@@ -538,7 +625,7 @@ final class Tags {
         return counts;
     }
 
-    private static JsonObject object(String body) {
+    static JsonObject object(String body) {
         try {
             JsonElement parsed = JsonParser.parseString(body == null ? "" : body);
             if (!parsed.isJsonObject()) {

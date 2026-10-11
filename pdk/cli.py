@@ -297,7 +297,8 @@ def _cmd_pages(args: argparse.Namespace) -> int:
     return EXIT_OK if outcome.ok else EXIT_FINDINGS
 
 
-TAG_ARITY = {"list": (0, 1), "read": (1, 100), "write": (1, 2), "apply": (1, 1), "delete": (1, 1), "alarms": (0, 1)}
+TAG_ARITY = {"list": (0, 1), "read": (1, 100), "write": (1, 2), "apply": (1, 1), "delete": (1, 1), "alarms": (0, 1),
+             "history": (0, 2)}
 
 
 def _cmd_tags(args: argparse.Namespace) -> int:
@@ -308,7 +309,8 @@ def _cmd_tags(args: argparse.Namespace) -> int:
     items = args.items
     if not low <= len(items) <= high or (args.action == "write" and len(items) == 1 and not args.quality):
         usage = {"list": "[path]", "read": "<path>...", "write": "<path> <value> [--quality Q] | <path> --quality Q",
-                 "apply": "<file.json> [--to PDK/folder]", "delete": "<path>", "alarms": "[path]"}[args.action]
+                 "apply": "<file.json> [--to PDK/folder | _types_/PDK]", "delete": "<path>", "alarms": "[path]",
+                 "history": "[<path> <v1,v2,...> [--every 1m] [--provider P] [--quality Q]]"}[args.action]
         print(f"pdk tags {args.action} {usage}", file=sys.stderr)
         return EXIT_USAGE
     gateway = Gateway(url=args.url) if args.url else Gateway()
@@ -324,6 +326,15 @@ def _cmd_tags(args: argparse.Namespace) -> int:
             print(tags.apply(gateway, Path(items[0]), args.to or tags.FOLDER))
         elif args.action == "delete":
             print(f"deleted {gateway.delete_tags(tags.full_path(items[0])).get('path')}")
+        elif args.action == "history":
+            if not items:
+                print("history providers: " + (", ".join(gateway.history_providers()) or "none"))
+            elif len(items) != 2:
+                print("pdk tags history <path> <v1,v2,...> [--every 1m] [--provider P]", file=sys.stderr)
+                return EXIT_USAGE
+            else:
+                print(tags.history(gateway, items[0], items[1].split(","), every=args.every, provider=args.provider,
+                                   quality=args.quality))
         else:
             print(tags.alarms_text(gateway.alarms(tags.full_path(items[0]) if items else None)))
     except (GatewayError, ValueError) as exc:
@@ -473,7 +484,10 @@ def build_parser() -> argparse.ArgumentParser:
                                                  "Sandbox/Setpoint), a value to write, or the JSON file to apply")
     tagger.add_argument("--quality", help="write: quality to write with the value, e.g. Bad_Stale, Bad_Disabled")
     tagger.add_argument("--depth", type=int, default=1, help="list: folder levels to walk (max 10)")
-    tagger.add_argument("--to", help="apply: folder under PDK/ to import into (default: PDK)")
+    tagger.add_argument("--to", help="apply: folder under PDK/ to import into (default: PDK), or _types_/PDK for "
+                                     "UDT definitions")
+    tagger.add_argument("--every", default="1m", help="history: time between the values (30s, 1m, 2h, 1d)")
+    tagger.add_argument("--provider", help="history: tag history provider (default: the gateway's only one)")
     tagger.add_argument("--url", help="gateway URL (default: PDK_GATEWAY_URL or http://127.0.0.1:8088)")
     tagger.set_defaults(func=_cmd_tags)
 

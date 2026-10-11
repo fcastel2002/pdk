@@ -220,14 +220,19 @@ def pdk_delete(path: str, resolved: bool = False) -> str:
         "current one), 'apply' (file: a tag export JSON of folders and memory tags with \"valueSource\": "
         "\"memory\", alarms included, imported into `to` under PDK/ and overwriting: it also resets values "
         "and acknowledges their alarms), "
-        "'delete' (path under PDK/), 'alarms' (path: alarm events of the tags under it). Writes outside PDK/ are "
-        "G013. Bad_LicenseExceeded means the gateway is over its tag license."
+        "'delete' (path under PDK/), 'alarms' (path: alarm events of the tags under it), 'history' (path and value "
+        "as comma-separated values like '10,12,15,11': stored as the tag's history, one every `every` (default "
+        "1m) ending now, in `provider` (default the only one; no path lists them), for trends and tag-history "
+        "bindings). UDTs: apply a file of UdtType definitions with to='_types_/PDK' (members memory tags; "
+        "bindings only to parameters), then instances with \"typeId\": \"PDK/<type>\" under PDK/. Writes "
+        "outside PDK/ and _types_/PDK/ are G013. Bad_LicenseExceeded means the gateway is over its tag license."
     ),
     annotations=DESTRUCTIVE,
     structured_output=False,
 )
 def pdk_tags(action: str, path: str | None = None, value: str | None = None, quality: str | None = None,
-             file: str | None = None, to: str | None = None, depth: int = 1) -> str:
+             file: str | None = None, to: str | None = None, depth: int = 1, every: str = "1m",
+             provider: str | None = None) -> str:
     from pdk import tags
 
     gateway = Gateway()
@@ -240,8 +245,14 @@ def pdk_tags(action: str, path: str | None = None, value: str | None = None, qua
             if not file:
                 return "pdk: apply needs file (a tag export JSON)"
             return tags.apply(gateway, Path(file), to or tags.FOLDER)
+        if action == "history" and not path:
+            return "history providers: " + (", ".join(gateway.history_providers()) or "none")
         if not path:
             return f"pdk: {action} needs path"
+        if action == "history":
+            if not value:
+                return "pdk: history needs value: comma-separated values, oldest first"
+            return tags.history(gateway, path, value.split(","), every=every, provider=provider, quality=quality)
         if action == "read":
             return tags.values_text(gateway.read_tags([tags.full_path(path)])["results"])
         if action == "write":
@@ -254,7 +265,7 @@ def pdk_tags(action: str, path: str | None = None, value: str | None = None, qua
         return str(exc)
     except (ValueError, OSError) as exc:
         return f"pdk: {exc}"
-    return f"pdk: unknown action {action!r} (list, read, write, apply, delete, alarms)"
+    return f"pdk: unknown action {action!r} (list, read, write, apply, delete, alarms, history)"
 
 
 @server.tool(

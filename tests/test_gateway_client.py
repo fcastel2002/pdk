@@ -237,3 +237,25 @@ def test_functions_and_compile_use_their_routes(monkeypatch: pytest.MonkeyPatch)
     assert gateway.compile_scripts(sources) == []
     assert sent == [("GET", "/functions", None), ("POST", "/scripts/compile", {"sources": sources}),
                     ("POST", "/scripts/compile", {"sources": sources})]
+
+
+def test_history_routes_list_providers_and_store_points(monkeypatch: pytest.MonkeyPatch) -> None:
+    sent: list[tuple[str, str, Any]] = []
+    answers: dict[tuple[str, str], Any] = {
+        ("GET", "/history"): {"providers": ["Hist", "Other"]},
+        ("POST", "/history"): {"stored": 1, "tagProvider": "default"},
+    }
+
+    def call(self: Gateway, method: str, route: str, body: Any = None) -> Any:
+        sent.append((method, route, body))
+        return answers[(method, route)]
+
+    monkeypatch.setattr(Gateway, "call", call)
+    gateway = Gateway(url="http://127.0.0.1:8088", token=TOKEN)
+    assert gateway.history_providers() == ["Hist", "Other"]
+    points = [{"path": "PDK/Sandbox/Flow", "value": 1, "timestamp": 1000}]
+    assert gateway.store_history("Hist", points) == {"stored": 1, "tagProvider": "default"}
+    answers[("GET", "/history")] = {}  # a module without the list answers no providers
+    assert gateway.history_providers() == []
+    assert sent == [("GET", "/history", None), ("POST", "/history", {"provider": "Hist", "points": points}),
+                    ("GET", "/history", None)]
