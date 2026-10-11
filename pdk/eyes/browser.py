@@ -286,11 +286,16 @@ class Eyes:
 
     With `idle_s`, the browser closes after that long without work: an open page keeps its Perspective session
     connected (Maker caps them per gateway), and a long-lived server would otherwise hold it forever. The next call
-    starts it again.
+    starts it again. A browser that goes away only disconnects its sessions, which then hold their slots until they
+    time out: `release(page_ids)`, called before the contexts close with one page of each session, closes them on
+    the gateway.
     """
 
-    def __init__(self, headless: bool = True, idle_s: float | None = None):
+    def __init__(self, headless: bool = True, idle_s: float | None = None,
+                 release: Callable[[list[str]], None] | None = None):
         self._headless = headless
+        self._release = release
+        self._session_pages: dict[Viewport, str] = {}  # one page id per context (= Perspective session)
         self._worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix="pdk-eyes")
         self._idle_s = idle_s
         self._last_use = time.monotonic()
@@ -335,6 +340,10 @@ class Eyes:
         geometry is stable again."""
         return self.run(self._extract, opened, root)
 
+    def location(self, opened: Opened) -> str:
+        """The page's URL now (a step may have navigated it)."""
+        return self.run(lambda: opened.page.url)
+
     def popups(self, opened: Opened) -> list[str]:
         """Ids of the popups open on the page, in stacking order."""
         return self.run(lambda: opened.page.evaluate(POPUPS_JS))
@@ -377,6 +386,7 @@ class Eyes:
                             f"Chromium did not start ({exc}); run `uv run playwright install chromium`") from exc
         self._contexts.clear()
         self._pages.clear()
+        self._session_pages.clear()
         return self._browser
 
     def _context(self, viewport: Viewport) -> Any:
@@ -413,6 +423,8 @@ class Eyes:
         state = _wait_ready(opened.page)
         opened.readiness_ms = round((time.perf_counter() - started) * 1000, 1)
         opened.page_id = state.get("pageId")
+        if opened.page_id:
+            self._session_pages[viewport] = opened.page_id
         opened.maker_notice = _dismiss_maker_notice(opened.page)
         if state.get("dpr") != 1:
             raise EyesError(BROWSER_CRASH, f"unexpected device pixel ratio {state.get('dpr')}")
@@ -454,6 +466,11 @@ class Eyes:
         return locator.screenshot()
 
     def _close(self) -> None:
+        pages = list(self._session_pages.values())
+        self._session_pages.clear()
+        if pages and self._release is not None:
+            with contextlib.suppress(Exception):  # best effort: an unclosed session only times out
+                self._release(pages)
         for context in self._contexts.values():
             with contextlib.suppress(Exception):
                 context.close()

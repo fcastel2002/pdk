@@ -53,9 +53,11 @@ its ``act`` steps run the view's own event scripts on the gateway, which can wri
      - destructive
      - ``path``, ``viewport``, ``focus``, ``query``, ``expect``, ``act``. See :doc:`../guide/inspection`.
    * - ``pdk_screenshot``
-     - writes (preview)
-     - ``path``, ``viewport``, ``component`` (name path such as ``root/Panel``). Returns a PNG image.
+     - destructive
+     - ``path``, ``viewport``, ``component`` (name path such as ``root/Panel``, or ``popup:<id>/root/...`` after
+       ``act``), ``act`` (steps run before capturing, as in ``pdk_inspect``). Returns a PNG image.
 
 The server's instructions describe the whole cycle (catalog, write, validate, deploy, inspect, fix), so a client
 learns the workflow from the server itself. The browser used by ``pdk_open``, ``pdk_inspect`` and
-``pdk_screenshot`` stays open between calls and closes after ``PDK_EYES_IDLE_S`` seconds without use.
+``pdk_screenshot`` stays open between calls and closes after ``PDK_EYES_IDLE_S`` seconds without use, closing its
+Perspective sessions on the gateway too.

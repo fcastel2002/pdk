@@ -318,3 +318,37 @@ def test_log_events_go_to_the_view_instance_that_logged_them() -> None:
     events = [{"mdc": {"view": "Main@C"}}, {"mdc": {"view": "Popups/Detail@Pdetail"}}, {"mdc": {}}]
     assert _mounted(events, "Main", "C") == [events[0]]
     assert _mounted(events, "Popups/Detail", "Pdetail") == [events[1]]
+
+
+def _repeater(props: dict[str, Any], *, client: tuple[float, float] = (1366, 120),
+              scroll: tuple[float, float] = (4800, 800)) -> list[dict[str, Any]]:
+    """The V012 findings for a flex repeater (the first child of root) with this DOM box and scroll size."""
+    view = {"custom": {}, "params": {}, "props": {}, "propConfig": {},
+            "root": {"type": "ia.container.flex", "meta": {"name": "root"}, "props": {"direction": "column"},
+                     "children": [{"type": "ia.display.flex-repeater", "meta": {"name": "Feed"}, "props": props}]}}
+    dom = {"viewport": {"width": 1366, "height": 768}, "console": [], "nodes": [
+        _node("C.0", "ia.container.flex", None, (0, 0, 1366, 768), overflow="hidden", clip=(0, 0, 1366, 768)),
+        _node("C.0:0", "ia.display.flex-repeater", "C.0", (0, 0, client[0], client[1]), scroll=scroll)]}
+    return [d for d in evaluate(join(view, dom, None, PATH)) if d["code"] == "V012"]
+
+
+def test_v012_flags_a_default_row_repeater_whose_instances_are_taller_than_it() -> None:
+    [finding] = _repeater({})
+    assert finding["severity"] == "warning"
+    assert "taller" in finding["message"] and "800 px in 120" in finding["message"]
+
+
+def test_v012_checks_the_width_of_a_column_repeater() -> None:
+    assert _repeater({"direction": "column"}, scroll=(1366, 800)) == []
+    [wide] = _repeater({"direction": "column"}, scroll=(1600, 800))
+    assert "wider" in wide["message"] and "1600 px in 1366" in wide["message"]
+
+
+def test_v012_wrapping_row_repeater_checks_the_width() -> None:
+    [wide] = _repeater({"wrap": "wrap"}, scroll=(1600, 800))
+    assert "wider" in wide["message"] and "1600 px in 1366" in wide["message"]
+
+
+def test_v012_ignores_sub_pixel_overflow_on_the_checked_axis() -> None:
+    assert _repeater({}, scroll=(4800, 120.4)) == []
+    assert len(_repeater({}, scroll=(4800, 121))) == 1

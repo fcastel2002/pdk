@@ -194,3 +194,146 @@ def test_embedded_views_are_read_through_their_rendered_text() -> None:
     assert failure["code"] == "A001" and "'Summary Area North P-205'" in failure["message"]
     # An input's value comes the same way: its own text is empty.
     assert _codes('root/Box text "P-205"', _joined(**{"C.0:2": {"inner_text": "P-205"}})) == []
+
+
+def _titled(**scopes: dict) -> Joined:
+    """Joined with a gateway tree on root/Title: props, position, custom and meta as the gateway reports them."""
+    tree = {"props": {"text": "Pump 1", "value": 35, "flag": True, "style": {"color": "red"},
+                      "items": [{"label": "a"}, {"label": "b"}]},
+            "position": {"x": 0, "y": 0}, "custom": {"total": 3}, "meta": {"name": "Title"}}
+    tree.update(scopes)
+    joined = _joined()
+    joined.by_name["root/Title"].live = tree
+    return joined
+
+
+def test_prop_operators_on_numbers() -> None:
+    joined = _titled()
+    assert _codes("root/Title prop value = 35; root/Title prop value != 36; root/Title prop value >= 35; "
+                  "root/Title prop value <= 35; root/Title prop value > 34; root/Title prop value < 36",
+                  joined) == []
+    found = expect.check(joined, "root/Title prop value >= 40; root/Title prop value > 35; "
+                                 "root/Title prop value != 35; root/Title prop value < 35; "
+                                 "root/Title prop value = 36")
+    assert [d["message"] for d in found.diagnostics] == [
+        "root/Title prop value >= 40: it is 35", "root/Title prop value > 35: it is 35",
+        "root/Title prop value != 35: it is 35", "root/Title prop value < 35: it is 35",
+        "root/Title prop value = 36: it is 35"]
+    assert all(d["code"] == "A001" and d["component"] == "root/Title" and d["hint"] for d in found.diagnostics)
+
+
+def test_prop_defaults_to_props_and_explicit_scopes_read_the_others() -> None:
+    joined = _titled()
+    assert _codes("root/Title prop value = 35; root/Title prop props.value = 35; root/Title prop custom.total = 3; "
+                  "root/Title prop position.x = 0; root/Title prop meta.name = Title", joined) == []
+    [failure] = expect.check(joined, "root/Title prop total = 3").diagnostics
+    assert failure["code"] == "A001"
+    assert failure["message"] == ("root/Title prop total = 3: it has no props.total "
+                                  "(it has: text, value, flag, style, items)")
+
+
+def test_prop_nested_paths_list_indices_and_json() -> None:
+    joined = _titled()
+    assert _codes("root/Title prop style.color = red; root/Title prop items[1].label = b; "
+                  "root/Title prop items.0.label = a; root/Title prop items[1] = '{\"label\":\"b\"}'",
+                  joined) == []
+    assert _codes("root/Title prop style = '{\"color\":\"red\"}'", joined) == []
+    [missing] = expect.check(joined, "root/Title prop items[2].label = c").diagnostics
+    assert missing["message"] == ("root/Title prop items[2].label = c: it has no props.items.2.label "
+                                  "(it has: text, value, flag, style, items)")
+    [wrong] = expect.check(joined, "root/Title prop style = red").diagnostics
+    assert wrong["message"] == 'root/Title prop style = red: it is {"color": "red"}'
+
+
+def test_prop_bool_is_not_a_number() -> None:
+    joined = _titled()
+    assert _codes("root/Title prop flag = true; root/Title prop flag != 1", joined) == []
+    [failure] = expect.check(joined, "root/Title prop flag = 1").diagnostics
+    assert failure["message"] == "root/Title prop flag = 1: it is true"
+    assert _codes("root/Title prop flag > 0", joined) == ["A001"]
+
+
+def test_prop_contains_text_and_searches_json() -> None:
+    joined = _titled()
+    assert _codes('root/Title prop text ~ "Pump"; root/Title prop items ~ label', joined) == []
+    [failure] = expect.check(joined, "root/Title prop text ~ Motor").diagnostics
+    assert failure["message"] == 'root/Title prop text ~ Motor: it is "Pump 1"'
+    [text] = expect.check(joined, "root/Title prop text > 3").diagnostics
+    assert text["message"] == 'root/Title prop text > 3: it is "Pump 1", not a number'
+    [expected] = expect.check(joined, "root/Title prop value > abc").diagnostics
+    assert expected["message"] == "root/Title prop value > abc: the value abc is not a number"
+
+
+def test_prop_without_a_gateway_tree_fails() -> None:
+    [failure] = expect.check(_joined(), "root/Title prop value = 35").diagnostics
+    assert failure["code"] == "A001" and failure["component"] == "root/Title"
+    assert failure["message"] == "root/Title prop value = 35: the gateway tree is not available for it"
+    assert failure["hint"] == expect.HINTS["prop"]
+
+
+def test_prop_malformed_expectations() -> None:
+    joined = _titled()
+    for bad in ("root/Title prop", "root/Title prop value glows 3", "root/Title prop a..b = 1", "root/Title prop [0]"):
+        assert _codes(bad, joined) == ["A002"], bad
+
+
+def test_view_props_read_the_routed_view() -> None:
+    joined = _joined()
+    joined.live_view = {"params": {"unit": "P-101"}, "custom": {"total": 3}}
+    assert _codes("view prop custom.total = 3; view prop params.unit = P-101; view prop custom.total >= 2",
+                  joined) == []
+    [failure] = expect.check(joined, "view prop custom.total > 3").diagnostics
+    assert failure["code"] == "A001" and failure["pointer"] == "" and failure["component"] == ""
+    assert failure["message"] == "view prop custom.total > 3: it is 3"
+    assert failure["hint"] == "Check the view's params/custom bindings and what writes them."
+    [missing] = expect.check(joined, "view prop custom.limit = 3").diagnostics
+    assert missing["message"] == "view prop custom.limit = 3: it has no custom.limit (it has: total)"
+    [no_tree] = expect.check(_joined(), "view prop custom.total = 3").diagnostics
+    assert no_tree["message"] == "view prop custom.total = 3: the gateway tree is not available for it"
+
+
+def test_view_prop_must_name_params_or_custom() -> None:
+    joined = _joined()
+    joined.live_view = {"params": {}, "custom": {"total": 3}}
+    [bad] = expect.check(joined, "view prop props.x = 1").diagnostics
+    assert bad["code"] == "A002" and "params or custom" in bad["message"]
+    assert _codes("view prop = 1", joined) == ["A002"]
+
+
+DETAIL = "http://127.0.0.1:8088/data/perspective/client/proj/detail"
+
+
+def _at(url: str, routed: str | None = None) -> Joined:
+    """The synthetic snapshot measured at `url`; `routed` is the view the gateway lists at the routed mount."""
+    dom = _dom()
+    dom["url"] = url
+    page = {"views": [{"resourcePath": routed, "mountPath": "C"}]} if routed else None
+    return join(_view(), dom, page, PATH)
+
+
+@pytest.mark.parametrize("url, expected", [
+    ("http://127.0.0.1:8088/data/perspective/client/my%20proj/pdk/PDK/A?x=1", "/pdk/PDK/A?x=1"),
+    ("http://127.0.0.1:8088/data/perspective/client/proj", "/"),
+    ("https://example.com/a", "https://example.com/a"),
+    ("", ""),
+])
+def test_page_location_is_the_path_inside_the_project(url: str, expected: str) -> None:
+    assert expect.page_location(url) == expected
+
+
+def test_page_path_matches_exactly_or_as_a_substring() -> None:
+    joined = _at(DETAIL)
+    assert _codes("page /detail", joined) == []
+    assert _codes("page = detail/", joined) == []
+    assert _codes("page ~ det", joined) == []
+    [wrong] = expect.check(joined, "page /other").diagnostics
+    assert wrong["code"] == "A001" and "it is /detail" in wrong["message"]
+    assert _codes("page = a b", joined) == ["A002"]
+
+
+def test_page_shows_checks_the_view_routed_on_the_page() -> None:
+    assert _codes("page shows PDK/X", _at(DETAIL, routed="PDK/X")) == []
+    [wrong] = expect.check(_at(DETAIL, routed="PDK/Y"), "page shows PDK/X").diagnostics
+    assert wrong["code"] == "A001" and "it shows PDK/Y" in wrong["message"]
+    [unknown] = expect.check(_at(DETAIL), "page shows PDK/X").diagnostics
+    assert unknown["code"] == "A001"

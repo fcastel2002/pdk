@@ -56,6 +56,8 @@ class Joined:
     foreign: int = 0  # DOM components outside the view (embedded view contents, docks)
     mount: str = MOUNT
     popups: dict[str, str] = field(default_factory=dict)  # open popup id -> its view path
+    url: str = ""  # the page's location when it was measured
+    routed: str | None = None  # the view the gateway has at this mount (after a nav action, maybe another one)
 
     @property
     def root_path(self) -> str:
@@ -81,12 +83,19 @@ def live_view(page: dict[str, Any] | None, view_path: str, mount: str = MOUNT) -
     return None
 
 
+def mounted_view(page: dict[str, Any] | None, mount: str = MOUNT) -> str | None:
+    """The view the gateway lists at `mount` on the page (C: the routed view), if it reported the page."""
+    return next((str(v.get("resourcePath")) for v in (page or {}).get("views", []) if v.get("mountPath") == mount),
+                None)
+
+
 def join(view: dict[str, Any], extracted: dict[str, Any], page: dict[str, Any] | None, view_path: str, *,
          mount: str = MOUNT, prefix: str = "") -> Joined:
     root = build_tree(view)
     parts = [Part(node, mount=mount, prefix=prefix) for node in walk(root)]
     routed = live_view(page, view_path, mount)
-    joined = Joined(parts, view, routed, dict(extracted.get("viewport") or {}), mount=mount)
+    joined = Joined(parts, view, routed, dict(extracted.get("viewport") or {}), mount=mount,
+                    url=str(extracted.get("url") or ""), routed=mounted_view(page, mount))
     dom_nodes = {node["path"]: node for node in extracted.get("nodes", [])}
     live_nodes: dict[str, dict[str, Any]] = {}
     if routed and isinstance(routed.get("root"), dict):

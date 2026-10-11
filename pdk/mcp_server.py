@@ -252,8 +252,10 @@ def _shared_eyes() -> Any:
     with _eyes_lock:
         if _eyes is None:
             from pdk.eyes.browser import Eyes
+            from pdk.eyes.inspect import session_closer
 
-            _eyes = Eyes(idle_s=float(os.environ.get("PDK_EYES_IDLE_S") or EYES_IDLE_S))
+            _eyes = Eyes(idle_s=float(os.environ.get("PDK_EYES_IDLE_S") or EYES_IDLE_S),
+                         release=session_closer(Gateway()))
             atexit.register(_eyes.close)
         return _eyes
 
@@ -283,7 +285,8 @@ def pdk_open(path: str, viewport: str | None = None) -> str:
     description=(
         "Reload a deployed sandbox view and report what is wrong at runtime, each anomaly on the view.json pointer "
         "of its component: V001 text cut, V002 container overflow, V003 viewport overflow, V007 collapsed, V010 "
-        "not rendered, V011 embedded view failed to load; Q001/Q002/Q003 a bound property is Bad/Error/Uncertain "
+        "not rendered, V011 embedded view failed to load, V012 repeater instances bigger than it; "
+        "Q001/Q002/Q003 a bound property is Bad/Error/Uncertain "
         "(missing tag, failing script or expression), pointing at the binding; L001 a script error the gateway "
         "logged for the component; C001 browser error; X001 partial eyes; X002 the page does not render this "
         "view.json (deploy first). Inspects the deployed version. Args: " + VIEW_ARG + "; focus (code, component "
@@ -300,7 +303,10 @@ def pdk_open(path: str, viewport: str | None = None) -> str:
         "`root/T in-view` (not scrolled or clipped away), `root/Log scrolls [x|y]`, "
         "`root/T color|bg #hex|rgb()`, `root/T font-size N`, `root/T font-weight 700`, "
         "`root/Save enabled|disabled`, `tag Sandbox/Setpoint = 42` (read back from the gateway), "
-        "`tag X quality Bad_Stale|Good|Bad`, `alarm North/Level active|cleared`. 1px tolerance. "
+        "`tag X quality Bad_Stale|Good|Bad`, `alarm North/Level active|cleared`, "
+        "`root/Bar prop value >= 40` (a prop as the gateway evaluated it: props by default, or "
+        "position/custom/meta; ops = != >= <= > < ~), `view prop custom.total = 3`, `page /detail` (the page's URL "
+        "path, `page ~ det` contains) and `page shows PDK/Detail` (the view on the page). 1px tolerance. "
         "act: steps performed before measuring (so query, expect, "
         "qualities and logged script errors see the state after them), one per ; or line: `click root/Save`, "
         "`type root/Name \"P-2\"` (commits with Tab), `row root/Table 1` (first row shown), `wait 500`, "
@@ -308,7 +314,8 @@ def pdk_open(path: str, viewport: str | None = None) -> str:
         "a step that cannot be done stops there as A004. act runs the view's own event scripts on the gateway (a click "
         "on a button that writes tags writes them): use it only on sandbox views meant for it. Popups open after the "
         "steps are inspected too: expect "
-        "`popup <id> open|closed`, and their components as popup:<id>/root/... in act, expect, query and anomalies."
+        "`popup <id> open|closed`, and their components as popup:<id>/root/... in act, expect, query and anomalies. "
+        "If a step navigates (a nav action), the report is about the view the page shows then, with a note."
     ),
     annotations=ACTS,
     structured_output=False,
@@ -325,15 +332,17 @@ def pdk_inspect(path: str, viewport: str | None = None, focus: str | None = None
     name="pdk_screenshot",
     description=(
         "PNG of a deployed sandbox view (reloaded) or of one component. Args: " + VIEW_ARG + "; component: name "
-        "path like root/Panel/Label (or DOM path C.0:1) to capture only that component."
+        "path like root/Panel/Label (or DOM path C.0:1) to capture only that component. act: steps performed before "
+        "capturing (same grammar as pdk_inspect act), e.g. to capture a popup or a state after typing."
     ),
-    annotations=PREVIEW_WRITE,
+    annotations=ACTS,
     structured_output=False,
 )
-def pdk_screenshot(path: str, viewport: str | None = None, component: str | None = None) -> list[Any] | str:
+def pdk_screenshot(path: str, viewport: str | None = None, component: str | None = None,
+                   act: str | None = None) -> list[Any] | str:
     from pdk.eyes import inspect
 
-    png, text = inspect.screenshot(_shared_eyes(), Gateway(), path, viewport, component)
+    png, text = inspect.screenshot(_shared_eyes(), Gateway(), path, viewport, component, act)
     if png is None:
         return text
     return [text, Image(data=png, format="png")]

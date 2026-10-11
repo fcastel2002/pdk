@@ -56,6 +56,10 @@ Anomalies
    * - ``V011``
      - Embedded view failed
      - An embedded view or repeater did not load: check ``props.path`` and the parameters.
+   * - ``V012``
+     - Repeater instances overflow
+     - A flex repeater's instances are bigger than the repeater along the axis their number does not explain (the
+       cross axis without ``wrap``, the main axis with it), so each one scrolls inside a strip of the repeater.
    * - ``Q001``
      - Bad quality
      - A binding delivers a *Bad* quality, for example ``Bad_NotFound`` for a tag that does not exist.
@@ -120,6 +124,16 @@ spaces.
      - the component is wholly in sight: not scrolled away, clipped or outside the window.
    * - ``root/Title color #323232``
      - text color; also ``bg`` (background), ``font-size [op] N`` and ``font-weight N``.
+   * - ``root/Bar prop value >= 40``
+     - a property as the gateway evaluated it: ``props`` by default (``prop value``), or ``position``, ``custom``
+       or ``meta`` (``prop custom.total = 3``); nested paths like ``items[0].label``. Operators ``=`` (default),
+       ``!=``, ``>=``, ``<=``, ``>``, ``<`` and ``~`` (contains). It reads values the DOM does not show, such as a
+       progress bar's or a slider's ``value``.
+   * - ``view prop custom.total = 3``
+     - the same for the view's ``params`` or ``custom``.
+   * - ``page /detail`` / ``page shows PDK/Detail``
+     - the page's URL path inside the project (``page ~ det`` for "contains"; a full URL for an external one), or
+       the view the page shows. Use them after a ``nav`` action.
    * - ``popup detail open`` / ``closed``
      - a popup with that id is open. Its components are written ``popup:detail/root/Name``.
    * - ``tag Sandbox/Setpoint = 42``
@@ -157,6 +171,11 @@ After each step the page is allowed to settle. A step that cannot be done (a dis
 the sequence as ``A004``; a malformed step is ``A005``. If a step opens a popup, the popup is inspected too and its
 anomalies carry the ``popup:<id>/`` prefix.
 
+If a step navigates (a ``nav`` action to a page or to a view), the report is about the view the page shows
+afterwards, and a note says so: its anomalies, and the components named in ``--expect`` and ``--query``, are that
+view's. ``page /detail`` and ``page shows PDK/Detail`` check where it went. A navigation to a page needs a route
+for it in the project's page configuration; one to a ``url`` outside Perspective leaves only ``page`` to check.
+
 Example: check that a button becomes enabled once a name is typed.
 
 .. code-block:: bash
@@ -182,12 +201,15 @@ Screenshots
 
 ``pdk screenshot`` saves a PNG of the view or of one component (``--component root/Panel``). Use it for what only
 an image can judge, such as colors and visual hierarchy; measurements and expectations are cheaper and more precise
-for everything else.
+for everything else. ``--act`` runs the same steps as ``inspect --act`` before capturing, so a popup
+(``--component popup:detail/root``) or the state after typing can be captured.
 
 Sessions and the browser
 ------------------------
 
 Each open view holds a Perspective session on the gateway, and some editions (Maker) limit how many can be open.
 PDK reuses one browser and one session between calls; the MCP server closes its browser after two minutes without
-use (``PDK_EYES_IDLE_S``). If a gateway refuses a session, close other Perspective tabs or wait for idle sessions to
-time out.
+use (``PDK_EYES_IDLE_S``). A browser that goes away only disconnects its session, which would keep its slot until it
+times out, so when PDK closes its browser (at the end of a command, or when the MCP server's browser goes idle) it
+also closes its sessions on the gateway. If a gateway still refuses a session, close other Perspective tabs or wait
+for idle sessions to time out.

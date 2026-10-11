@@ -365,6 +365,10 @@ Produced by ``pdk inspect`` on a running view. See :doc:`../guide/inspection` fo
    * - ``V011``
      - embedded-view-failed
      - An embedded view or repeater instance that did not load.
+   * - ``V012``
+     - repeater-instances-overflow
+     - A flex repeater whose instances are bigger than it along the axis the instance count does not explain
+       (the cross axis without wrap, the main axis with it), so each instance scrolls inside a strip of it.
    * - ``Q001``
      - bad-quality
      - A binding with a *Bad* quality, such as ``Bad_NotFound``.

@@ -28,10 +28,12 @@ final class Routes {
     private final Live live;
     private final LogTap logs;
     private final Tags tags;
+    private final Sandbox sandbox;
     private final Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
 
     Routes(GatewayContext context, Token token, Sandbox sandbox, ChangeLog changes, LogTap logs) {
         this.access = new Access(token);
+        this.sandbox = sandbox;
         this.live = new Live(context);
         this.logs = logs;
         this.tags = new Tags(context, sandbox);
@@ -56,6 +58,11 @@ final class Routes {
                 request -> catalog.list("true".equalsIgnoreCase(request.getParameter("full"))));
         mount(routes, HttpMethod.GET, "/catalog/:id", request -> catalog.one(request.getParameter("id")));
         mount(routes, HttpMethod.GET, "/sessions", request -> live.sessions(project(request)));
+        mount(routes, HttpMethod.DELETE, "/sessions", request -> {
+            String project = project(request);
+            sandbox.requireWritable(project);
+            return live.close(project, required(request, "page"));
+        });
         mount(routes, HttpMethod.GET, "/pages/:page", request -> live.page(project(request), request.getParameter("page")));
         mount(routes, HttpMethod.GET, "/logs", request -> Reply.ok(logs.since(number(request, "since", 0),
                 (int) number(request, "limit", 200), optionalProject(request), request.getParameter("view"))));
@@ -108,6 +115,14 @@ final class Routes {
         } catch (NumberFormatException error) {
             throw new ApiError(400, "BAD_REQUEST", "'" + name + "' must be an integer, got '" + value + "'.");
         }
+    }
+
+    private static String required(RequestContext request, String name) {
+        String value = request.getParameter(name);
+        if (value == null || value.isBlank()) {
+            throw new ApiError(400, "BAD_REQUEST", "Missing '" + name + "'.");
+        }
+        return value.strip();
     }
 
     private static String project(RequestContext request) {

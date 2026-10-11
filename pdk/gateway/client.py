@@ -207,6 +207,10 @@ class Gateway:
         """Client sessions of a project, with their pages and the view instances on each."""
         return self.call("GET", "/sessions?" + urllib.parse.urlencode({"project": project}))
 
+    def close_session(self, project: str, page_id: str) -> dict[str, Any]:
+        """Close the sandbox session that owns a page, so it does not hold a session slot until it times out."""
+        return self.call("DELETE", "/sessions?" + urllib.parse.urlencode({"project": project, "page": page_id}))
+
     def page(self, project: str, page_id: str) -> dict[str, Any]:
         """The evaluated tree of every view on a page: plain values, non-Good qualities and configured bindings."""
         route = f"/pages/{urllib.parse.quote(page_id, safe='')}?" + urllib.parse.urlencode({"project": project})

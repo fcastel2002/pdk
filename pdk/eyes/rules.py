@@ -251,6 +251,36 @@ def failed_views(joined: Joined) -> list[Diagnostic]:
     return found
 
 
+REPEATER = "ia.display.flex-repeater"
+
+
+def repeater_overflow(joined: Joined) -> list[Diagnostic]:
+    """V012: a flex repeater's instances are bigger than the repeater along the axis the instance count does not
+    explain (the cross axis without wrap, the main axis with it), so each one scrolls inside a strip of it."""
+    found: list[Diagnostic] = []
+    for part in joined.parts:
+        dom = part.dom
+        if part.type != REPEATER or not dom:
+            continue
+        props = part.node.props()
+        row = str(props.get("direction") or "row").startswith("row")
+        wraps = str(props.get("wrap") or "nowrap") != "nowrap"
+        horizontal = row == wraps  # the axis to check: width for column/nowrap and row/wrap
+        size, client = ("scroll_width", "client_width") if horizontal else ("scroll_height", "client_height")
+        content, room = dom.get(size) or 0, dom.get(client) or 0
+        if room <= 0 or content - room <= EPSILON_PX:
+            continue
+        side = "wider" if horizontal else "taller"
+        found.append(_diag(
+            "V012", "warning", part,
+            f"its instances are {side} than it ({content:.0f} px in {room:.0f}): each one scrolls inside it",
+            "Give the repeater room on that axis (position.basis/grow), or size the instances: "
+            f"props.{'useDefaultViewWidth' if horizontal else 'useDefaultViewHeight'} false with "
+            "props.elementPosition, or a smaller defaultSize in the instance view.",
+            {"axis": "x" if horizontal else "y", "content": content, "room": room}))
+    return found
+
+
 # ------------------------------------------------------------------------------------------------ gateway
 
 
@@ -422,7 +452,7 @@ def evaluate(joined: Joined, *, logs: list[dict[str, Any]] | None = None,
     inside = tuple(d["component"] + "/" for d in hidden)
     geometry = viewport_overflow(joined) + component_overflow(joined) + text_clipped(joined)
     found += hidden + [d for d in geometry if not (inside and d["component"].startswith(inside))]
-    found += not_mounted(joined) + failed_views(joined)
+    found += not_mounted(joined) + failed_views(joined) + repeater_overflow(joined)
     found += qualities(joined) if joined.live_view else overlays(joined)
     found += logged(joined, logs or [])
     return found

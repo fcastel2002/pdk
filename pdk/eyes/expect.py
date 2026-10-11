@@ -14,6 +14,10 @@ One expectation per `;` or line, `<component> <relation> [args]`, components by 
     root/Log scrolls [y]                          its content overflows along x/y (either) and it scrolls there
     root/Log/Last in-view                         wholly in sight: not scrolled away, clipped, or off the viewport
     root/Title color #323232                      color, bg (hex, rgb(), rgba()), font-size [op] N, font-weight N
+    root/Bar prop value >= 40                     a property as the gateway evaluated it: props, or position/custom/meta
+    view prop custom.total = 3                    the routed view's params or custom, from the gateway's entry for it
+    page /detail                                  the page's URL path (page ~ /det contains); after a nav action
+    page shows PDK/Detail                         the view the page shows (a nav action may swap it, URL or not)
     tag Sandbox/Setpoint = 42                     a simulated tag's value (read back from the gateway), under PDK/
     tag Sandbox/Setpoint quality Bad_Stale        its quality: a name, or a level (Good, Bad, Uncertain, Error)
     alarm North/Level active                      or cleared: alarm events of the tags at or under the path
@@ -25,8 +29,10 @@ and y, which are measured from the parent's padding box (the viewport for root),
 from __future__ import annotations
 
 import difflib
+import json
 import re
 import shlex
+import urllib.parse
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -41,6 +47,10 @@ SIDES = {"below", "above", "left-of", "right-of", "inside"}
 EDGES = {"left", "right", "top", "bottom", "center-x", "center-y"}
 METRICS = {"width", "height", "x", "y"}
 OPS = {"=", ">=", "<=", ">", "<"}
+PROP_OPS = {"=", "!=", ">=", "<=", ">", "<", "~"}
+PROP_SCOPES = ("props", "position", "custom", "meta")  # a component's scopes; any other first segment is props
+VIEW_SCOPES = ("params", "custom")
+_MISSING = object()
 WEIGHTS = {"normal": "400", "bold": "700"}
 COORD = "ia.container.coord"
 GRAMMAR = ("One per ; or line: `<name path> below|above|left-of|right-of <name path> [gap [op] N | gap N..M]`, "
@@ -50,7 +60,9 @@ GRAMMAR = ("One per ; or line: `<name path> below|above|left-of|right-of <name p
            "`<a> color|bg <css color>`, "
            "`popup <id> open|closed`, components of an open popup as popup:<id>/root/..., "
            "`<a> font-size [op] N`, "
-           "`<a> font-weight N`, `tag <path> [=] <value>`, `tag <path> quality <Code|Good|Bad|Uncertain|Error>`, "
+           "`<a> prop <path> [=|!=|>=|<=|>|<|~] <value>`, `view prop params|custom.<path> [op] <value>`, "
+           "`<a> font-weight N`, `page [=|~] <path or URL>`, `page shows <view path>`, "
+           "`tag <path> [=] <value>`, `tag <path> quality <Code|Good|Bad|Uncertain|Error>`, "
            "`alarm <path> active|cleared` (tag paths under PDK/ like Sandbox/Setpoint).")
 HINTS = {
     "below": "Check the order of the parent's children, its direction (column) or this component's position.y.",
@@ -76,8 +88,12 @@ HINTS = {
     "bg": "Check props.style.backgroundColor and the style classes that apply.",
     "font-size": "Check props.style.fontSize and the style classes that apply.",
     "font-weight": "Check props.style.fontWeight and the style classes that apply.",
+    "prop": ("Check the prop's binding and its source (pdk_inspect reports its quality), or the event that should "
+             "change it."),
     "tag": ("Check what writes the tag: the control's event script (pdk_inspect reports L001 if it failed), its "
             "tag path and the value it sends; pdk tags read shows the tag now."),
+    "page": ("Check the nav action's config (page, view or url) and the step that should trigger it; a page path needs "
+             "a route in the project's page configuration (pdk pages list)."),
     "alarm": ("Check the alarm's mode and setpoint in the tag JSON against the value written; pdk tags alarms "
               "lists the events."),
 }
@@ -157,10 +173,16 @@ def _check_one(joined: Joined, item: str, tags: TagReader | None = None) -> Diag
             raise
         except Exception as error:  # noqa: BLE001  (a gateway error is the measured state of this expectation)
             return make("A001", "error", "", "", f"{item}: could not read it: {error}", HINTS[subject_name])
+    if subject_name == "page":
+        return _page(joined, relation, args, item)
+    if subject_name == "view" and relation == "prop":
+        return _view_prop(joined, args, item)
     subject = _part(joined, subject_name)
     if isinstance(subject, str):
         return make("A003", "error", "", subject_name, f"{item}: {subject}",
                     "Use the name path of a component of this view (root/Panel/Label); pdk_inspect query=* lists them.")
+    if relation == "prop":
+        return _prop(subject, args, item)
     if relation in SIDES:
         return _side(joined, subject, relation, args, item)
     if relation == "aligned":
@@ -199,6 +221,42 @@ def _check_one(joined: Joined, item: str, tags: TagReader | None = None) -> Diag
     if relation in ("font-size", "font-weight"):
         return _font(subject, relation, args, item)
     raise _Malformed(f"unknown relation {relation!r}")
+
+
+def _page(joined: Joined, relation: str, args: list[str], item: str) -> Diagnostic | None:
+    """`page [=|~] <path or URL>` against the page's URL; `page shows <view>` against the view routed on it."""
+    if relation == "shows":
+        if len(args) != 1:
+            raise _Malformed("expected `page shows <view path>`")
+        if joined.routed is None:
+            return make("A001", "error", "", "", f"{item}: the gateway does not say which view the page shows",
+                        HINTS["page"])
+        if joined.routed.strip("/") == args[0].strip("/"):
+            return None
+        return make("A001", "error", "", "", f"{item}: it shows {joined.routed}", HINTS["page"])
+    op, raw = ("=", relation) if not args else (relation, " ".join(args))
+    if op not in ("=", "~") or (args and len(args) != 1):
+        raise _Malformed("expected `page [=|~] <path or URL>` or `page shows <view path>`")
+    have = page_location(joined.url)
+    want = raw if raw.startswith(("http://", "https://")) else "/" + raw.strip("/")
+    if op == "~" and want.strip("/") in have:
+        return None
+    if op == "=" and (have.rstrip("/") or "/") == (want.rstrip("/") or "/"):
+        return None
+    return make("A001", "error", "", "", f"{item}: it is {have or 'unknown'}", HINTS["page"])
+
+
+def page_location(url: str | None) -> str:
+    """A Perspective page's path inside its project (/data/perspective/client/<project>/<path>, with the query),
+    decoded; any other URL whole."""
+    if not url:
+        return ""
+    parsed = urllib.parse.urlsplit(url)
+    parts = parsed.path.split("/", 5)
+    if len(parts) < 5 or parts[1:4] != ["data", "perspective", "client"]:
+        return url
+    path = "/" + urllib.parse.unquote(parts[5] if len(parts) > 5 else "")
+    return path + ("?" + parsed.query if parsed.query else "")
 
 
 def _popup(joined: Joined, pid: str, args: list[str], item: str) -> Diagnostic | None:
@@ -246,6 +304,99 @@ def _alarm(tags: TagReader, path: str, args: list[str], item: str) -> Diagnostic
         return None
     seen = "; ".join(f"{e.get('tag')}/{e.get('name')} {e.get('state')}" for e in events[:5]) or "no alarm events"
     return make("A001", "error", "", "", f"{item}: {len(active)} active ({seen})", HINTS["alarm"])
+
+
+def _prop(subject: Part, args: list[str], item: str) -> Diagnostic | None:
+    """A property as the gateway evaluated it: props unless the path starts with position, custom or meta."""
+    path, op, raw = _prop_args(args, "prop")
+    keys = _path_keys(path)
+    if keys[0] not in PROP_SCOPES:
+        keys = ["props", *keys]
+    if subject.live is None:
+        return _fail(subject, "prop", f"{item}: the gateway tree is not available for it")
+    reason = _prop_reason(subject.live, keys, op, raw)
+    return None if reason is None else _fail(subject, "prop", f"{item}: {reason}")
+
+
+def _view_prop(joined: Joined, args: list[str], item: str) -> Diagnostic | None:
+    """The routed view's params or custom, from the gateway's entry for it (`view prop custom.total = 3`)."""
+    path, op, raw = _prop_args(args, "view prop")
+    keys = _path_keys(path)
+    if keys[0] not in VIEW_SCOPES:
+        raise _Malformed(f"a view's property starts with params or custom, not {keys[0]!r} "
+                         "(like `view prop custom.total = 3`)")
+    hint = "Check the view's params/custom bindings and what writes them."
+    if joined.live_view is None:
+        return make("A001", "error", "", "", f"{item}: the gateway tree is not available for it", hint)
+    reason = _prop_reason(joined.live_view, keys, op, raw)
+    return None if reason is None else make("A001", "error", "", "", f"{item}: {reason}", hint)
+
+
+def _prop_args(args: list[str], head: str) -> tuple[str, str, str]:
+    """`<path> [op] <value>` -> (path, op, value); the op defaults to `=`."""
+    if len(args) == 2:
+        return args[0], "=", args[1]
+    if len(args) == 3 and args[1] in PROP_OPS:
+        return args[0], args[1], args[2]
+    raise _Malformed(f"expected `{head} <path> [=|!=|>=|<=|>|<|~] <value>`")
+
+
+def _path_keys(path: str) -> list[str]:
+    """`items[2].label` -> ["items", "2", "label"]: dot names and list indices, written `.0` or `[0]`."""
+    if not re.fullmatch(r"[^.\[\]]+(?:\.[^.\[\]]+|\[\d+\])*", path):
+        raise _Malformed(f"{path!r} is not a property path (like value, style.color or items[2].label)")
+    return re.findall(r"[^.\[\]]+", path)
+
+
+def _dig(root: dict[str, Any], keys: list[str]) -> tuple[Any, dict[str, Any]]:
+    """The value at `keys` (or _MISSING), and the last dict reached on the way; a miss lists that dict's keys."""
+    node: Any = root
+    deepest = root
+    for key in keys:
+        if isinstance(node, dict) and key in node:
+            node = node[key]
+        elif isinstance(node, list) and key.isdigit() and int(key) < len(node):
+            node = node[int(key)]
+        else:
+            return _MISSING, deepest
+        if isinstance(node, dict):
+            deepest = node
+    return node, deepest
+
+
+def _prop_reason(root: dict[str, Any], keys: list[str], op: str, raw: str) -> str | None:
+    """Why the value at `keys` (scope first) fails `op raw`, None when it holds; the reason says what was read."""
+    actual, deepest = _dig(root, keys)
+    if actual is _MISSING:
+        have = ", ".join(list(deepest)[:8]) or "nothing"
+        return f"it has no {'.'.join(keys)} (it has: {have})"
+    if op in (">", "<", ">=", "<="):
+        if not _is_number(actual):
+            return f"it is {simulated.show(actual)}, not a number"
+        expected = simulated.parse_value(raw)
+        if not _is_number(expected):
+            return f"the value {raw} is not a number"
+        holds = {">": actual > expected, "<": actual < expected,
+                 ">=": actual >= expected, "<=": actual <= expected}[op]
+    elif op == "~":
+        holds = raw in _prop_text(actual)
+    else:
+        same = _json_text(actual) == raw if isinstance(actual, (dict, list)) else simulated.matches(actual, raw)
+        holds = same if op == "=" else not same
+    return None if holds else f"it is {simulated.show(actual)}"
+
+
+def _is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _json_text(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def _prop_text(value: Any) -> str:
+    """What `~` searches: the value as text, or a dict or list as its compact JSON."""
+    return _json_text(value) if isinstance(value, (dict, list)) else str(value)
 
 
 def _part(joined: Joined, name: str) -> Part | str:

@@ -56,6 +56,9 @@ Endpoints
    * - GET
      - ``/sessions?project=``
      - Open Perspective sessions of a project, with their pages and views.
+   * - DELETE
+     - ``/sessions?project=&page=``
+     - Close the sandbox session that owns that page (PDK's own browser sessions, when it closes the browser).
    * - GET
      - ``/pages/{page}?project=``
      - The evaluated component tree of a page: props and binding qualities.

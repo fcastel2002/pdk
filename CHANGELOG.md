@@ -2,6 +2,20 @@
 
 All notable changes to PDK are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- `--expect` reads properties as the gateway evaluated them (`root/Bar prop value >= 40`, `view prop custom.x = 3`)
+  and where a navigation went (`page /detail`, `page shows PDK/Detail`).
+- `pdk screenshot --act` (and `act` in `pdk_screenshot`) runs steps before capturing.
+- V012: a flex repeater whose instances are bigger than it on the axis their number does not explain.
+
+### Changed
+- Closing PDK's browser also closes its Perspective sessions on the gateway (`DELETE /sessions`), so they no longer
+  hold a session slot until they time out.
+- When an `--act` step navigates, `inspect` reports the view the page shows afterwards instead of X002.
+- `pdk_screenshot` is declared destructive in MCP, like `pdk_inspect`, since `act` runs the view's scripts.
+
 ## [0.1.0] - 2026-10-10
 First public release.
 

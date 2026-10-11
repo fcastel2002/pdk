@@ -285,7 +285,7 @@ def _cmd_eyes(args: argparse.Namespace) -> int:
     from pdk.gateway.client import Gateway
 
     gateway = Gateway(url=args.url) if args.url else Gateway()
-    with Eyes() as eyes:
+    with Eyes(release=inspect.session_closer(gateway)) as eyes:
         if args.command == "open":
             result = inspect.open_view(eyes, gateway, args.path, args.viewport)
         elif args.command == "inspect":
@@ -293,7 +293,7 @@ def _cmd_eyes(args: argparse.Namespace) -> int:
                                           budget=args.budget, query=args.query,
                                           expect=args.expect, act=args.act)
         else:
-            png, text = inspect.screenshot(eyes, gateway, args.path, args.viewport, args.component)
+            png, text = inspect.screenshot(eyes, gateway, args.path, args.viewport, args.component, args.act)
             if png is None:
                 print(text, file=sys.stderr)
                 return EXIT_FINDINGS
@@ -415,9 +415,12 @@ def build_parser() -> argparse.ArgumentParser:
                                          "tag Sandbox/Setpoint 42 [quality Bad_Stale]'; failures are A004")
     inspector.add_argument("--budget", type=int, default=DEFAULT_BUDGET, help="output budget in tokens")
     shooter = sub.add_parser("screenshot", help="PNG of a deployed view, or of one of its components")
-    shooter.add_argument("--component", help="name path (root/Panel/Label) or DOM path (C.0:1)")
+    shooter.add_argument("--component", help="name path (root/Panel/Label) or DOM path (C.0:1); popup:<id>/root/... "
+                                             "once --act opened the popup")
     shooter.add_argument("--out", default=None, help="PNG file to write (default: <work>/_screenshots/<view>"
                                                      "[__<component>].png, <work> being PDK_WORK_DIR or work/)")
+    shooter.add_argument("--act", help="steps performed before capturing, same grammar as inspect --act (to capture a "
+                                       "popup or a state after typing); a failing step is A004 and no PNG")
     for command in (opener, inspector, shooter):
         command.add_argument("path", help=view_arg)
         command.add_argument("--viewport", default=None, help="WIDTHxHEIGHT (default: 1366x768)")

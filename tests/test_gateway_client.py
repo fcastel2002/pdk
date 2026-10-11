@@ -198,3 +198,20 @@ def test_health_is_asked_once_per_instance(monkeypatch) -> None:
     assert calls == ["/health"]
     gateway.health(refresh=True)
     assert calls == ["/health", "/health"]
+
+
+def test_close_session_deletes_the_sandbox_page_session(fake: Gateway, monkeypatch: pytest.MonkeyPatch) -> None:
+    # FakeModule.seen keeps only the path, so the query is captured where the client sends it.
+    sent: list[tuple[str, str]] = []
+    real_call = fake.call
+
+    def spy(method: str, route: str, body: Any = None) -> Any:
+        sent.append((method, route))
+        return real_call(method, route, body)
+
+    monkeypatch.setattr(fake, "call", spy)
+    with pytest.raises(GatewayError) as caught:  # the fake holds no session: the module answers NOT_FOUND
+        fake.close_session("sb", "p 1")
+    assert sent == [("DELETE", "/sessions?project=sb&page=p+1")]
+    assert FakeModule.seen == [client.BASE_PATH + "/sessions"]
+    assert caught.value.code == "G007"

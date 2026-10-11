@@ -21,7 +21,8 @@ from pdk.eyes import act as actions
 from pdk.eyes import expect as expectations
 from pdk.eyes import measure, rules
 from pdk.eyes.browser import Eyes, EyesError, Opened, Viewport
-from pdk.eyes.join import join
+from pdk.eyes.expect import page_location
+from pdk.eyes.join import Joined, join, mounted_view
 from pdk.gateway.client import VIEWS, Gateway, GatewayError
 from pdk.validate.tree import build_tree, walk
 
@@ -82,6 +83,22 @@ def resolve(gateway: Gateway, location: str) -> Target:
         if mine is not None and mine != view:
             note = "the local copy has edits that are not deployed: this inspects the gateway version"
     return Target(project, path, view, note)
+
+
+def session_closer(gateway: Gateway) -> Any:
+    """Eyes' `release`: close the sandbox sessions of the browser's pages on the gateway (best effort, so a module
+    without the route only leaves them to time out)."""
+    def release(page_ids: list[str]) -> None:
+        try:
+            project = gateway.health().get("sandbox")
+        except GatewayError:
+            return
+        for page_id in page_ids:
+            try:
+                gateway.close_session(project, page_id)
+            except GatewayError:
+                continue
+    return release
 
 
 def _preview(gateway: Gateway, target: Target) -> str:
@@ -242,20 +259,40 @@ def inspect_view(eyes: Eyes, gateway: Gateway, location: str, viewport: str | No
                                "DOM overlays only")
         else:
             reasons.append("Perspective's session API is unavailable: qualities come from the DOM overlays only")
-        extracted = eyes.extract(opened)
+        view, view_path, navigated = target.view, target.path, None
+        try:
+            extracted = eyes.extract(opened)
+        except EyesError:
+            where = eyes.location(opened) if steps else ""
+            if not where or page_location(where).startswith("/"):
+                raise
+            # A step left Perspective (a nav action with a url): only the page and the console can be read.
+            extracted = {"url": where, "viewport": {}, "nodes": [], "console": list(opened.console)}
+            view, view_path, navigated = {}, "", f"a step left Perspective for {where}"
+        routed = mounted_view(page)
+        if steps and routed and routed != target.path:
+            text = gateway.resource(target.project, VIEWS, routed).get("files", {}).get(sync.VIEW_FILE)
+            if text:
+                view, view_path = json.loads(text), routed
+                navigated = (f"a step navigated from {target.path} to {routed} "
+                             f"(page {page_location(extracted.get('url'))}): this reports {routed}")
         popups = _open_popups(eyes, gateway, opened, target.project, page, reasons)
         events: list[dict[str, Any]] = []
         if cursor is not None:
             time.sleep(LOG_GRACE_S)
-            for path in dict.fromkeys([target.path, *(popup.path for popup in popups)]):
+            for path in dict.fromkeys([view_path or target.path, *(popup.path for popup in popups)]):
                 events += gateway.logs(since=cursor, project=target.project, view=path).get("events", [])
     except (EyesError, GatewayError, ValueError) as error:
         return _failed(target, location, error)
-    joined = join(target.view, extracted, page, target.path)
-    if page is not None and joined.live_view is None:
-        reasons.append(f"the gateway does not list {target.path} on page {opened.page_id}")
-    diagnostics = rules.evaluate(joined, logs=_mounted(events, target.path, "C"),
-                                 console_entries=extracted["console"], degraded_reasons=reasons)
+    if view:
+        joined = join(view, extracted, page, view_path)
+        if page is not None and joined.live_view is None:
+            reasons.append(f"the gateway does not list {view_path} on page {opened.page_id}")
+        diagnostics = rules.evaluate(joined, logs=_mounted(events, view_path, "C"),
+                                     console_entries=extracted["console"], degraded_reasons=reasons)
+    else:
+        joined = Joined([], {}, None, {}, url=str(extracted["url"]))
+        diagnostics = rules.evaluate(joined, console_entries=extracted["console"], degraded_reasons=reasons)
     components = len(joined.parts)
     for popup in popups:
         inside = join(popup.view, popup.extracted, page, popup.path, mount=f"P{popup.id}",
@@ -271,7 +308,7 @@ def inspect_view(eyes: Eyes, gateway: Gateway, location: str, viewport: str | No
                if expect and not joined.mismatches else None)
     if outcome:
         diagnostics += outcome.diagnostics
-    title = f"{target.project}:{target.path} @{opened.viewport} ({components} components"
+    title = f"{target.project}:{view_path or target.path} @{opened.viewport} ({components} components"
     title += f", {joined.foreign} embedded)" if joined.foreign else ")"
     if joined.popups:
         title += " + popups " + ", ".join(f"{pid} ({path})" for pid, path in joined.popups.items())
@@ -284,6 +321,8 @@ def inspect_view(eyes: Eyes, gateway: Gateway, location: str, viewport: str | No
         text += "\nexpect: not checked, the page does not render this view.json"
     if query:
         text += "\n" + measure.describe(joined, query)
+    if navigated:
+        text += f"\nnote: {navigated}"
     if target.note:
         text += f"\nnote: {target.note}"
     if opened.endless:
@@ -293,24 +332,46 @@ def inspect_view(eyes: Eyes, gateway: Gateway, location: str, viewport: str | No
 
 
 def screenshot(eyes: Eyes, gateway: Gateway, location: str, viewport: str | None = None,
-               component: str | None = None) -> tuple[bytes | None, str]:
-    """PNG of the view (opened afresh) or of one component, by name path (root/Panel/Label) or DOM path (C.0:1)."""
+               component: str | None = None, act: str | None = None) -> tuple[bytes | None, str]:
+    """PNG of the view (opened afresh) or of one component, by name path (root/Panel/Label), DOM path (C.0:1) or,
+    once `act` has opened it, popup:<id>/root/... With `act`, the steps (pdk.eyes.act) run before capturing: a step
+    that cannot be read comes back as A005, one that cannot be done as A004, and neither gives a PNG."""
     target = None
+    acted: actions.Outcome | None = None
     try:
         target = resolve(gateway, location)
+        nodes = {node.path: node for node in walk(build_tree(target.view))}
+        popup_component = bool(component) and component.startswith(actions.POPUP_PREFIX)
         dom_path = None
-        if component:
-            nodes = {node.path: node for node in walk(build_tree(target.view))}
+        if component and not popup_component:
             if component.startswith("C."):
                 dom_path = component
             elif component in nodes:
                 dom_path = f"C.{nodes[component].address}"
             else:
                 return None, f"{target.project}:{target.path} has no component {component!r} (use a name path " \
-                             "like root/Panel/Label)"
+                             "like root/Panel/Label, or popup:<id>/root/... after act opened the popup)"
+        steps: list[actions.Step] = []
+        if act:
+            steps, malformed = actions.parse(act, nodes)
+            if malformed:
+                return None, render(malformed, title=f"{target.project}:{target.path}")
         opened: Opened = eyes.open(_preview(gateway, target), Viewport.parse(viewport))
+        resolve_popup = _popup_resolver(gateway, target.project, opened)
+        if steps:
+            pointers = {path: node.pointer for path, node in nodes.items()}
+            acted = eyes.act(opened, steps, pointers, resolve_popup,
+                             lambda step: simulated.write(gateway, step.tag, step.value, step.quality))
+            if acted.diagnostics:
+                return None, render(acted.diagnostics, title=f"{target.project}:{target.path}") + "\n" + acted.summary()
+        if popup_component:
+            dom_path = resolve_popup(component)
+            if dom_path is None:
+                return None, f"{target.project}:{target.path} has no component {component!r} in an open popup " \
+                             "(act must open it first, e.g. click root/Open)"
         png = eyes.screenshot(opened, dom_path)
     except (EyesError, GatewayError, ValueError) as error:
         return None, _failed(target, location, error).text
     what = f"{component} ({dom_path})" if component else "the viewport"
-    return png, f"{target.project}:{target.path} @{opened.viewport}: {what}, {len(png)} bytes"
+    text = f"{target.project}:{target.path} @{opened.viewport}: {what}, {len(png)} bytes"
+    return png, text + ("\n" + acted.summary() if acted else "")

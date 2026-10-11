@@ -88,6 +88,27 @@ final class Live {
         throw new ApiError(404, "PAGE_NOT_FOUND", "No page '" + pageId + "' in the sessions of " + project + ".");
     }
 
+    /**
+     * Close the client session that owns a page, the way system.perspective.closeSession does: a browser that goes
+     * away only disconnects its session, which then holds a slot until it times out (Maker caps them).
+     */
+    Reply close(String project, String pageId) {
+        for (InternalSession session : monitor().getClientSessionsForProject(project)) {
+            if (onQueue(session, () -> session.findPage(pageId).isPresent())) {
+                String id = session.getSessionId().toString();
+                onQueue(session, () -> {
+                    session.close("Closed by PDK after an inspection.");
+                    return null;
+                });
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("project", project);
+                body.put("closed", id);
+                return Reply.ok(body);
+            }
+        }
+        throw new ApiError(404, "PAGE_NOT_FOUND", "No page '" + pageId + "' in the sessions of " + project + ".");
+    }
+
     private PerspectiveSessionMonitor monitor() {
         PerspectiveSessionMonitor monitor;
         try {

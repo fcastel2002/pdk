@@ -187,3 +187,44 @@ def test_an_idle_browser_is_closed_and_the_next_call_reopens_it() -> None:
     time.sleep(0.6)
     assert closed == [1] and eyes._browser is None
     eyes.close()
+
+
+class _FakeContext:
+    """A browser context that records its close into the shared event list."""
+
+    def __init__(self, events: list[Any]) -> None:
+        self.events = events
+
+    def close(self) -> None:
+        self.events.append("close")
+
+
+def test_release_gets_one_page_per_session_before_the_contexts_close() -> None:
+    events: list[Any] = []
+    eyes = browser.Eyes(release=lambda pages: events.append(("release", sorted(pages))))
+    try:
+        eyes._session_pages = {Viewport(1366, 768): "p1", Viewport(375, 812): "p2"}
+        eyes._contexts = {Viewport(1366, 768): _FakeContext(events), Viewport(375, 812): _FakeContext(events)}
+        eyes.run(eyes._close)
+        assert events == [("release", ["p1", "p2"]), "close", "close"]
+        assert eyes._session_pages == {}
+    finally:
+        eyes.close()
+
+
+def test_a_release_that_raises_does_not_stop_the_close() -> None:
+    events: list[Any] = []
+
+    def broken(pages: list[str]) -> None:
+        events.append("release")
+        raise RuntimeError("gateway down")
+
+    eyes = browser.Eyes(release=broken)
+    try:
+        eyes._session_pages = {Viewport(1366, 768): "p1"}
+        eyes._contexts = {Viewport(1366, 768): _FakeContext(events)}
+        eyes.run(eyes._close)
+        assert events == ["release", "close"]
+        assert eyes._session_pages == {} and eyes._contexts == {}
+    finally:
+        eyes.close()

@@ -94,6 +94,7 @@ CODES: dict[str, str] = {
     "V007": "collapsed-component",
     "V010": "not-mounted",
     "V011": "embedded-view-failed",
+    "V012": "repeater-instances-overflow",
     "Q001": "bad-quality",
     "Q002": "error-quality",
     "Q003": "uncertain-quality",
