@@ -369,6 +369,10 @@ Produced by ``pdk inspect`` on a running view. See :doc:`../guide/inspection` fo
      - repeater-instances-overflow
      - A flex repeater whose instances are bigger than it along the axis the instance count does not explain
        (the cross axis without wrap, the main axis with it), so each instance scrolls inside a strip of it.
+   * - ``V013``
+     - low-contrast
+     - Text whose color is too close to what is behind it: below 4.5:1, or 3:1 for large text (24px, or 18.66px
+       bold), as WCAG AA asks. Disabled controls are exempt; text over a background image is not judged.
    * - ``Q001``
      - bad-quality
      - A binding with a *Bad* quality, such as ``Bad_NotFound``.

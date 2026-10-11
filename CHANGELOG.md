@@ -9,6 +9,12 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
   and where a navigation went (`page /detail`, `page shows PDK/Detail`).
 - `pdk screenshot --act` (and `act` in `pdk_screenshot`) runs steps before capturing.
 - V012: a flex repeater whose instances are bigger than it on the axis their number does not explain.
+- `--act` steps `select` (dropdown option), `slide` (slider), `key`, `hover`, `double-click` and `scroll`.
+- `--viewport` presets (`desktop`, `tablet`, `phone`, `wide`); `inspect` takes several, comma-separated, with one
+  report each.
+- V013: text with low contrast against what is behind it (WCAG AA).
+- `pdk screenshot --compare before.png` (and `compare` in `pdk_screenshot`): the share of pixels that changed, the
+  components where, and a diff image.
 
 ### Changed
 - Closing PDK's browser also closes its Perspective sessions on the gateway (`DELETE /sessions`), so they no longer

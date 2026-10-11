@@ -55,7 +55,8 @@ its ``act`` steps run the view's own event scripts on the gateway, which can wri
    * - ``pdk_screenshot``
      - destructive
      - ``path``, ``viewport``, ``component`` (name path such as ``root/Panel``, or ``popup:<id>/root/...`` after
-       ``act``), ``act`` (steps run before capturing, as in ``pdk_inspect``). Returns a PNG image.
+       ``act``), ``act`` (steps run before capturing, as in ``pdk_inspect``), ``compare`` (a PNG taken before:
+       reports what changed and where, and adds a diff image). Returns a PNG image.
 
 The server's instructions describe the whole cycle (catalog, write, validate, deploy, inspect, fix), so a client
 learns the workflow from the server itself. The browser used by ``pdk_open``, ``pdk_inspect`` and

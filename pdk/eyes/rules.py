@@ -281,6 +281,66 @@ def repeater_overflow(joined: Joined) -> list[Diagnostic]:
     return found
 
 
+_RGBA = re.compile(r"rgba?\(([^)]*)\)")
+LARGE_TEXT_PX = 24.0  # WCAG "large": 18pt, or 14pt bold
+LARGE_BOLD_TEXT_PX = 18.66
+
+
+def _rgba(value: str | None) -> tuple[float, float, float, float] | None:
+    match = _RGBA.fullmatch((value or "").strip())
+    if not match:
+        return None
+    parts = [float(p) for p in re.split(r"[\s,/]+", match.group(1).strip()) if p]
+    if len(parts) < 3:
+        return None
+    return parts[0], parts[1], parts[2], parts[3] if len(parts) > 3 else 1.0
+
+
+def _luminance(rgb: tuple[float, float, float]) -> float:
+    def channel(c: float) -> float:
+        c /= 255
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = (channel(c) for c in rgb)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast_ratio(color: str | None, background: str | None) -> float | None:
+    """WCAG contrast of a text color (its alpha composited over the background) on an opaque background."""
+    fg, bg = _rgba(color), _rgba(background)
+    if fg is None or bg is None:
+        return None
+    alpha = fg[3]
+    mixed = tuple(fg[i] * alpha + bg[i] * (1 - alpha) for i in range(3))
+    lighter, darker = sorted((_luminance(mixed), _luminance(bg[:3])), reverse=True)  # type: ignore[arg-type]
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+def low_contrast(joined: Joined) -> list[Diagnostic]:
+    """V013: text whose color is too close to what is behind it (WCAG AA: 4.5:1, or 3:1 for large text). Disabled
+    controls are exempt, and text over a background image is not judged."""
+    found: list[Diagnostic] = []
+    for part in joined.parts:
+        dom = part.dom
+        if not dom or not dom.get("text") or dom.get("disabled") or not dom.get("visible", True):
+            continue
+        ratio = contrast_ratio(dom.get("color"), dom.get("text_bg"))
+        if ratio is None:
+            continue
+        size = dom.get("font_size") or 0
+        bold = str(dom.get("font_weight") or "400").isdigit() and int(dom["font_weight"]) >= 700
+        need = 3.0 if size >= LARGE_TEXT_PX or (bold and size >= LARGE_BOLD_TEXT_PX) else 4.5
+        if ratio >= need:
+            continue
+        found.append(_diag(
+            "V013", "warning", part,
+            f"text contrast {ratio:.2f}:1 ({dom.get('color')} on {dom.get('text_bg')}), below {need:g}:1",
+            "Darken the text or lighten what is behind it (props.style.color, the backgroundColor of it or its "
+            "parent, or their style classes); WCAG AA asks 4.5:1, or 3:1 from 24px (18.66px bold).",
+            {"ratio": round(ratio, 2), "color": dom.get("color"), "background": dom.get("text_bg"),
+             "font_size": size, "needed": need}))
+    return found
+
+
 # ------------------------------------------------------------------------------------------------ gateway
 
 
@@ -453,6 +513,7 @@ def evaluate(joined: Joined, *, logs: list[dict[str, Any]] | None = None,
     geometry = viewport_overflow(joined) + component_overflow(joined) + text_clipped(joined)
     found += hidden + [d for d in geometry if not (inside and d["component"].startswith(inside))]
     found += not_mounted(joined) + failed_views(joined) + repeater_overflow(joined)
+    found += [d for d in low_contrast(joined) if not (inside and d["component"].startswith(inside))]
     found += qualities(joined) if joined.live_view else overlays(joined)
     found += logged(joined, logs or [])
     return found

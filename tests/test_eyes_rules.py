@@ -352,3 +352,40 @@ def test_v012_wrapping_row_repeater_checks_the_width() -> None:
 def test_v012_ignores_sub_pixel_overflow_on_the_checked_axis() -> None:
     assert _repeater({}, scroll=(4800, 120.4)) == []
     assert len(_repeater({}, scroll=(4800, 121))) == 1
+
+
+def _contrast(color: str, background: str | None, **dom: Any) -> list[dict[str, Any]]:
+    """The V013 findings for the Title label drawn in `color` over `background`."""
+    page = _dom()
+    page["nodes"][1].update({"color": color, "text_bg": background, "font_size": 14, "font_weight": "400", **dom})
+    return [d for d in _run(page) if d["code"] == "V013"]
+
+
+def test_contrast_ratio_follows_wcag() -> None:
+    from pdk.eyes.rules import contrast_ratio
+    assert contrast_ratio("rgb(0, 0, 0)", "rgb(255, 255, 255)") == pytest.approx(21.0)
+    assert contrast_ratio("rgb(255, 255, 255)", "rgb(255, 255, 255)") == pytest.approx(1.0)
+    assert contrast_ratio("rgba(0, 0, 0, 0.5)", "rgb(255, 255, 255)") == pytest.approx(3.95, abs=0.05)
+    assert contrast_ratio("rgb(1 2 3 / 0.5)", "rgb(255, 255, 255)") is not None  # CSS level 4 syntax
+    assert contrast_ratio("red", "rgb(255, 255, 255)") is None
+
+
+def test_v013_flags_low_contrast_text_and_names_the_colors() -> None:
+    [finding] = _contrast("rgb(204, 204, 204)", "rgb(255, 255, 255)")
+    assert finding["severity"] == "warning" and finding["component"] == "root/Title"
+    assert "1.61:1" in finding["message"] and "below 4.5:1" in finding["message"]
+    assert _contrast("rgb(50, 50, 50)", "rgb(255, 255, 255)") == []
+
+
+def test_v013_asks_less_of_large_text() -> None:
+    gray = "rgb(140, 140, 140)"  # about 3.4:1 on white
+    assert len(_contrast(gray, "rgb(255, 255, 255)")) == 1
+    assert _contrast(gray, "rgb(255, 255, 255)", font_size=24) == []
+    assert _contrast(gray, "rgb(255, 255, 255)", font_size=19, font_weight="700") == []
+    assert len(_contrast(gray, "rgb(255, 255, 255)", font_size=19, font_weight="400")) == 1
+
+
+def test_v013_skips_disabled_controls_and_unknown_backgrounds() -> None:
+    faint = "rgb(230, 230, 230)"
+    assert _contrast(faint, None) == []  # a background image on the way: not judged
+    assert _contrast(faint, "rgb(255, 255, 255)", disabled=True) == []

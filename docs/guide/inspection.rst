@@ -20,10 +20,13 @@ Commands
    uv run pdk inspect PDK/Pump                  # anomalies
    uv run pdk inspect PDK/Pump --focus V001     # expand one code, component or pointer
    uv run pdk inspect PDK/Pump --viewport 1920x1080
+   uv run pdk inspect PDK/Pump --viewport desktop,tablet,phone   # one report per viewport
    uv run pdk screenshot PDK/Pump --component root/Panel --out panel.png
 
 The view is given by its path in the sandbox (``PDK/Pump``) or by its local folder. The default viewport is
-1366×768. Inspection always looks at the **deployed** version: if your local copy differs, the report says so, and
+1366×768; ``--viewport`` takes ``WIDTHxHEIGHT`` or a preset (``desktop`` 1366×768, ``tablet`` 768×1024, ``phone``
+375×812, ``wide`` 1920×1080), and ``inspect`` takes several, comma-separated, with one report for each (the
+token budget is shared). Inspection always looks at the **deployed** version: if your local copy differs, the report says so, and
 ``X002`` means the page does not render the ``view.json`` at all (deploy first).
 
 Anomalies
@@ -60,6 +63,11 @@ Anomalies
      - Repeater instances overflow
      - A flex repeater's instances are bigger than the repeater along the axis their number does not explain (the
        cross axis without ``wrap``, the main axis with it), so each one scrolls inside a strip of the repeater.
+   * - ``V013``
+     - Low contrast
+     - Text too close in color to what is behind it (WCAG AA: 4.5:1, or 3:1 for large text). The background is
+       the first opaque one from the text outwards; text over an image is not judged, and disabled controls are
+       exempt.
    * - ``Q001``
      - Bad quality
      - A binding delivers a *Bad* quality, for example ``Bad_NotFound`` for a tag that does not exist.
@@ -162,6 +170,18 @@ script errors all describe the state after them:
      - Types into the input inside the component and confirms with Tab.
    * - ``row root/Table 2``
      - Selects the second visible row of a table.
+   * - ``select root/Mode "Manual"``
+     - Picks that option of a dropdown (several labels for a multi-select) and waits until the dropdown shows it.
+   * - ``slide root/Level 7``
+     - Moves a slider's handle with the keyboard until it reads 7 (A004 if 7 is not one of its steps).
+   * - ``key Enter`` / ``key root/Name Enter``
+     - Presses a key (Playwright names: ``Enter``, ``Escape``, ``Tab``, ``ArrowDown``, ``Control+A``) on the
+       focused element, or on the input inside the component.
+   * - ``hover root/Pump`` / ``double-click root/Pump``
+     - Moves the mouse over the component, or double-clicks it.
+   * - ``scroll root/List bottom``
+     - Scrolls the component (or the first scrolling element inside it) ``down`` or ``up`` one screen, to the
+       ``top`` or ``bottom``, or by N pixels.
    * - ``wait 500``
      - Waits that many milliseconds (at most 10,000).
    * - ``tag Sandbox/Setpoint 42 [quality Bad_Stale]``
@@ -203,6 +223,18 @@ Screenshots
 an image can judge, such as colors and visual hierarchy; measurements and expectations are cheaper and more precise
 for everything else. ``--act`` runs the same steps as ``inspect --act`` before capturing, so a popup
 (``--component popup:detail/root``) or the state after typing can be captured.
+
+``--compare before.png`` checks what a change did to the picture: take a screenshot before editing, deploy the
+change, and capture again with the same view, viewport and component. The report gives the share of pixels that
+changed and the components where they are; the diff image (``<out>__diff.png``) shows the new capture faded with
+the changed pixels in red. Changes outside the components you meant to touch are the regressions to look at.
+
+.. code-block:: bash
+
+   uv run pdk screenshot PDK/Pump --out before.png
+   # edit, deploy
+   uv run pdk screenshot PDK/Pump --compare before.png
+   # compare: 0.4% of pixels differ in 1 region(s): root/Header/Title 93x13 @12,8
 
 Sessions and the browser
 ------------------------

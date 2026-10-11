@@ -293,7 +293,19 @@ def _cmd_eyes(args: argparse.Namespace) -> int:
                                           budget=args.budget, query=args.query,
                                           expect=args.expect, act=args.act)
         else:
-            png, text = inspect.screenshot(eyes, gateway, args.path, args.viewport, args.component, args.act)
+            before = None
+            if args.compare:  # read before the browser is needed, so a wrong path costs nothing
+                try:
+                    before = Path(args.compare).read_bytes()
+                except OSError as error:
+                    print(f"cannot read {args.compare}: {error.strerror or error}", file=sys.stderr)
+                    return EXIT_USAGE
+            diff = None
+            if before is None:
+                png, text = inspect.screenshot(eyes, gateway, args.path, args.viewport, args.component, args.act)
+            else:
+                png, diff, text = inspect.compare_screenshot(eyes, gateway, args.path, before, args.viewport,
+                                                             args.component, args.act)
             if png is None:
                 print(text, file=sys.stderr)
                 return EXIT_FINDINGS
@@ -301,6 +313,10 @@ def _cmd_eyes(args: argparse.Namespace) -> int:
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_bytes(png)
             print(f"{text} -> {out}")
+            if diff is not None:
+                diff_out = out.with_name(f"{out.stem}__diff.png")
+                diff_out.write_bytes(diff)
+                print(f"diff -> {diff_out}")
             return EXIT_OK
     print(result.text)
     return EXIT_OK if result.ok else EXIT_FINDINGS
@@ -411,7 +427,9 @@ def build_parser() -> argparse.ArgumentParser:
                                             "root/T text \"Pump\"; tag Sandbox/Setpoint = 42; "
                                             "alarm North/Level active'; failures are A001 diagnostics")
     inspector.add_argument("--act", help="steps to perform before measuring, ;-separated: 'click root/Save; "
-                                         "type root/Name \"P-2\"; row root/Table 1; wait 500; "
+                                         "type root/Name \"P-2\"; row root/Table 1; select root/Mode \"Auto\"; "
+                                         "slide root/Level 7; key [root/Name] Enter; hover root/X; double-click "
+                                         "root/X; scroll root/List bottom; wait 500; "
                                          "tag Sandbox/Setpoint 42 [quality Bad_Stale]'; failures are A004")
     inspector.add_argument("--budget", type=int, default=DEFAULT_BUDGET, help="output budget in tokens")
     shooter = sub.add_parser("screenshot", help="PNG of a deployed view, or of one of its components")
@@ -421,9 +439,15 @@ def build_parser() -> argparse.ArgumentParser:
                                                      "[__<component>].png, <work> being PDK_WORK_DIR or work/)")
     shooter.add_argument("--act", help="steps performed before capturing, same grammar as inspect --act (to capture a "
                                        "popup or a state after typing); a failing step is A004 and no PNG")
+    shooter.add_argument("--compare", metavar="BEFORE.png", help="PNG taken before, of the same view, viewport and "
+                                                                 "component: reports the %% of pixels that changed and "
+                                                                 "where, and writes the changed pixels in red to "
+                                                                 "<out>__diff.png")
     for command in (opener, inspector, shooter):
         command.add_argument("path", help=view_arg)
-        command.add_argument("--viewport", default=None, help="WIDTHxHEIGHT (default: 1366x768)")
+        command.add_argument("--viewport", default=None, help="WIDTHxHEIGHT or desktop, tablet, phone, wide "
+                                                              "(default: 1366x768); inspect takes several, "
+                                                              "comma-separated, one report each")
         command.add_argument("--url", help="gateway URL (default: PDK_GATEWAY_URL or http://127.0.0.1:8088)")
         command.set_defaults(func=_cmd_eyes)
     return parser

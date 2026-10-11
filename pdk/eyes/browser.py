@@ -9,6 +9,7 @@ a kept context keeps its session; every open is a new tab, so a new Perspective 
 
 from __future__ import annotations
 
+import base64
 import contextlib
 import re
 import threading
@@ -28,6 +29,7 @@ STABLE_SAMPLES = 3
 POLL_S = 0.05
 LAYOUT_EPSILON_PX = 0.0  # measured by perspective-compiler over 2640 rAF samples: geometry settles exactly
 DEFAULT_VIEWPORT = "1366x768"
+VIEWPORT_PRESETS = {"desktop": DEFAULT_VIEWPORT, "tablet": "768x1024", "phone": "375x812", "wide": "1920x1080"}
 ROOT_PATH = "C.0"
 CONSOLE_LIMIT = 50
 
@@ -51,6 +53,7 @@ READINESS_TIMEOUT = "readiness-timeout"
 LAYOUT_UNSTABLE = "layout-unstable"
 BROWSER_CRASH = "browser-crash"
 BROWSER_MISSING = "browser-missing"
+COMPARE_FAILED = "compare-failed"
 
 
 class EyesError(RuntimeError):
@@ -69,10 +72,18 @@ class Viewport:
 
     @classmethod
     def parse(cls, text: str | None) -> Viewport:
+        """WIDTHxHEIGHT or a preset name (desktop, tablet, phone, wide)."""
+        text = VIEWPORT_PRESETS.get((text or "").strip().lower(), text)
         match = re.fullmatch(r"\s*(\d{2,5})\s*[xX×]\s*(\d{2,5})\s*", text or DEFAULT_VIEWPORT)
         if not match:
-            raise ValueError(f"viewport must look like 1366x768, got {text!r}")
+            raise ValueError(f"viewport must look like 1366x768 or be one of {', '.join(VIEWPORT_PRESETS)}, "
+                             f"got {text!r}")
         return cls(int(match.group(1)), int(match.group(2)))
+
+    @classmethod
+    def parse_many(cls, text: str | None) -> list[Viewport]:
+        """One or more viewports, comma-separated, without repeats."""
+        return list(dict.fromkeys(cls.parse(item) for item in (text or DEFAULT_VIEWPORT).split(",") if item.strip()))
 
     def __str__(self) -> str:
         return f"{self.width}x{self.height}"
@@ -245,6 +256,29 @@ EXTRACT_JS = r"""
       if (i.matches(field) && i.closest('[data-component-path]') === el) return i.value.trim() || null;
     return null;
   };
+  // What is behind a text: the background colors from its element outwards, composited until one is opaque
+  // (over white, the canvas); null when a background image is on the way, since its colors are unknown.
+  const rgba = (v) => {
+    const m = /rgba?\(([^)]+)\)/.exec(v || '');
+    if (!m) return null;
+    const p = m[1].split(/[\s,\/]+/).filter(Boolean).map(Number);
+    return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1];
+  };
+  const backdrop = (el) => {
+    const layers = [];
+    for (let cur = el; cur; cur = cur.parentElement) {
+      const cs = getComputedStyle(cur);
+      if (cs.backgroundImage && cs.backgroundImage !== 'none') return null;
+      const c = rgba(cs.backgroundColor);
+      if (c && c[3] > 0) { layers.push(c); if (c[3] >= 1) break; }
+    }
+    let [r, g, b] = [255, 255, 255];
+    for (let i = layers.length - 1; i >= 0; i--) {
+      const [lr, lg, lb, la] = layers[i];
+      r = lr * la + r * (1 - la); g = lg * la + g * (1 - la); b = lb * la + b * (1 - la);
+    }
+    return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+  };
   const nodes = [];
   for (const el of [root, ...root.querySelectorAll('[data-component-path]')]) {
     const cs = getComputedStyle(el), r = el.getBoundingClientRect(), text = ownText(el);
@@ -265,7 +299,7 @@ EXTRACT_JS = r"""
         ? el.innerText.trim() || null : inputValue(el),
       cut_rect: clipRect(el, true), overlay: overlay(el), failed_views: failedViews(el),
       disabled: el.matches(':disabled') || !!el.querySelector('input:disabled, button:disabled, textarea:disabled'),
-      color: ts.color, background_color: cs.backgroundColor,
+      color: ts.color, background_color: cs.backgroundColor, text_bg: text.holder ? backdrop(text.holder) : null,
       font_family: ts.fontFamily, font_size: px(ts.fontSize), font_weight: ts.fontWeight, text_align: cs.textAlign,
       padding: [px(cs.paddingTop), px(cs.paddingRight), px(cs.paddingBottom), px(cs.paddingLeft)],
       border_width: [px(cs.borderTopWidth), px(cs.borderRightWidth), px(cs.borderBottomWidth), px(cs.borderLeftWidth)],
@@ -274,6 +308,100 @@ EXTRACT_JS = r"""
     });
   }
   return {url: location.href, viewport: {width: window.innerWidth, height: window.innerHeight}, nodes};
+}
+"""
+
+
+# Compares two PNGs of the same view in the page (see Eyes.compare). A pixel differs when one of its four channels
+# moves by more than `threshold`; the grid cells holding a differing pixel are marked, and the marked cells that touch
+# (8 neighbours) make one region, boxed by its differing pixels. The diff is the after image at 35% over white, with
+# the differing pixels in red.
+COMPARE_JS = r"""
+async ({before, after, threshold, cell}) => {
+  const load = async (src) => {
+    const img = new Image();
+    img.src = src;
+    await img.decode();
+    return img;
+  };
+  const a = await load(before), b = await load(after);
+  const w = a.naturalWidth, h = a.naturalHeight;
+  if (w !== b.naturalWidth || h !== b.naturalHeight) {
+    return {size_before: [w, h], size_after: [b.naturalWidth, b.naturalHeight]};
+  }
+  const pixelsOf = (img) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', {willReadFrequently: true});
+    ctx.drawImage(img, 0, 0);
+    return ctx.getImageData(0, 0, w, h).data;
+  };
+  const pa = pixelsOf(a), pb = pixelsOf(b);
+  const cols = Math.ceil(w / cell), rows = Math.ceil(h / cell);
+  const marked = new Uint8Array(cols * rows);
+  const hits = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const d = Math.max(Math.abs(pa[i] - pb[i]), Math.abs(pa[i + 1] - pb[i + 1]),
+                         Math.abs(pa[i + 2] - pb[i + 2]), Math.abs(pa[i + 3] - pb[i + 3]));
+      if (d > threshold) {
+        hits.push(y * w + x);
+        marked[Math.floor(y / cell) * cols + Math.floor(x / cell)] = 1;
+      }
+    }
+  }
+  const label = new Int32Array(cols * rows).fill(-1);
+  let regionCount = 0;
+  for (let start = 0; start < marked.length; start++) {
+    if (!marked[start] || label[start] >= 0) continue;
+    const id = regionCount++;
+    const queue = [start];
+    label[start] = id;
+    for (let q = 0; q < queue.length; q++) {
+      const r0 = Math.floor(queue[q] / cols), c0 = queue[q] % cols;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          const r = r0 + dr, c = c0 + dc;
+          if (r < 0 || c < 0 || r >= rows || c >= cols) continue;
+          const n = r * cols + c;
+          if (marked[n] && label[n] < 0) {
+            label[n] = id;
+            queue.push(n);
+          }
+        }
+      }
+    }
+  }
+  const boxes = Array.from({length: regionCount},
+                           () => ({minX: Infinity, minY: Infinity, maxX: -1, maxY: -1, pixels: 0}));
+  for (const p of hits) {
+    const x = p % w, y = Math.floor(p / w);
+    const box = boxes[label[Math.floor(y / cell) * cols + Math.floor(x / cell)]];
+    box.minX = Math.min(box.minX, x);
+    box.minY = Math.min(box.minY, y);
+    box.maxX = Math.max(box.maxX, x);
+    box.maxY = Math.max(box.maxY, y);
+    box.pixels++;
+  }
+  const regions = boxes.map((box) => ({x: box.minX, y: box.minY, width: box.maxX - box.minX + 1,
+                                       height: box.maxY - box.minY + 1, pixels: box.pixels}));
+  regions.sort((p, q) => q.pixels - p.pixels);
+  const out = document.createElement('canvas');
+  out.width = w;
+  out.height = h;
+  const octx = out.getContext('2d');
+  octx.fillStyle = '#ffffff';
+  octx.fillRect(0, 0, w, h);
+  octx.globalAlpha = 0.35;
+  octx.drawImage(b, 0, 0);
+  octx.globalAlpha = 1;
+  const painted = octx.getImageData(0, 0, w, h);
+  for (const p of hits) painted.data.set([230, 0, 0, 255], p * 4);
+  octx.putImageData(painted, 0, 0);
+  return {width: w, height: h, changed: hits.length, total: w * h, region_count: regionCount,
+          regions: regions.slice(0, 20), diff: out.toDataURL('image/png')};
 }
 """
 
@@ -357,6 +485,18 @@ class Eyes:
     def screenshot(self, opened: Opened, component: str | None = None) -> bytes:
         """PNG of the viewport, or of one component by its DOM path (e.g. C.0:3:0)."""
         return self.run(self._screenshot, opened, component)
+
+    def compare(self, opened: Opened, before: bytes, after: bytes, threshold: int = 32,
+                cell: int = 16) -> dict[str, Any]:
+        """Pixel comparison of two PNGs of the same view, in the page (COMPARE_JS): `changed` of `total` pixels differ
+        by more than `threshold` in one channel, `regions` boxes them (largest first, at most 20; `region_count` is
+        the real number) and `diff_png` is the after image with the changes in red. Sizes that differ come back as
+        size_before and size_after only."""
+        return self.run(self._compare, opened, before, after, threshold, cell)
+
+    def forget(self, viewport: Viewport) -> None:
+        """Close the context of one viewport and release its session (an extra viewport of one inspection)."""
+        self.run(self._forget, viewport)
 
     def close(self) -> None:
         """Idempotent; safe from atexit, where the worker pool may already be shut down."""
@@ -465,6 +605,29 @@ class Eyes:
             raise EyesError(READINESS_TIMEOUT, f"no single component at DOM path {component}")
         return locator.screenshot()
 
+    def _compare(self, opened: Opened, before: bytes, after: bytes, threshold: int, cell: int) -> dict[str, Any]:
+        args = {"before": _png_data_url(before), "after": _png_data_url(after), "threshold": threshold, "cell": cell}
+        try:
+            result = opened.page.evaluate(COMPARE_JS, args)
+        except Exception as exc:  # noqa: BLE001
+            raise EyesError(_crash_or(exc, COMPARE_FAILED), f"visual comparison failed: {exc}") from exc
+        diff = result.pop("diff", None)
+        if diff is not None:
+            result["diff_png"] = base64.b64decode(diff.split(",", 1)[1])
+        return result
+
+    def _forget(self, viewport: Viewport) -> None:
+        page = self._session_pages.pop(viewport, None)
+        if page and self._release is not None:
+            with contextlib.suppress(Exception):
+                self._release([page])
+        for key in [key for key in self._pages if key[1] == viewport]:
+            del self._pages[key]
+        context = self._contexts.pop(viewport, None)
+        if context is not None:
+            with contextlib.suppress(Exception):
+                context.close()
+
     def _close(self) -> None:
         pages = list(self._session_pages.values())
         self._session_pages.clear()
@@ -487,6 +650,10 @@ class Eyes:
 
 
 # ------------------------------------------------------------------------------------------------ helpers
+
+
+def _png_data_url(png: bytes) -> str:
+    return "data:image/png;base64," + base64.b64encode(png).decode("ascii")
 
 
 def _console(opened: Opened, kind: str, text: str) -> None:

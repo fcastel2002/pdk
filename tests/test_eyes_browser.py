@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import base64
+import contextlib
 import math
+import struct
 import time
+import zlib
+from collections.abc import Callable, Iterator
 from typing import Any
 
 import pytest
@@ -16,9 +21,19 @@ def test_viewport_parsing() -> None:
     assert Viewport.parse(None) == Viewport(1366, 768)
     assert Viewport.parse(" 1920 x 1080 ") == Viewport(1920, 1080)
     assert str(Viewport.parse("800X600")) == "800x600"
-    for bad in ("1366", "wide", "1x2", "1366x768x2"):
+    for bad in ("1366", "huge", "1x2", "1366x768x2"):
         with pytest.raises(ValueError):
             Viewport.parse(bad)
+
+
+def test_viewport_presets_and_lists() -> None:
+    assert Viewport.parse("phone") == Viewport(375, 812)
+    assert Viewport.parse(" Tablet ") == Viewport(768, 1024)
+    assert Viewport.parse("wide") == Viewport(1920, 1080)
+    assert Viewport.parse_many("desktop, phone,1366x768") == [Viewport(1366, 768), Viewport(375, 812)]
+    assert Viewport.parse_many(None) == [Viewport(1366, 768)]
+    with pytest.raises(ValueError):
+        Viewport.parse_many("phone,nope")
 
 
 @pytest.mark.parametrize(("state", "status"), [
@@ -136,6 +151,137 @@ def test_extract_js_reports_computed_style() -> None:
     # A label's textStyle styles the element inside it: color and font are the text's, not the root's.
     styled = nodes["C.2"]
     assert (styled["color"], styled["font_size"], styled["font_weight"]) == ("rgb(198, 40, 40)", 12.0, "700")
+
+
+# -- visual comparison: COMPARE_JS in a real Chromium, Eyes.compare with a fake page
+
+WHITE = (255, 255, 255, 255)
+BLACK = (0, 0, 0, 255)
+
+
+def _png(width: int, height: int, pixel: Callable[[int, int], tuple[int, int, int, int]]) -> bytes:
+    """A small RGBA PNG (8 bits, no filter), built with zlib and struct: the tests need no image library."""
+    def chunk(kind: bytes, body: bytes) -> bytes:
+        return struct.pack(">I", len(body)) + kind + body + struct.pack(">I", zlib.crc32(kind + body))
+
+    rows = b"".join(b"\x00" + bytes(channel for x in range(width) for channel in pixel(x, y)) for y in range(height))
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(rows)) + chunk(b"IEND", b"")
+
+
+def _data_url(png: bytes) -> str:
+    return "data:image/png;base64," + base64.b64encode(png).decode("ascii")
+
+
+def _changed(x: int, y: int) -> tuple[int, int, int, int]:
+    """A 6x6 block at 10,10 and a pixel touching its corner (one region), a 2x2 block at 70,70 (another), and a
+    pixel off by 10 at 40,40 (under the threshold)."""
+    if (10 <= x <= 15 and 10 <= y <= 15) or (x, y) == (16, 16) or (70 <= x <= 71 and 70 <= y <= 71):
+        return BLACK
+    if (x, y) == (40, 40):
+        return (245, 255, 255, 255)
+    return WHITE
+
+
+@contextlib.contextmanager
+def _chromium_page() -> Iterator[Any]:
+    """A blank page of Playwright's Chromium; the test is skipped where the browser is not installed."""
+    sync_api = pytest.importorskip("playwright.sync_api")
+    with sync_api.sync_playwright() as p:
+        try:
+            chromium = p.chromium.launch(headless=True)
+        except Exception as exc:  # the browser binary is not installed for Playwright on this machine
+            pytest.skip(f"Playwright Chromium is not available: {exc}")
+        try:
+            yield chromium.new_page()
+        finally:
+            chromium.close()
+
+
+def test_compare_js_boxes_the_changed_regions_and_paints_the_diff() -> None:
+    before = _png(96, 96, lambda x, y: WHITE)
+    after = _png(96, 96, _changed)
+    with _chromium_page() as page:
+        result = page.evaluate(browser.COMPARE_JS, {"before": _data_url(before), "after": _data_url(after),
+                                                     "threshold": 32, "cell": 16})
+        # the diff, read back in the page: the changed pixel is red, the one under the threshold is not
+        pixels = page.evaluate("""async (src) => {
+          const img = new Image();
+          img.src = src;
+          await img.decode();
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          return [Array.from(ctx.getImageData(12, 12, 1, 1).data), Array.from(ctx.getImageData(40, 40, 1, 1).data)];
+        }""", result["diff"])
+
+    assert (result["width"], result["height"], result["total"]) == (96, 96, 96 * 96)
+    assert result["changed"] == 41 and result["region_count"] == 2
+    # 8-connected: the corner pixel joins the block, so one region of 37 pixels, not two
+    assert result["regions"] == [
+        {"x": 10, "y": 10, "width": 7, "height": 7, "pixels": 37},
+        {"x": 70, "y": 70, "width": 2, "height": 2, "pixels": 4},
+    ]
+    assert result["diff"].startswith("data:image/png;base64,")
+    assert pixels[0] == [230, 0, 0, 255]
+    assert pixels[1][1] > 200  # the unchanged pixel: the faded after image, not red
+
+
+def test_compare_js_answers_the_sizes_when_they_differ() -> None:
+    with _chromium_page() as page:
+        result = page.evaluate(browser.COMPARE_JS, {"before": _data_url(_png(40, 40, lambda x, y: WHITE)),
+                                                     "after": _data_url(_png(96, 96, lambda x, y: WHITE)),
+                                                     "threshold": 32, "cell": 16})
+    assert result == {"size_before": [40, 40], "size_after": [96, 96]}
+
+
+class _ComparePage:
+    """Stands in for the page: records each evaluate call and answers `result`, or raises `error`."""
+
+    def __init__(self, result: Any = None, error: Exception | None = None) -> None:
+        self.result = result
+        self.error = error
+        self.calls: list[tuple[str, Any]] = []
+
+    def evaluate(self, script: str, arg: Any = None) -> Any:
+        self.calls.append((script, arg))
+        if self.error is not None:
+            raise self.error
+        return self.result
+
+
+def _opened(page: _ComparePage) -> browser.Opened:
+    return browser.Opened(url="http://gateway/preview", viewport=Viewport.parse(None), page=page, page_id=None,
+                          readiness_ms=0.0, maker_notice=False)
+
+
+def test_compare_sends_both_pngs_and_decodes_the_diff_into_bytes() -> None:
+    diff = b"\x89PNG\r\n\x1a\ndiff"
+    regions = [{"x": 1, "y": 2, "width": 3, "height": 4, "pixels": 5}]
+    page = _ComparePage({"width": 8, "height": 8, "changed": 5, "total": 64, "region_count": 1, "regions": regions,
+                         "diff": _data_url(diff)})
+    with browser.Eyes() as eyes:
+        result = eyes.compare(_opened(page), b"before", b"after", threshold=5, cell=4)
+    script, arg = page.calls[0]
+    assert script == browser.COMPARE_JS
+    assert arg == {"before": _data_url(b"before"), "after": _data_url(b"after"), "threshold": 5, "cell": 4}
+    assert result == {"width": 8, "height": 8, "changed": 5, "total": 64, "region_count": 1, "regions": regions,
+                      "diff_png": diff}
+
+
+def test_compare_of_different_sizes_has_no_diff() -> None:
+    page = _ComparePage({"size_before": [2, 2], "size_after": [3, 3]})
+    with browser.Eyes() as eyes:
+        assert eyes.compare(_opened(page), b"a", b"b") == {"size_before": [2, 2], "size_after": [3, 3]}
+
+
+def test_compare_failing_in_the_page_is_compare_failed() -> None:
+    page = _ComparePage(error=RuntimeError("Image decode failed"))
+    with browser.Eyes() as eyes, pytest.raises(browser.EyesError) as info:
+        eyes.compare(_opened(page), b"a", b"b")
+    assert info.value.status == browser.COMPARE_FAILED
 
 
 def test_extract_js_cut_rect_frees_the_axes_a_container_scrolls() -> None:

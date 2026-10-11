@@ -20,7 +20,7 @@ from pdk.diagnostics import DEFAULT_BUDGET, counts, render
 from pdk.eyes import act as actions
 from pdk.eyes import expect as expectations
 from pdk.eyes import measure, rules
-from pdk.eyes.browser import Eyes, EyesError, Opened, Viewport
+from pdk.eyes.browser import ROOT_PATH, Eyes, EyesError, Opened, Viewport
 from pdk.eyes.expect import page_location
 from pdk.eyes.join import Joined, join, mounted_view
 from pdk.gateway.client import VIEWS, Gateway, GatewayError
@@ -29,6 +29,7 @@ from pdk.validate.tree import build_tree, walk
 SETTLE_S = 3.0
 POLL_S = 0.25
 LOG_GRACE_S = 0.3  # log events are appended asynchronously; give the last ones a moment
+MIN_SHARED_BUDGET = 400  # per viewport, when several share one report
 OPEN_HINTS = {
     "gateway-unavailable": "Start the gateway, or check PDK_GATEWAY_URL.",
     "http-error": "Check the project name and that the preview page exists (deploy the view again).",
@@ -226,7 +227,29 @@ def inspect_view(eyes: Eyes, gateway: Gateway, location: str, viewport: str | No
                  expect: str | None = None, act: str | None = None) -> Result:
     """Reload the view and report its anomalies: rendering, gateway qualities, logged script errors, console; with
     `act`, after performing those steps (pdk.eyes.act); with `query`, also what was measured of the matching
-    components (measure.describe); with `expect`, the expectations that fail, as A diagnostics (expect.check)."""
+    components (measure.describe); with `expect`, the expectations that fail, as A diagnostics (expect.check).
+    Several viewports (comma-separated, or presets like phone) give one report each, with the budget shared; the
+    sessions of the extra ones are closed afterwards."""
+    try:
+        viewports = Viewport.parse_many(viewport)
+    except ValueError as error:
+        return Result(False, f"{location}: {error}")
+    if len(viewports) == 1:
+        return _inspect_one(eyes, gateway, location, str(viewports[0]), focus=focus, budget=budget, query=query,
+                            expect=expect, act=act)
+    share = max(MIN_SHARED_BUDGET, budget // len(viewports))
+    results: list[Result] = []
+    for each in viewports:
+        results.append(_inspect_one(eyes, gateway, location, str(each), focus=focus, budget=share, query=query,
+                                    expect=expect, act=act))
+        if each != Viewport.parse(None):
+            eyes.forget(each)
+    return Result(all(r.ok for r in results), "\n\n".join(r.text for r in results), sum(r.errors for r in results))
+
+
+def _inspect_one(eyes: Eyes, gateway: Gateway, location: str, viewport: str | None = None, *,
+                 focus: str | None = None, budget: int = DEFAULT_BUDGET, query: str | None = None,
+                 expect: str | None = None, act: str | None = None) -> Result:
     target = None
     try:
         target = resolve(gateway, location)
@@ -332,10 +355,25 @@ def inspect_view(eyes: Eyes, gateway: Gateway, location: str, viewport: str | No
 
 
 def screenshot(eyes: Eyes, gateway: Gateway, location: str, viewport: str | None = None,
-               component: str | None = None, act: str | None = None) -> tuple[bytes | None, str]:
+               component: str | None = None, act: str | None = None,
+               compare: bytes | None = None) -> tuple[bytes | None, str]:
     """PNG of the view (opened afresh) or of one component, by name path (root/Panel/Label), DOM path (C.0:1) or,
     once `act` has opened it, popup:<id>/root/... With `act`, the steps (pdk.eyes.act) run before capturing: a step
-    that cannot be read comes back as A005, one that cannot be done as A004, and neither gives a PNG."""
+    that cannot be read comes back as A005, one that cannot be done as A004, and neither gives a PNG. With `compare`
+    (the bytes of a PNG taken before), the text ends with the comparison line (see compare_screenshot)."""
+    png, _diff, text = _shoot(eyes, gateway, location, viewport, component, act, compare)
+    return png, text
+
+
+def compare_screenshot(eyes: Eyes, gateway: Gateway, location: str, before: bytes, viewport: str | None = None,
+                       component: str | None = None, act: str | None = None) -> tuple[bytes | None, bytes | None, str]:
+    """screenshot, compared with `before` (a PNG of the same view, viewport and component): (png, diff_png, text).
+    diff_png is the new PNG with the changed pixels in red; None when nothing changed or the sizes differ."""
+    return _shoot(eyes, gateway, location, viewport, component, act, before)
+
+
+def _shoot(eyes: Eyes, gateway: Gateway, location: str, viewport: str | None, component: str | None, act: str | None,
+           compare: bytes | None) -> tuple[bytes | None, bytes | None, str]:
     target = None
     acted: actions.Outcome | None = None
     try:
@@ -349,13 +387,13 @@ def screenshot(eyes: Eyes, gateway: Gateway, location: str, viewport: str | None
             elif component in nodes:
                 dom_path = f"C.{nodes[component].address}"
             else:
-                return None, f"{target.project}:{target.path} has no component {component!r} (use a name path " \
-                             "like root/Panel/Label, or popup:<id>/root/... after act opened the popup)"
+                return None, None, f"{target.project}:{target.path} has no component {component!r} (use a name " \
+                                   "path like root/Panel/Label, or popup:<id>/root/... after act opened the popup)"
         steps: list[actions.Step] = []
         if act:
             steps, malformed = actions.parse(act, nodes)
             if malformed:
-                return None, render(malformed, title=f"{target.project}:{target.path}")
+                return None, None, render(malformed, title=f"{target.project}:{target.path}")
         opened: Opened = eyes.open(_preview(gateway, target), Viewport.parse(viewport))
         resolve_popup = _popup_resolver(gateway, target.project, opened)
         if steps:
@@ -363,15 +401,86 @@ def screenshot(eyes: Eyes, gateway: Gateway, location: str, viewport: str | None
             acted = eyes.act(opened, steps, pointers, resolve_popup,
                              lambda step: simulated.write(gateway, step.tag, step.value, step.quality))
             if acted.diagnostics:
-                return None, render(acted.diagnostics, title=f"{target.project}:{target.path}") + "\n" + acted.summary()
+                return (None, None, render(acted.diagnostics, title=f"{target.project}:{target.path}") + "\n"
+                        + acted.summary())
         if popup_component:
             dom_path = resolve_popup(component)
             if dom_path is None:
-                return None, f"{target.project}:{target.path} has no component {component!r} in an open popup " \
-                             "(act must open it first, e.g. click root/Open)"
+                return None, None, f"{target.project}:{target.path} has no component {component!r} in an open popup " \
+                                   "(act must open it first, e.g. click root/Open)"
         png = eyes.screenshot(opened, dom_path)
+        diff, compared = None, None
+        if compare is not None:
+            diff, compared = _compared(eyes, opened, target, dom_path, compare, png)
     except (EyesError, GatewayError, ValueError) as error:
-        return None, _failed(target, location, error).text
+        return None, None, _failed(target, location, error).text
     what = f"{component} ({dom_path})" if component else "the viewport"
     text = f"{target.project}:{target.path} @{opened.viewport}: {what}, {len(png)} bytes"
-    return png, text + ("\n" + acted.summary() if acted else "")
+    if acted:
+        text += "\n" + acted.summary()
+    if compared:
+        text += "\n" + compared
+    return png, diff, text
+
+
+MAX_LISTED_REGIONS = 8
+
+
+def _compared(eyes: Eyes, opened: Opened, target: Target, dom_path: str | None, before: bytes,
+              png: bytes) -> tuple[bytes | None, str]:
+    """Compares the capture with `before`, and names the components where things changed: a region takes the smallest
+    component under its centre. A capture of one component gives boxes relative to it, so its bounds are added back.
+    Returns the diff PNG (None when there is nothing to show) and the compare line."""
+    result = eyes.compare(opened, before, png)
+    if "size_before" in result:
+        (before_w, before_h), (now_w, now_h) = result["size_before"], result["size_after"]
+        return None, f"compare: sizes differ (before {before_w}x{before_h}, now {now_w}x{now_h})"
+    if not result["changed"]:
+        return None, "compare: identical"
+    # A popup component is in its popup's tree (P<id>.0:...), the rest in the view's (C.0...).
+    root = dom_path.split(":", 1)[0] if dom_path and dom_path.startswith("P") else ROOT_PATH
+    boxes = [node for node in eyes.extract(opened, root)["nodes"] if node.get("path") and node.get("bounds")]
+    offset_x = offset_y = 0.0
+    for node in boxes:
+        if dom_path and node["path"] == dom_path:
+            offset_x, offset_y = node["bounds"]["left"], node["bounds"]["top"]
+    names = {node.address: node.path for node in walk(build_tree(target.view))}
+    listed = []
+    for region in result["regions"][:MAX_LISTED_REGIONS]:
+        under = _component_at(boxes, offset_x + region["x"] + region["width"] / 2,
+                              offset_y + region["y"] + region["height"] / 2)
+        name = _component_name(under, names) if under else "(no component)"
+        listed.append(f"{name} {region['width']}x{region['height']} @{region['x']},{region['y']}")
+    more = result["region_count"] - len(listed)
+    text = (f"compare: {_percent(result['changed'], result['total'])} of pixels differ in "
+            f"{result['region_count']} region(s): " + "; ".join(listed) + (f"; +{more} more" if more > 0 else ""))
+    return result.get("diff_png"), text
+
+
+def _component_at(boxes: list[dict[str, Any]], x: float, y: float) -> str | None:
+    """DOM path of the smallest component whose box holds the point; boxes with no area hold nothing."""
+    best: tuple[float, str] | None = None
+    for node in boxes:
+        bounds = node["bounds"]
+        if bounds["width"] <= 0 or bounds["height"] <= 0:
+            continue
+        if bounds["left"] <= x < bounds["right"] and bounds["top"] <= y < bounds["bottom"]:
+            area = bounds["width"] * bounds["height"]
+            if best is None or area < best[0]:
+                best = (area, node["path"])
+    return best[1] if best else None
+
+
+def _component_name(dom_path: str, names: dict[str, str]) -> str:
+    """Name path of a DOM path: C.<address> is looked up in the view's tree. A path inside an embedded view (after a
+    "$") names its host, the component of the primary view that holds it. Anything else, popups included, is kept
+    as the DOM path."""
+    primary = dom_path.split("$", 1)[0]
+    if primary.startswith("C."):
+        return names.get(primary[2:], dom_path)
+    return dom_path
+
+
+def _percent(changed: int, total: int) -> str:
+    share = 100 * changed / total if total else 0.0
+    return f"{share:.1f}%" if share >= 0.1 else "<0.1%"

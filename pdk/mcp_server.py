@@ -261,7 +261,8 @@ def _shared_eyes() -> Any:
 
 
 VIEW_ARG = ("path: the local view folder or view.json under work/<sandbox>/, or a view path in the sandbox like "
-            "PDK/Menu; viewport: WIDTHxHEIGHT (default 1366x768)")
+            "PDK/Menu; viewport: WIDTHxHEIGHT or desktop|tablet|phone|wide (default 1366x768; pdk_inspect takes "
+            "several, comma-separated, e.g. desktop,phone, and reports each)")
 
 
 @server.tool(
@@ -285,7 +286,8 @@ def pdk_open(path: str, viewport: str | None = None) -> str:
     description=(
         "Reload a deployed sandbox view and report what is wrong at runtime, each anomaly on the view.json pointer "
         "of its component: V001 text cut, V002 container overflow, V003 viewport overflow, V007 collapsed, V010 "
-        "not rendered, V011 embedded view failed to load, V012 repeater instances bigger than it; "
+        "not rendered, V011 embedded view failed to load, V012 repeater instances bigger than it, V013 low text "
+        "contrast; "
         "Q001/Q002/Q003 a bound property is Bad/Error/Uncertain "
         "(missing tag, failing script or expression), pointing at the binding; L001 a script error the gateway "
         "logged for the component; C001 browser error; X001 partial eyes; X002 the page does not render this "
@@ -309,7 +311,10 @@ def pdk_open(path: str, viewport: str | None = None) -> str:
         "path, `page ~ det` contains) and `page shows PDK/Detail` (the view on the page). 1px tolerance. "
         "act: steps performed before measuring (so query, expect, "
         "qualities and logged script errors see the state after them), one per ; or line: `click root/Save`, "
-        "`type root/Name \"P-2\"` (commits with Tab), `row root/Table 1` (first row shown), `wait 500`, "
+        "`type root/Name \"P-2\"` (commits with Tab), `row root/Table 1` (first row shown), "
+        "`select root/Mode \"Manual\"` (dropdown option; several labels for a multi-select), `slide root/Level 7`, "
+        "`key [root/Name] Enter`, `hover root/X`, `double-click root/X`, `scroll root/List down|up|top|bottom|N`, "
+        "`wait 500`, "
         "`tag Sandbox/Setpoint 42 [quality Bad_Stale]` (a simulated tag under PDK/, see pdk_tags); "
         "a step that cannot be done stops there as A004. act runs the view's own event scripts on the gateway (a click "
         "on a button that writes tags writes them): use it only on sandbox views meant for it. Popups open after the "
@@ -333,19 +338,32 @@ def pdk_inspect(path: str, viewport: str | None = None, focus: str | None = None
     description=(
         "PNG of a deployed sandbox view (reloaded) or of one component. Args: " + VIEW_ARG + "; component: name "
         "path like root/Panel/Label (or DOM path C.0:1) to capture only that component. act: steps performed before "
-        "capturing (same grammar as pdk_inspect act), e.g. to capture a popup or a state after typing."
+        "capturing (same grammar as pdk_inspect act), e.g. to capture a popup or a state after typing. "
+        "compare: a PNG taken before (same view, viewport and component): reports the % of pixels that changed, the "
+        "components where, and returns a diff image (changed pixels in red)."
     ),
     annotations=ACTS,
     structured_output=False,
 )
 def pdk_screenshot(path: str, viewport: str | None = None, component: str | None = None,
-                   act: str | None = None) -> list[Any] | str:
+                   act: str | None = None, compare: str | None = None) -> list[Any] | str:
     from pdk.eyes import inspect
 
-    png, text = inspect.screenshot(_shared_eyes(), Gateway(), path, viewport, component, act)
+    if compare is None:
+        png, text = inspect.screenshot(_shared_eyes(), Gateway(), path, viewport, component, act)
+        diff = None
+    else:
+        try:
+            before = Path(compare).read_bytes()
+        except OSError as error:
+            return f"cannot read the compare PNG {compare}: {error.strerror or error}"
+        png, diff, text = inspect.compare_screenshot(_shared_eyes(), Gateway(), path, before, viewport, component, act)
     if png is None:
         return text
-    return [text, Image(data=png, format="png")]
+    images: list[Any] = [text, Image(data=png, format="png")]
+    if diff is not None:
+        images.append(Image(data=diff, format="png"))
+    return images
 
 
 def main() -> None:
