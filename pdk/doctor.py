@@ -244,7 +244,8 @@ def _sandbox(state: State, _: bool) -> Check:
         return Check("sandbox", WARN, f"{name}: writes enabled; target project {target} does not exist",
                      "Fix -Dpdk.target in ignition.conf (or import the project) and restart the gateway.")
     detail = f"{name}: writes enabled under PDK/" if health.get("writeEnabled") else f"{name}: exists, writes disabled"
-    return Check("sandbox", OK, detail + (f"; target {target} (finished views via promote)" if target else ""))
+    promoted = f"; target {target} (views, style classes and scripts via promote)" if target else ""
+    return Check("sandbox", OK, detail + promoted)
 
 
 def _eyes(state: State, _: bool) -> Check:
