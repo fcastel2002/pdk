@@ -146,6 +146,10 @@ Bindings and ``propConfig`` (B)
      - expression-syntax
      - An expression that does not parse: ``and``/``or``/``not`` instead of ``&&``/``||``/``!``, unbalanced
        parentheses or quotes (errors), or a construct the offline parser does not know (warning).
+   * - ``B011``
+     - unknown-expression-function
+     - An expression calls a function the gateway does not register (with "did you mean"). Checked when the
+       bundle has the gateway's function list (``pdk schemas functions``).
 
 Events and scripts (E)
 ----------------------
@@ -181,6 +185,14 @@ Events and scripts (E)
      - A script body line without a leading tab. Ignition wraps every body in a function, so it would fail to
        parse at runtime. Only lines that start a Python statement count: lines inside a triple-quoted string or
        open brackets, after a backslash continuation, or holding only a comment may start at column 0.
+   * - ``E008``
+     - unknown-system-function
+     - A script uses a ``system.*`` name the gateway does not have (with "did you mean"). Checked when the bundle
+       has the gateway's function list (``pdk schemas functions``); strings and comments are skipped.
+   * - ``E009``
+     - script-syntax
+     - A script that the gateway's Jython 2.7 does not compile, with the line of the body. Checked by
+       ``pdk deploy`` and ``pdk validate --compile`` through the gateway; the script is compiled, never run.
 
 References (R)
 --------------

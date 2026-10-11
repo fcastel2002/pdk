@@ -90,6 +90,24 @@ References to other views, their parameters and style classes can only be checke
 ``--project`` with either a project folder or the name of a project on the local gateway; inside a project tree
 (including ``work/<project>/``) the project is detected automatically. The gateway's projects are only read.
 
+Functions and scripts checked against the gateway
+-------------------------------------------------
+
+The expression functions and the ``system.*`` scripting functions a gateway offers depend on its version and its
+modules. ``pdk schemas functions`` reads them from the running gateway and saves them next to the bundle
+(``schemas/<version>/functions.json``; ``pdk doctor --fix`` does it too). With that list, validation also reports
+an expression that calls a function the gateway does not have (``B011``) and a script that uses a ``system.*`` name
+it does not have (``E008``), both with "did you mean". Without it, those two checks are skipped.
+
+A script's full syntax is checked by the gateway's own Jython 2.7: ``pdk deploy`` compiles every script of the view
+before writing it (never running it) and refuses the deploy on ``E009``, with the line of the body. ``pdk validate
+--compile`` (``compile=true`` in ``pdk_validate``) does the same without deploying.
+
+.. code-block:: bash
+
+   uv run pdk schemas functions
+   uv run pdk validate work/<sandbox>/PDK/Pump --compile
+
 What validation cannot see
 --------------------------
 

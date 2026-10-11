@@ -259,9 +259,39 @@ def _eyes(state: State, _: bool) -> Check:
     return Check("eyes", OK, "gateway tree and log tap available")
 
 
+def _functions(state: State, fix: bool) -> Check:
+    """The gateway's function list next to the bundle, for B011 and E008 (offline otherwise skipped)."""
+    from pdk.bundle import BundleError, load_bundle, save_functions
+    from pdk.gateway.client import Gateway, GatewayError
+
+    try:
+        bundle = load_bundle()
+    except BundleError:
+        return Check("functions", SKIP, "needs the schema bundle")
+    if bundle.functions is not None and not fix:
+        return Check("functions", OK, f"{len(bundle.functions.expression)} expression functions and "
+                                      f"{len(bundle.functions.script)} system.* names from Ignition "
+                                      f"{bundle.functions.ignition or '?'}")
+    if state.health is None:
+        if bundle.functions is not None:
+            return Check("functions", OK, "function list present (the gateway is not checked)")
+        return Check("functions", SKIP, "needs the module")
+    try:
+        listing = Gateway().functions()
+    except GatewayError as exc:
+        return Check("functions", WARN, f"the module does not list functions ({exc.code}): B011 and E008 are "
+                                        "skipped", "uv run pdk gateway install --restart   (a newer module)")
+    if not fix and bundle.functions is None:
+        return Check("functions", WARN, "no function list next to the bundle: B011 and E008 are skipped",
+                     "uv run pdk schemas functions   (or pdk doctor --fix)")
+    save_functions(bundle.root, listing, state.health.get("ignitionVersion"))
+    return Check("functions", OK, f"saved {len(listing.get('expression') or [])} expression functions and "
+                                  f"{len(listing.get('script') or [])} system.* names (--fix)")
+
+
 CHECKS: tuple[Callable[[State, bool], Check], ...] = (
     _config, _playwright, _ignition, _schemas, _chromium, _jdk, _ignition_conf, _gateway, _api_key, _module,
-    _sandbox, _eyes,
+    _sandbox, _eyes, _functions,
 )
 
 

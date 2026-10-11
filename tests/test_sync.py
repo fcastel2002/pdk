@@ -10,6 +10,8 @@ from typing import Any
 import pytest
 
 from pdk import sync
+from pdk.cli import main
+from pdk.diagnostics import make
 from pdk.gateway.client import GatewayError
 from pdk.sync import GATEWAY_COPY, MISSING, PAGE_CONFIG, SIDECAR, VIEW_FILE
 from tests.helpers import label, view
@@ -470,3 +472,80 @@ def test_a_sandbox_path_without_a_local_folder_still_says_where_to_put_it(gw: Fa
                                                                          bundle) -> None:
     outcome = sync.deploy(gw, Path("PDK/Nowhere"), bundle, root=tmp_path)
     assert not outcome.ok and "<project>/<view path>" in outcome.text
+
+
+# --- the gateway's compile of view scripts ----------------------------------------------------------
+
+
+def _scripted(text: str = "\treturn 1") -> dict[str, Any]:
+    return view(label("Title", scripts={"customMethods": [{"name": "go", "params": [], "script": text}]}))
+
+
+def test_compile_without_the_gateway_route_is_skipped_unless_strict(gw: FakeGateway) -> None:
+    def missing(sources: list[dict[str, str]]) -> list[dict[str, Any]]:
+        raise GatewayError("G007", "no /scripts/compile route", status=404)
+
+    gw.compile_scripts = missing
+    text = json.dumps(_scripted())
+    assert sync.compiled(gw, text) == []
+    with pytest.raises(GatewayError):
+        sync.compiled(gw, text, strict=True)
+    with pytest.raises(GatewayError):
+        sync.compiler(gw)(text)
+
+
+def test_a_view_without_scripts_never_reaches_the_gateway(gw: FakeGateway) -> None:
+    def spy(sources: list[dict[str, str]]) -> list[dict[str, Any]]:
+        raise AssertionError("nothing to compile")
+
+    gw.compile_scripts = spy
+    text = json.dumps(view(label("Title")))
+    assert sync.compiled(gw, text) == [] and sync.compiled(gw, text, strict=True) == []
+
+
+def test_compiled_maps_the_gateways_rejections_to_e009(gw: FakeGateway) -> None:
+    def rejects(sources: list[dict[str, str]]) -> list[dict[str, Any]]:
+        return [{"id": s["id"], "ok": False, "line": 2, "column": 1, "message": "invalid syntax"} for s in sources]
+
+    gw.compile_scripts = rejects
+    found = sync.compiled(gw, json.dumps(_scripted()))
+    assert [(d["code"], d["pointer"]) for d in found] == [
+        ("E009", "/root/children/0/scripts/customMethods/0/script")]
+
+
+def test_deploy_refuses_a_script_the_gateway_does_not_compile(gw: FakeGateway, tmp_path: Path, bundle) -> None:
+    sync.pull(gw, "PDK/Menu", root=tmp_path)
+    directory = tmp_path / PROJECT / "PDK" / "Menu"
+    _edit(directory, lambda data: data["root"]["children"][0].update(
+        scripts={"customMethods": [{"name": "go", "params": [], "script": "\tx = (1"}]}))
+
+    def rejects(sources: list[dict[str, str]]) -> list[dict[str, Any]]:
+        return [{"id": "0", "ok": False, "line": 2, "column": 9, "message": "unexpected EOF"}]
+
+    gw.compile_scripts = rejects
+    outcome = sync.deploy(gw, directory, bundle, root=tmp_path)
+    assert not outcome.ok and "E009" in outcome.text and "Not deployed" in outcome.text
+    assert "/root/children/0/scripts/customMethods/0/script" in outcome.text
+    assert gw.writes == 0
+
+
+def test_cli_validate_compile_reports_the_gateways_findings(tmp_path: Path, monkeypatch, capsys) -> None:
+    path = tmp_path / "view.json"
+    path.write_text(json.dumps(view(label())), encoding="utf-8")
+    rejected = make("E009", "error", "/root/children/0/props/text", "root/Title", "script does not compile",
+                    "fix the Jython 2.7 syntax")
+    monkeypatch.setattr(sync, "compiler", lambda gateway: lambda text: [rejected])
+    assert main(["validate", str(path), "--compile"]) == 1
+    assert "E009" in capsys.readouterr().out
+
+
+def test_cli_validate_compile_without_the_module_says_so(tmp_path: Path, monkeypatch, capsys) -> None:
+    path = tmp_path / "view.json"
+    path.write_text(json.dumps(view(label())), encoding="utf-8")
+
+    def refuse(text: str) -> list[Any]:
+        raise GatewayError("G007", "no /scripts/compile route", status=404)
+
+    monkeypatch.setattr(sync, "compiler", lambda gateway: refuse)
+    assert main(["validate", str(path), "--compile"]) == 1
+    assert "--compile needs the gateway's module" in capsys.readouterr().err

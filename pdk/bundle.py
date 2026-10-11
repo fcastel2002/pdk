@@ -199,6 +199,44 @@ def _type_names(node: Any, names: set[str], in_properties: bool = False) -> None
             _type_names(value, names)
 
 
+FUNCTIONS_FILE = "functions.json"
+
+
+@dataclass(frozen=True)
+class Functions:
+    """What code may call, as read from a running gateway (`pdk schemas functions`): expression functions by
+    lower-case name, and the names under `system.*` (functions and the modules on the way to them)."""
+
+    expression: dict[str, str]  # lower-case name -> name
+    script: frozenset[str]
+    ignition: str | None = None
+
+
+def load_functions(base: Path) -> Functions | None:
+    """The functions.json next to a bundle, or None (offline checks of function names are then skipped)."""
+    try:
+        data = json.loads((base / FUNCTIONS_FILE).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    expression: dict[str, str] = {}
+    for item in data.get("expression") or []:
+        name = str(item.get("name") or "") if isinstance(item, dict) else ""
+        if name and expression.get(name.lower(), name.lower()) == name.lower():  # toString over its alias tostring
+            expression[name.lower()] = name
+    script = frozenset(str(name) for name in data.get("script") or [] if isinstance(name, str))
+    return Functions(expression, script, data.get("ignition"))
+
+
+def save_functions(base: Path, listing: dict[str, Any], ignition: str | None) -> Path:
+    """Write the gateway's /functions listing next to the bundle."""
+    path = base / FUNCTIONS_FILE
+    data = {"ignition": ignition, "expression": listing.get("expression") or [], "script": listing.get("script") or []}
+    path.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    return path
+
+
 @dataclass
 class Bundle:
     version: str
@@ -209,6 +247,7 @@ class Bundle:
     dom_events: dict[str, str]  # event name -> category
     registry: Registry
     validator_class: type[Validator] = Draft4Validator
+    functions: Functions | None = None
     _validators: dict[int, Validator] = field(default_factory=dict, repr=False)
 
     def schema(self, name: str) -> dict[str, Any]:
@@ -325,4 +364,5 @@ def load_bundle(version: str | None = None, root: Path | None = None) -> Bundle:
     for component in components.values():
         _type_names(component.schema, type_names)
         _type_names(component.child_position_schema, type_names)
-    return Bundle(version, base, manifest, components, schemas, dom_events, registry, _validator_class(type_names))
+    return Bundle(version, base, manifest, components, schemas, dom_events, registry, _validator_class(type_names),
+                  functions=load_functions(base))

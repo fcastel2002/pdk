@@ -54,6 +54,15 @@ Endpoints
      - ``/catalog[?full=true]`` · ``/catalog/{id}``
      - The Perspective components registered on the running gateway.
    * - GET
+     - ``/functions``
+     - The expression functions (``name``, ``category``) and the ``system.*`` scripting names (from the gateway's
+       scripting hints) of the running gateway.
+   * - POST
+     - ``/scripts/compile``
+     - Compile Jython sources with the gateway's Jython, never running them. Body:
+       ``{"sources": [{"id", "code"}]}`` (at most 500); answers ``{"results": [{"id", "ok", "line", "column",
+       "message"}]}``.
+   * - GET
      - ``/sessions?project=``
      - Open Perspective sessions of a project, with their pages and views.
    * - DELETE

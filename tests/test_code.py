@@ -2,11 +2,21 @@
 
 from __future__ import annotations
 
+import dataclasses
 from typing import Any
 
 import pytest
 
-from pdk.validate.code import _Parser, _Syntax
+from pdk.bundle import Functions
+from pdk.validate.code import (
+    WRAPPER,
+    _expression,
+    _Parser,
+    _script,
+    _Syntax,
+    compile_diagnostics,
+    compile_requests,
+)
 from tests.helpers import find, label, view
 
 
@@ -111,3 +121,112 @@ def test_e007_flags_the_first_column_zero_statement(bundle) -> None:
 def test_e007_flags_an_unindented_first_line(bundle) -> None:
     found = _script_findings(bundle, "return value * 2\n\treturn value")
     assert len(found) == 1 and "line 1" in found[0]["message"]
+
+
+# --- B011 and E008: names the gateway lists (functions.json) -----------------------------------
+
+
+def _functions(*names: str, script: tuple[str, ...] = ()) -> Functions:
+    return Functions({name.lower(): name for name in names}, frozenset(script))
+
+
+SYSTEM = _functions(script=("system", "system.tag", "system.tag.readBlocking", "system.tag.writeBlocking",
+                            "system.util", "system.util.getLogger"))
+
+
+def test_b011_flags_an_unknown_function_and_suggests_the_gateway_name() -> None:
+    found = _expression("toStrng(1)", "/p", "root", _functions("toString", "toStr"))
+    assert [(d["code"], d["severity"], d["pointer"]) for d in found] == [("B011", "error", "/p")]
+    assert "toStrng()" in found[0]["message"] and "did you mean toString?" in found[0]["message"]
+    assert found[0]["hint"]
+
+
+@pytest.mark.parametrize("text", ["dateFormat(now(), 'HH:mm')", "DATEFORMAT(now())", "dateformat(NOW())"])
+def test_b011_lookup_is_case_insensitive(text: str) -> None:
+    assert _expression(text, "/p", "root", _functions("dateFormat", "now")) == []
+
+
+def test_b011_needs_a_function_list() -> None:
+    assert _expression("toStrng(1)", "/p", "root", None) == []
+    assert _expression("toStrng(1)", "/p", "root", Functions({}, frozenset())) == []
+
+
+@pytest.mark.parametrize("text", ["toStrng(1) and 2", "a and b"])
+def test_b010_still_wins_over_b011(text: str) -> None:
+    found = _expression(text, "/p", "root", _functions("toString"))
+    assert [(d["code"], d["severity"]) for d in found] == [("B010", "error")]
+
+
+def test_b011_reaches_a_view_through_the_bundle(bundle) -> None:
+    loaded = dataclasses.replace(bundle, functions=_functions("dateFormat", "toString"))
+    found = find(loaded, view(_expr_label("toStrng({view.params.a})"), params={"a": 1}), "B011")
+    assert [d["pointer"] for d in found] == ["/root/children/0/propConfig/props.text/binding/config/expression"]
+
+
+def test_e008_flags_an_unknown_system_name_and_suggests_the_gateway_name() -> None:
+    found = _script("\tsystem.tag.writeBlockin([], [])", "/p", "root/Label", SYSTEM)
+    assert [d["code"] for d in found] == ["E008"]
+    assert found[0]["pointer"] == "/p" and found[0]["component"] == "root/Label"
+    assert "script line 1" in found[0]["message"] and "system.tag.writeBlocking" in found[0]["message"]
+
+
+def test_e008_ignores_names_in_strings_and_comments() -> None:
+    assert _script("\tx = 'system.nope.x'  # system.foo.bar", "/p", "", SYSTEM) == []
+
+
+@pytest.mark.parametrize("body", ['\tsystem.util.getLogger("a").info("b")', "\tsystem.tag"])
+def test_e008_accepts_known_modules_and_calls_on_their_results(body: str) -> None:
+    assert _script(body, "/p", "", SYSTEM) == []
+
+
+def test_e008_is_not_checked_for_an_unindented_body() -> None:
+    found = _script("system.tag.writeBlockin([], [])", "/p", "", SYSTEM)
+    assert [d["code"] for d in found] == ["E007"]
+
+
+# --- the gateway's compile of the view's scripts ----------------------------------------------------
+
+
+def _scripted_view() -> dict[str, Any]:
+    transform = {"type": "script", "code": "\treturn value * 2"}
+    return view(
+        label("Label",
+              propConfig={"props.text": {"binding": {"type": "property", "config": {"path": "view.params.a"},
+                                                     "transforms": [transform]},
+                                         "onChange": {"script": "\tprint(value)"}}},
+              scripts={"customMethods": [{"name": "go", "params": [], "script": "\treturn 1"}]}),
+        params={"a": 1},
+        events={"system": {"onStartup": {"type": "script", "scope": "G", "config": {"script": "\tpass"}}}})
+
+
+def test_compile_requests_wrap_every_script_body_in_order() -> None:
+    sources, where = compile_requests(_scripted_view())
+    assert [s["id"] for s in sources] == ["0", "1", "2", "3"]
+    assert all(s["code"].startswith(WRAPPER) for s in sources)
+    assert sources[0]["code"] == WRAPPER + "\treturn value * 2\n\tpass\n"
+    assert [where[str(i)][0] for i in range(4)] == [
+        "/root/children/0/propConfig/props.text/binding/transforms/0/code",
+        "/root/children/0/propConfig/props.text/onChange/script",
+        "/events/system/onStartup/config/script",
+        "/root/children/0/scripts/customMethods/0/script",
+    ]
+
+
+def test_compile_diagnostics_map_a_failure_to_its_body_line() -> None:
+    _, where = compile_requests(_scripted_view())
+    found = compile_diagnostics([{"id": 1, "ok": False, "line": 3, "column": 5, "message": "m"}], where)
+    assert [(d["code"], d["severity"], d["pointer"]) for d in found] == [
+        ("E009", "error", "/root/children/0/propConfig/props.text/onChange/script")]
+    assert "at line 2, column 5: m" in found[0]["message"]
+
+
+def test_compile_diagnostics_ignore_passing_and_unknown_sources() -> None:
+    _, where = compile_requests(_scripted_view())
+    assert compile_diagnostics([{"id": 0, "ok": True}, {"id": 9, "ok": False, "line": 2, "message": "x"}], where) == []
+
+
+def test_compile_diagnostics_without_a_line_give_the_message_alone() -> None:
+    _, where = compile_requests(_scripted_view())
+    found = compile_diagnostics([{"id": 3, "ok": False, "message": "boom"}], where)
+    assert [d["pointer"] for d in found] == ["/root/children/0/scripts/customMethods/0/script"]
+    assert found[0]["message"] == "script does not compile: boom"

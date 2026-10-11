@@ -211,6 +211,14 @@ class Gateway:
         """Close the sandbox session that owns a page, so it does not hold a session slot until it times out."""
         return self.call("DELETE", "/sessions?" + urllib.parse.urlencode({"project": project, "page": page_id}))
 
+    def functions(self) -> dict[str, Any]:
+        """Expression functions ({name, category}) and system.* scripting names registered on the gateway."""
+        return self.call("GET", "/functions")
+
+    def compile_scripts(self, sources: list[dict[str, str]]) -> list[dict[str, Any]]:
+        """[{id, code}] compiled (never run) with the gateway's Jython: [{id, ok, line?, column?, message?}]."""
+        return self.call("POST", "/scripts/compile", {"sources": sources}).get("results", [])
+
     def page(self, project: str, page_id: str) -> dict[str, Any]:
         """The evaluated tree of every view on a page: plain values, non-Good qualities and configured bindings."""
         route = f"/pages/{urllib.parse.quote(page_id, safe='')}?" + urllib.parse.urlencode({"project": project})

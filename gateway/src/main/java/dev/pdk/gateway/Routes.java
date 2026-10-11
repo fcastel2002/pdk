@@ -28,6 +28,7 @@ final class Routes {
     private final Live live;
     private final LogTap logs;
     private final Tags tags;
+    private final Functions functions;
     private final Sandbox sandbox;
     private final Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
 
@@ -42,6 +43,7 @@ final class Routes {
                 context.getSystemManager().getDataDir().toPath().resolve("projects"));
         this.changes = changes;
         this.catalog = new Catalog(context);
+        this.functions = new Functions(context);
     }
 
     void mount(RouteGroup routes) {
@@ -57,6 +59,8 @@ final class Routes {
         mount(routes, HttpMethod.GET, "/catalog",
                 request -> catalog.list("true".equalsIgnoreCase(request.getParameter("full"))));
         mount(routes, HttpMethod.GET, "/catalog/:id", request -> catalog.one(request.getParameter("id")));
+        mount(routes, HttpMethod.GET, "/functions", request -> functions.list());
+        mount(routes, HttpMethod.POST, "/scripts/compile", request -> functions.compile(request.readBody()));
         mount(routes, HttpMethod.GET, "/sessions", request -> live.sessions(project(request)));
         mount(routes, HttpMethod.DELETE, "/sessions", request -> {
             String project = project(request);

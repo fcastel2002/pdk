@@ -9,6 +9,7 @@ import re
 import sys
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from pdk.bundle import (
     BundleError,
@@ -57,6 +58,23 @@ def default_screenshot(view: str, component: str | None = None) -> Path:
 def _cmd_validate(args: argparse.Namespace) -> int:
     bundle = load_bundle(args.perspective)
     project = resolve_project(args.project)
+    compiler = None
+    if args.compile:
+        from pdk import sync
+        from pdk.gateway.client import Gateway
+
+        compiler = sync.compiler(Gateway(url=args.url) if args.url else Gateway())
+    try:
+        return _validate(args, bundle, project, compiler)
+    except Exception as exc:  # a GatewayError from --compile: the gateway could not compile
+        from pdk.gateway.client import GatewayError
+        if not isinstance(exc, GatewayError):
+            raise
+        print(f"pdk: --compile needs the gateway's module (0.2 or later): {exc}", file=sys.stderr)
+        return EXIT_FINDINGS
+
+
+def _validate(args: argparse.Namespace, bundle: Any, project: Any, compiler: Any) -> int:
     worst = EXIT_OK
     for raw in args.paths:
         target = Path(raw)
@@ -64,14 +82,14 @@ def _cmd_validate(args: argparse.Namespace) -> int:
             print(f"pdk: {target} does not exist", file=sys.stderr)
             return EXIT_USAGE
         if args.json:
-            results = validate_paths(target, bundle, project=project, profile=args.profile)
+            results = validate_paths(target, bundle, project=project, profile=args.profile, compiler=compiler)
             payload = [{"path": str(r.path), "project": r.project.name if r.project else None,
                         "viewPath": r.view_path, "diagnostics": r.diagnostics} for r in results]
             print(json.dumps(payload, indent=2, ensure_ascii=False))
             errors = sum(1 for r in results for d in r.diagnostics if d["severity"] == "error")
         else:
             text, errors = report_paths(target, bundle, project=project, profile=args.profile,
-                                        focus=args.focus, budget=args.budget)
+                                        focus=args.focus, budget=args.budget, compiler=compiler)
             print(text)
         if errors:
             worst = EXIT_FINDINGS
@@ -85,6 +103,22 @@ def _cmd_catalog(args: argparse.Namespace) -> int:
 
 
 def _cmd_schemas(args: argparse.Namespace) -> int:
+    if args.action == "functions":
+        from pdk.bundle import save_functions
+        from pdk.gateway.client import Gateway, GatewayError
+
+        gateway = Gateway(url=args.url) if args.url else Gateway()
+        try:
+            listing = gateway.functions()
+            ignition = gateway.health().get("ignitionVersion")
+        except GatewayError as exc:
+            print(f"pdk: {exc}", file=sys.stderr)
+            return EXIT_FINDINGS
+        bundle = load_bundle(args.perspective)
+        path = save_functions(bundle.root, listing, ignition if isinstance(ignition, str) else None)
+        print(f"{len(listing.get('expression') or [])} expression functions and {len(listing.get('script') or [])} "
+              f"system.* names -> {path}")
+        return EXIT_OK
     if args.action == "sync":
         from pdk import live
         from pdk.gateway.client import Gateway, GatewayError
@@ -348,6 +382,9 @@ def build_parser() -> argparse.ArgumentParser:
     validate.add_argument("--focus", help="expand diagnostics by code, component path or pointer prefix")
     validate.add_argument("--budget", type=int, default=DEFAULT_BUDGET * 4, help="output budget in tokens")
     validate.add_argument("--json", action="store_true", help="machine-readable diagnostics")
+    validate.add_argument("--compile", action="store_true",
+                          help="also compile every script with the gateway's Jython (E009); needs the module")
+    validate.add_argument("--url", help="--compile: gateway URL (default: PDK_GATEWAY_URL or http://127.0.0.1:8088)")
     validate.set_defaults(func=_cmd_validate)
 
     cat = sub.add_parser("catalog", help="components, props, bindings and events of the installed version")
@@ -359,12 +396,15 @@ def build_parser() -> argparse.ArgumentParser:
     cat.set_defaults(func=_cmd_catalog)
 
     schemas = sub.add_parser("schemas", help="extract or list schema bundles")
-    schemas.add_argument("action", choices=["extract", "list", "sync"],
-                         help="sync: compare with the gateway's live catalog and add its third-party components")
+    schemas.add_argument("action", choices=["extract", "list", "sync", "functions"],
+                         help="sync: compare with the gateway's live catalog and add its third-party components; "
+                              "functions: save the gateway's expression functions and system.* names next to the "
+                              "bundle, for B011 and E008")
     schemas.add_argument("--ignition-home", help="Ignition install dir (default: IGNITION_HOME or the standard path)")
     schemas.add_argument("--modl", help="explicit Perspective .modl file")
     schemas.add_argument("--out", help="bundle root (default: ./schemas or PDK_SCHEMAS_DIR)")
-    schemas.add_argument("--url", help="sync: gateway URL (default: PDK_GATEWAY_URL or http://127.0.0.1:8088)")
+    schemas.add_argument("--url", help="sync, functions: gateway URL (default: PDK_GATEWAY_URL or "
+                                        "http://127.0.0.1:8088)")
     schemas.set_defaults(func=_cmd_schemas)
 
     hook = sub.add_parser("hook", help="Claude Code PostToolUse hook (reads the event JSON on stdin)")

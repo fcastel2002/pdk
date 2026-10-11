@@ -12,7 +12,7 @@ from typing import Any
 from mcp.server.mcpserver import Image, MCPServer
 from mcp.types import ToolAnnotations
 
-from pdk import __version__
+from pdk import __version__, sync
 from pdk.bundle import BundleError, load_bundle
 from pdk.catalog import catalog
 from pdk.gateway.client import Gateway, GatewayError
@@ -61,7 +61,9 @@ server = MCPServer("pdk", instructions=INSTRUCTIONS, version=__version__)
         "missing views/params. Args: path (view.json or directory) or view (JSON text); project (project dir or "
         "local gateway project name, enables view/param/style-class checks; auto-detected inside a project tree); "
         "focus (code like P001, component path like root/Panel, or pointer prefix) to expand details; "
-        "profile='hmi' for design-token lint."
+        "profile='hmi' for design-token lint; compile=true also compiles every script with the gateway's Jython "
+        "(E009 with the line; pdk_deploy always does). B011/E008 (unknown expression function, unknown system.* "
+        "name) need the gateway's function list (`uv run pdk schemas functions`)."
     ),
     annotations=READ_ONLY,
     structured_output=False,
@@ -72,19 +74,23 @@ def pdk_validate(
     project: str | None = None,
     focus: str | None = None,
     profile: str | None = None,
+    compile: bool = False,
 ) -> str:
     try:
         bundle = load_bundle()
         resolved_project = resolve_project(project)
+        compiler = sync.compiler(Gateway()) if compile else None
         if view is not None:
-            return report_text(view, bundle, project=resolved_project, profile=profile, focus=focus)[0]
+            return report_text(view, bundle, project=resolved_project, profile=profile, focus=focus,
+                               compiler=compiler)[0]
         if not path:
             return "Pass path (a view.json or a directory) or view (the JSON text)."
         target = Path(path)
         if not target.exists():
             return f"{target} does not exist (relative paths resolve against {Path.cwd()})."
-        return report_paths(target, bundle, project=resolved_project, profile=profile, focus=focus)[0]
-    except (BundleError, FileNotFoundError) as exc:
+        return report_paths(target, bundle, project=resolved_project, profile=profile, focus=focus,
+                            compiler=compiler)[0]
+    except (BundleError, FileNotFoundError, GatewayError) as exc:
         return f"pdk: {exc}"
 
 

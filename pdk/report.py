@@ -8,7 +8,7 @@ from pathlib import Path
 from pdk.bundle import Bundle
 from pdk.diagnostics import CHARS_PER_TOKEN, DEFAULT_BUDGET, Diagnostic, counts, render, summary_line
 from pdk.project import Project, open_project
-from pdk.validate import FileResult, validate_paths, validate_text
+from pdk.validate import Compiler, FileResult, validate_paths, validate_text
 
 
 def resolve_project(spec: str | None) -> Project | None:
@@ -32,9 +32,10 @@ def report_paths(
     profile: str | None = None,
     focus: str | None = None,
     budget: int = DEFAULT_BUDGET,
+    compiler: Compiler | None = None,
 ) -> tuple[str, int]:
     """Text report for a file or a directory of views, and the number of errors found."""
-    results = validate_paths(target, bundle, project=project, profile=profile)
+    results = validate_paths(target, bundle, project=project, profile=profile, compiler=compiler)
     if not results:
         return f"No view.json under {target}", 0
     errors = sum(counts(r.diagnostics)["error"] for r in results)
@@ -94,8 +95,10 @@ def report_text(
     profile: str | None = None,
     focus: str | None = None,
     budget: int = DEFAULT_BUDGET,
+    compiler: Compiler | None = None,
 ) -> tuple[str, int]:
-    diagnostics = validate_text(text, bundle, project=project, view_path=view_path, profile=profile)
+    diagnostics = validate_text(text, bundle, project=project, view_path=view_path, profile=profile,
+                                compiler=compiler)
     where = f" [{project.name}:{view_path}]" if project and view_path else ""
     title = f"inline view{where} (Perspective {bundle.version})"
     return render(diagnostics, title=title, budget=budget, focus=focus), counts(diagnostics)["error"]

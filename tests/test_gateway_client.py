@@ -215,3 +215,25 @@ def test_close_session_deletes_the_sandbox_page_session(fake: Gateway, monkeypat
     assert sent == [("DELETE", "/sessions?project=sb&page=p+1")]
     assert FakeModule.seen == [client.BASE_PATH + "/sessions"]
     assert caught.value.code == "G007"
+
+
+def test_functions_and_compile_use_their_routes(monkeypatch: pytest.MonkeyPatch) -> None:
+    sent: list[tuple[str, str, Any]] = []
+    answers: dict[str, Any] = {
+        "/functions": {"expression": [{"name": "now"}], "script": ["system"]},
+        "/scripts/compile": {"results": [{"id": "0", "ok": True}]},
+    }
+
+    def call(self: Gateway, method: str, route: str, body: Any = None) -> Any:
+        sent.append((method, route, body))
+        return answers[route]
+
+    monkeypatch.setattr(Gateway, "call", call)
+    gateway = Gateway(url="http://127.0.0.1:8088", token=TOKEN)
+    assert gateway.functions() == answers["/functions"]
+    sources = [{"id": "0", "code": "def __pdk_body__():\n\tpass\n"}]
+    assert gateway.compile_scripts(sources) == [{"id": "0", "ok": True}]
+    answers["/scripts/compile"] = {}  # a module that answers without results
+    assert gateway.compile_scripts(sources) == []
+    assert sent == [("GET", "/functions", None), ("POST", "/scripts/compile", {"sources": sources}),
+                    ("POST", "/scripts/compile", {"sources": sources})]

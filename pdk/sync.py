@@ -25,10 +25,10 @@ from typing import Any
 
 from pdk import REPO_ROOT
 from pdk.bundle import Bundle
-from pdk.diagnostics import CHARS_PER_TOKEN, DEFAULT_BUDGET, counts, join, render
+from pdk.diagnostics import CHARS_PER_TOKEN, DEFAULT_BUDGET, Diagnostic, counts, join, render
 from pdk.gateway.client import VIEWS, Gateway, GatewayError
 from pdk.project import open_project
-from pdk.validate import parse_view, validate_text
+from pdk.validate import code, parse_view, validate_text
 from pdk.validate.tree import build_tree, walk
 
 WORK_ENV = "PDK_WORK_DIR"
@@ -199,6 +199,8 @@ def deploy(gateway: Gateway, location: Path, bundle: Bundle, *, resolved: bool =
                              + preview())
 
     diagnostics = validate_text(text, bundle, project=_local_project(project), view_path=path)
+    if not counts(diagnostics)["error"]:
+        diagnostics += compiled(gateway, text)
     if counts(diagnostics)["error"]:
         report = render(diagnostics, title=f"{_shown(local)} [{project}:{path}]", budget=budget)
         return Outcome(False, report + "\nNot deployed: fix the errors above first.")
@@ -216,6 +218,29 @@ def deploy(gateway: Gateway, location: Path, bundle: Bundle, *, resolved: bool =
     return Outcome(True, f"{written.get('op', 'written')} {project}:{path} "
                          f"{_short(signature) or 'new'} -> {_short(written.get('signature'))}{note}"
                          + preview())
+
+
+def compiled(gateway: Gateway, text: str, *, strict: bool = False) -> list[Diagnostic]:
+    """E009 for the scripts of a view that the gateway's Jython does not compile. Without `strict`, nothing when
+    the gateway cannot compile (an older module without the route); with it, that GatewayError propagates."""
+    view, error = parse_view(text)
+    if error or not isinstance(view, dict):
+        return []
+    sources, where = code.compile_requests(view)
+    if not sources:
+        return []
+    try:
+        results = gateway.compile_scripts(sources)
+    except GatewayError:
+        if strict:
+            raise
+        return []
+    return code.compile_diagnostics(results, where)
+
+
+def compiler(gateway: Gateway) -> Callable[[str], list[Diagnostic]]:
+    """For validate's `compiler`: the scripts of a view compiled by the gateway (GatewayError if it cannot)."""
+    return lambda text: compiled(gateway, text, strict=True)
 
 
 def promote(gateway: Gateway, location: Path, bundle: Bundle, *, to: str | None = None,

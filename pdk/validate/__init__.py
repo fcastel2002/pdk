@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -52,18 +53,27 @@ def parse_view(text: str) -> tuple[Any, Diagnostic | None]:
                           "fix the JSON syntax (quotes, commas, braces)")
 
 
+Compiler = Callable[[str], list[Diagnostic]]  # view.json text -> E009 of the scripts that do not compile
+
+
 def validate_text(
     text: str, bundle: Bundle, *, project: Project | None = None, view_path: str | None = None,
-    profile: str | None = None,
+    profile: str | None = None, compiler: Compiler | None = None,
 ) -> list[Diagnostic]:
+    """With `compiler` (pdk.sync.compiler: the gateway's Jython), a view without errors also gets its scripts
+    compiled."""
     view, error = parse_view(text)
     if error:
         return [error]
-    return validate_view(view, bundle, project=project, view_path=view_path, profile=profile)
+    diagnostics = validate_view(view, bundle, project=project, view_path=view_path, profile=profile)
+    if compiler is not None and not any(d["severity"] == "error" for d in diagnostics):
+        diagnostics = ordered(diagnostics + compiler(text))
+    return diagnostics
 
 
 def validate_file(
-    path: Path, bundle: Bundle, *, project: Project | None = None, profile: str | None = None
+    path: Path, bundle: Bundle, *, project: Project | None = None, profile: str | None = None,
+    compiler: Compiler | None = None,
 ) -> FileResult:
     view_path = None
     located = locate(path)
@@ -75,7 +85,8 @@ def validate_file(
     except OSError as exc:
         error = make("S000", "error", "", "", f"cannot read {path}: {exc.strerror}", "check the path")
         return FileResult(path, [error], project, view_path)
-    diagnostics = validate_text(text, bundle, project=project, view_path=view_path, profile=profile)
+    diagnostics = validate_text(text, bundle, project=project, view_path=view_path, profile=profile,
+                                compiler=compiler)
     return FileResult(path, diagnostics, project, view_path)
 
 
@@ -86,6 +97,7 @@ def view_files(target: Path) -> list[Path]:
 
 
 def validate_paths(
-    target: Path, bundle: Bundle, *, project: Project | None = None, profile: str | None = None
+    target: Path, bundle: Bundle, *, project: Project | None = None, profile: str | None = None,
+    compiler: Compiler | None = None,
 ) -> list[FileResult]:
-    return [validate_file(p, bundle, project=project, profile=profile) for p in view_files(target)]
+    return [validate_file(p, bundle, project=project, profile=profile, compiler=compiler) for p in view_files(target)]

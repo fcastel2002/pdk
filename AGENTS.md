@@ -5,7 +5,8 @@ A kit for an agent to build and fix Ignition Perspective views (`view.json`), ve
 ## Commands
 - `uv sync` · `uv run pdk doctor [--fix]` (see `README.md`) · `uv run pytest` · `uv run ruff check .`
 - `uv run pdk schemas extract`: `schemas/<ver>/` from the installed `.modl` (not versioned).
-- `uv run pdk validate <view.json|dir> [--project P]` · `uv run pdk catalog [type] [--prop P|--search S|--topic T]`
+- `uv run pdk schemas functions`: the gateway's expression functions and `system.*` names next to the bundle (B011, E008).
+- `uv run pdk validate <view.json|dir> [--project P] [--compile]` (`--compile`: scripts through the gateway's Jython, E009) · `uv run pdk catalog [type] [--prop P|--search S|--topic T]`
 - `uv run pdk pull|deploy|promote|delete <path>`: sandbox views in `work/` with their signature; 409 → diff and `--resolved`. `promote --to-project target` copies to the target project (`-Dpdk.target`).
 - `uv run pdk pull stylesheet` → `work/<sandbox>/_stylesheet/stylesheet.css`; `pdk deploy` of that folder sends it back (CSS checked, signature and 409 like views). It is edited in the sandbox; `promote work/<sandbox>/_stylesheet --to-project target` copies it to the target.
 - `uv run pdk open|inspect|screenshot <path>`: the eyes (Chromium + the gateway's tree). `inspect --query <paths|types|*>` adds what was measured for those components and `--expect "<a> below <b>; <c> width 100%"` checks the layout (A001–A003); `--act "click <c>; type <c> \"x\"; row <table> N"` acts before measuring (A004–A005).

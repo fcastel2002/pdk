@@ -2,17 +2,22 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from pdk.bundle import (
     Bundle,
+    Functions,
     available_versions,
     extract_bundle,
     find_ignition_home,
     find_perspective_modl,
     load_bundle,
+    load_functions,
+    save_functions,
 )
+from pdk.cli import main
 from pdk.shape import SchemaRef, resolve
 
 
@@ -73,3 +78,50 @@ def test_a_leftover_staging_folder_is_not_a_version(tmp_path: Path) -> None:
         (tmp_path / name).mkdir()
         (tmp_path / name / "manifest.json").write_text("{}", encoding="utf-8")
     assert available_versions(tmp_path) == ["3.3.8"]
+
+
+def test_load_functions_prefers_the_camel_case_name_in_either_order(tmp_path: Path) -> None:
+    for names in (["toString", "tostring"], ["tostring", "toString"]):
+        save_functions(tmp_path, {"expression": [{"name": name} for name in names], "script": []}, "8.3.2")
+        loaded = load_functions(tmp_path)
+        assert loaded is not None and loaded.expression == {"tostring": "toString"}
+
+
+def test_load_functions_without_a_usable_file_is_none(tmp_path: Path) -> None:
+    assert load_functions(tmp_path) is None
+    (tmp_path / "functions.json").write_text("{not json", encoding="utf-8")
+    assert load_functions(tmp_path) is None
+    (tmp_path / "functions.json").write_text("[]", encoding="utf-8")
+    assert load_functions(tmp_path) is None
+
+
+def test_save_then_load_round_trips_the_listing(tmp_path: Path) -> None:
+    listing = {"expression": [{"name": "dateFormat", "category": "Date"}, {"name": "now"}],
+               "script": ["system", "system.tag"]}
+    assert save_functions(tmp_path, listing, "8.3.2") == tmp_path / "functions.json"
+    assert load_functions(tmp_path) == Functions({"dateformat": "dateFormat", "now": "now"},
+                                                 frozenset({"system", "system.tag"}), "8.3.2")
+
+
+def test_schemas_functions_saves_the_gateway_listing(tmp_path: Path, monkeypatch, capsys) -> None:
+    saved: list[tuple[Path, dict[str, Any], str | None]] = []
+
+    class FakeGateway:
+        def __init__(self, url: str | None = None) -> None:
+            pass
+
+        def functions(self) -> dict[str, Any]:
+            return {"expression": [{"name": "dateFormat"}, {"name": "now"}], "script": ["system", "system.tag"]}
+
+        def health(self) -> dict[str, Any]:
+            return {"ignitionVersion": "8.3.2"}
+
+    def save(base: Path, listing: dict[str, Any], ignition: str | None) -> Path:
+        saved.append((base, listing, ignition))
+        return base / "functions.json"
+
+    monkeypatch.setattr("pdk.gateway.client.Gateway", FakeGateway)
+    monkeypatch.setattr("pdk.bundle.save_functions", save)
+    assert main(["schemas", "functions"]) == 0
+    assert len(saved) == 1 and saved[0][2] == "8.3.2" and saved[0][1]["script"] == ["system", "system.tag"]
+    assert "2 expression functions and 2 system.* names" in capsys.readouterr().out

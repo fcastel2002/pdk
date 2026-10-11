@@ -15,6 +15,10 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
 - V013: text with low contrast against what is behind it (WCAG AA).
 - `pdk screenshot --compare before.png` (and `compare` in `pdk_screenshot`): the share of pixels that changed, the
   components where, and a diff image.
+- `pdk schemas functions` saves the gateway's expression functions and `system.*` names next to the bundle; with
+  them, B011 (unknown expression function) and E008 (unknown `system.*` name), with "did you mean".
+- E009: `pdk deploy` compiles every script with the gateway's Jython before writing (`pdk validate --compile`,
+  `compile` in `pdk_validate`); module routes `GET /functions` and `POST /scripts/compile`.
 
 ### Changed
 - Closing PDK's browser also closes its Perspective sessions on the gateway (`DELETE /sessions`), so they no longer
