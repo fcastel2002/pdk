@@ -165,6 +165,19 @@ def test_event_names_groups_and_scopes(bundle) -> None:
     assert {"E001", "E002", "E004"} <= found
 
 
+def test_extension_functions_only_the_declared_names(bundle) -> None:
+    table = {"type": "ia.display.alarmstatustable", "meta": {"name": "Alarms"}, "position": {"basis": "300px"},
+             "scripts": {"extensionFunctions": [
+                 {"name": "filterAlarm", "script": "\treturn True", "enabled": True},
+                 {"name": "filterAlarms", "script": "\treturn True", "enabled": True}]}}
+    [d] = find(bundle, view(table), "E010")
+    assert d["pointer"] == "/root/children/0/scripts/extensionFunctions/1/name"
+    assert "filterAlarm" in d["hint"]
+    stray = label(scripts={"extensionFunctions": [{"name": "filterAlarm", "script": "\treturn True", "enabled": True}]})
+    [d] = find(bundle, view(stray), "E010")
+    assert "no extension functions" in d["hint"]
+
+
 def test_button_component_event_and_popup_shape(bundle) -> None:
     button = {"type": "ia.input.button", "meta": {"name": "Open"}, "props": {"text": "Open"},
               "events": {"component": {"onActionPerformed": {"type": "popup", "scope": "C",

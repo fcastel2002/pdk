@@ -38,6 +38,7 @@ def test_snippets_are_clean(bundle) -> None:
 
 
 @pytest.mark.parametrize("kwargs", [{}, {"type": "ia.display.table"}, {"type": "table", "prop": "columns[]"},
+                                    {"type": "ia.input.form"}, {"type": "ia.display.alarmstatustable"},
                                     {"search": "tank"}, *({"topic": t} for t in TOPICS)])
 def test_catalog_answers_fit_the_budget(bundle, kwargs) -> None:
     text = catalog(bundle, **kwargs)
@@ -49,6 +50,14 @@ def test_catalog_finds_by_short_name_and_suggests(bundle) -> None:
     assert "ia.display.label" in catalog(bundle, type="ia.display.lable")
     assert catalog(bundle, type="numeric entry").startswith("ia.input.numeric-entry-field")  # unique start of a name
     assert catalog(bundle, type="alarm").startswith("Unknown component type")  # ambiguous: status or journal table
+
+
+def test_catalog_shows_variants_and_extension_functions(bundle) -> None:
+    flex = catalog(bundle, type="ia.container.flex")
+    assert 'Column: {"direction": "column"}' in flex and "extension functions" not in flex
+    table = catalog(bundle, type="ia.display.alarmstatustable")
+    assert "filterAlarm(self, alarmEvent)" in table and "filterShelvedAlarm(" in table
+    assert "ia.input.dropdown" in catalog(bundle, search="multi-selection")  # a variant label
 
 
 def test_cli_exit_codes(bundle, tmp_path, capsys) -> None:

@@ -67,6 +67,7 @@ CODES: dict[str, str] = {
     "E007": "script-not-indented",
     "E008": "unknown-system-function",
     "E009": "script-syntax",
+    "E010": "unknown-extension-function",
     "R001": "undeclared-view-param",
     "R002": "undeclared-custom",
     "R003": "unknown-prop-ref",

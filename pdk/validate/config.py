@@ -64,6 +64,25 @@ def check(ctx: Context) -> list[Diagnostic]:
                 if key not in SCRIPT_KEYS:
                     out.append(make("E006", "warning", join(node.pointer, "scripts", key), node.path,
                                     f"unknown scripts key '{key}'", did_you_mean(key, SCRIPT_KEYS)))
+            out += _extension_functions(ctx, c["scripts"].get("extensionFunctions"), node)
+    return out
+
+
+def _extension_functions(ctx: Context, functions: Any, node: Node) -> list[Diagnostic]:
+    """The gateway runs only the extension functions the component declares, matched by name: any other is
+    silently ignored."""
+    component = ctx.component(node)
+    if component is None or not isinstance(functions, list):
+        return []
+    valid = list(component.extension_functions)
+    out: list[Diagnostic] = []
+    for i, function in enumerate(functions):
+        name = function.get("name") if isinstance(function, dict) else None
+        if isinstance(name, str) and name not in valid:
+            hint = did_you_mean(name, valid) if valid else f"{component.id} has no extension functions: remove it"
+            out.append(make("E010", "error", join(node.pointer, "scripts", "extensionFunctions", i, "name"),
+                            node.path, f"{component.id} has no extension function '{name}'; it would never run",
+                            hint))
     return out
 
 

@@ -6,7 +6,7 @@ description: Create or edit Ignition Perspective views (view.json) verified agai
 # Perspective views with PDK
 
 ## Workflow
-1. **Look it up before writing.** `pdk_catalog(type="...")` gives the real props (type, default, description), the component's events and, for containers, the `position` keys of their children. `pdk_catalog(topic="bindings" | "events" | "view")` gives the exact shapes. If a prop is not in the catalog, it does not exist: do not invent it.
+1. **Look it up before writing.** `pdk_catalog(type="...")` gives the real props (type, default, description), the component's events, its palette variants (the props the Designer sets for "Column", "Secondary", "QR Code"...: write them for that look), its extension functions (`scripts.extensionFunctions`, only the declared names run: E010) and, for containers, the `position` keys of their children. `pdk_catalog(topic="bindings" | "events" | "view")` gives the exact shapes. If a prop is not in the catalog, it does not exist: do not invent it.
 2. **Start from a snippet** in `snippets/` (real views saved by the Designer and validated) and from [reference.md](reference.md).
 3. **Write the view.json.** The hook validates every `view.json` you write or edit. If it reports problems, fix **all** of them before moving on. For in-memory JSON or a directory use `pdk_validate(view=...)` or `pdk_validate(path=...)`.
 4. **Pass `project=`** (or work inside the project tree) to check embedded views, params and style classes.

@@ -193,6 +193,11 @@ Events and scripts (E)
      - script-syntax
      - A script that the gateway's Jython 2.7 does not compile, with the line of the body. Checked by
        ``pdk deploy`` and ``pdk validate --compile`` through the gateway; the script is compiled, never run.
+   * - ``E010``
+     - unknown-extension-function
+     - An entry of ``scripts.extensionFunctions`` whose ``name`` the component does not declare. The gateway runs
+       only the declared ones, matched by name, and ignores the rest without a message. ``pdk catalog <type>``
+       lists them with their arguments.
 
 References (R)
 --------------

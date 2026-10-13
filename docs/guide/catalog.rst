@@ -24,6 +24,23 @@ Pass a component id, its short name or its display name:
 For containers, the output also lists the ``position`` keys their *children* take (for example ``basis``, ``grow``
 and ``shrink`` for a flex container, ``x``, ``y``, ``width`` and ``height`` for a coordinate container).
 
+Two more sections appear when the component has them:
+
+- **Palette variants**: the entries of the Designer's palette that set props when dropped, such as ``Column``
+  (``{"direction": "column"}``) for a flex container or ``Secondary`` (``{"primary": false}``) for a button. Writing
+  those props gives the same look as the variant. ``--search`` also matches variant labels.
+- **Extension functions**: the functions the component lets a script override, under
+  ``scripts.extensionFunctions`` as ``{"name", "script", "enabled"}``, with their arguments and default body. The
+  gateway runs only the ones the component declares (``E010``).
+
+.. code-block:: console
+
+   $ uv run pdk catalog alarmstatustable
+   …
+   extension functions (scripts.extensionFunctions: [{"name", "script", "enabled": true}], the script is the body of def <name>(self, <args>)):
+     filterAlarm(self, alarmEvent) -- Called for each alarm event before it is displayed in the table. Return False to exclud... | default: "return True"
+     …
+
 Nested props
 ------------
 

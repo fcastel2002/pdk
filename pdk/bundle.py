@@ -154,6 +154,8 @@ class Component:
     deprecated: bool
     default_meta_name: str | None
     library: str
+    variants: tuple[dict[str, Any], ...] = ()  # palette entries: label, tooltip and the props the Designer drops
+    extension_functions: dict[str, dict[str, Any]] = field(default_factory=dict)  # name -> arguments, default body
 
     @property
     def is_container(self) -> bool:
@@ -344,6 +346,9 @@ def load_bundle(version: str | None = None, root: Path | None = None) -> Bundle:
                 deprecated=bool(descriptor.get("deprecated", False)),
                 default_meta_name=descriptor.get("defaultMetaName"),
                 library=library,
+                variants=tuple(v for v in palette.get("variants") or [] if isinstance(v, dict)),
+                extension_functions={f["name"]: f for f in descriptor.get("extensionFunctions") or []
+                                     if isinstance(f, dict) and "name" in f},
             )
 
     dom_events: dict[str, str] = {}

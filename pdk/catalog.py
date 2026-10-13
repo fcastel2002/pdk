@@ -114,9 +114,10 @@ def _search(bundle: Bundle, query: str) -> list[str]:
     scored: list[tuple[int, Component]] = []
     for component in bundle.components.values():
         fields = (component.id.lower(), component.name.lower(), component.tooltip.lower())
+        labels = [str(v.get("label") or "").lower() for v in component.variants]
         if q in fields[0] or q == fields[1]:
             scored.append((0, component))
-        elif q in fields[1]:
+        elif q in fields[1] or any(q in label for label in labels):
             scored.append((1, component))
         elif q in fields[2]:
             scored.append((2, component))
@@ -149,6 +150,20 @@ def _component(bundle: Bundle, component: Component) -> list[str]:
             lines.append(f"  {name} -- {str(event.get('description') or '')[:90]}")
     else:
         lines.append("component events: none (DOM events go under events.dom, see topic=events)")
+    variants = [v for v in component.variants if v.get("props")]
+    if variants:
+        lines.append("palette variants (props the Designer sets when dropping one; write them for that look):")
+        lines += [f"  {v.get('label') or v.get('id')}: {_short(v['props'], 120)}" for v in variants]
+    if component.extension_functions:
+        lines.append('extension functions (scripts.extensionFunctions: [{"name", "script", "enabled": true}], '
+                     "the script is the body of def <name>(self, <args>)):")
+        for name, function in sorted(component.extension_functions.items()):
+            args = ", ".join(["self"] + [str(a.get("name")) for a in function.get("arguments") or []
+                                         if isinstance(a, dict)])
+            text = str(function.get("description") or "")
+            text = text if len(text) <= 90 else text[:87] + "..."
+            default = str(function.get("defaultImplementation") or "").strip()
+            lines.append(f"  {name}({args}) -- {text}" + (f" | default: {_short(default, 60)}" if default else ""))
     if component.child_position_schema:
         position = object_shape(SchemaRef(component.child_position_schema, component.child_position_schema), bundle)
         keys = position.properties if position else {}
