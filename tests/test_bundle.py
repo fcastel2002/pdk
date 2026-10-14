@@ -103,7 +103,7 @@ def test_save_then_load_round_trips_the_listing(tmp_path: Path) -> None:
                                                  frozenset({"system", "system.tag"}), "8.3.2")
 
 
-def test_schemas_functions_saves_the_gateway_listing(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_schemas_functions_saves_the_gateway_listing(tmp_path: Path, monkeypatch, capsys, bundle) -> None:
     saved: list[tuple[Path, dict[str, Any], str | None]] = []
 
     class FakeGateway:

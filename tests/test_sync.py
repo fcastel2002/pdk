@@ -529,7 +529,7 @@ def test_deploy_refuses_a_script_the_gateway_does_not_compile(gw: FakeGateway, t
     assert gw.writes == 0
 
 
-def test_cli_validate_compile_reports_the_gateways_findings(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_cli_validate_compile_reports_the_gateways_findings(tmp_path: Path, monkeypatch, capsys, bundle) -> None:
     path = tmp_path / "view.json"
     path.write_text(json.dumps(view(label())), encoding="utf-8")
     rejected = make("E009", "error", "/root/children/0/props/text", "root/Title", "script does not compile",
@@ -539,7 +539,7 @@ def test_cli_validate_compile_reports_the_gateways_findings(tmp_path: Path, monk
     assert "E009" in capsys.readouterr().out
 
 
-def test_cli_validate_compile_without_the_module_says_so(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_cli_validate_compile_without_the_module_says_so(tmp_path: Path, monkeypatch, capsys, bundle) -> None:
     path = tmp_path / "view.json"
     path.write_text(json.dumps(view(label())), encoding="utf-8")
 
