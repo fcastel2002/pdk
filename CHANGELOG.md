@@ -4,6 +4,8 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-14
+
 ### Added
 - V014: a container that scrolls without a `scrolls` expectation asking for it (an error inside another scroll
   along the same axis or for under 24px of content), or that shows a scrollbar with nothing to scroll. V002 can

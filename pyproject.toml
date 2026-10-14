@@ -1,6 +1,6 @@
 [project]
 name = "pdk-perspective"
-version = "0.1.0"
+version = "0.2.0"
 description = "PDK for Ignition Perspective: lets an AI agent build, validate, deploy and inspect Perspective views on a development gateway."
 readme = "README.md"
 license = "Apache-2.0"

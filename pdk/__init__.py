@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 PACKAGE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = PACKAGE_DIR.parent
