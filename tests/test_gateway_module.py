@@ -22,6 +22,11 @@ def test_module_version_fits_ignition_build_number() -> None:
     assert module.module_version(datetime(2026, 10, 4, 15, 52)) < module.module_version(datetime(2026, 10, 4, 15, 53))
 
 
+def test_module_version_between_releases_keeps_x_y_z(monkeypatch) -> None:
+    monkeypatch.setattr(module, "__version__", "0.2.1.dev3+g1a2b3c4.d20261014")
+    assert module.module_version(datetime(2026, 10, 4, 15, 52)) == "0.2.1.262771552"
+
+
 def test_module_xml_declares_a_free_module_that_needs_perspective() -> None:
     xml = module.render_module_xml("0.1.0.262771552")
     assert "@" not in xml

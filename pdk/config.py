@@ -23,6 +23,7 @@ KEYS: dict[str, str] = {
     "work_dir": "PDK_WORK_DIR",
     "schemas_dir": "PDK_SCHEMAS_DIR",
     "perspective_version": "PDK_PERSPECTIVE_VERSION",
+    "update_check": "PDK_UPDATE_CHECK",
 }
 
 
@@ -45,7 +46,7 @@ def load() -> tuple[Path, dict[str, str], str | None]:
         value = data.get(key)
         if value is None or os.environ.get(variable):
             continue
-        os.environ[variable] = str(value)
+        os.environ[variable] = str(value).lower() if isinstance(value, bool) else str(value)
         applied[variable] = key
     problem = f"{path}: unknown keys {', '.join(unknown)} (known: {', '.join(KEYS)})" if unknown else None
     return path, applied, problem

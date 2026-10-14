@@ -16,6 +16,7 @@ from typing import Any
 
 from pdk.diagnostics import Diagnostic, Severity, join, make
 from pdk.eyes.join import Joined, Part, mounted_by_design
+from pdk.paths import RUN
 
 EPSILON_PX = 0.5  # sub-pixel text and scroll rounding is not a defect
 TEXT_TYPES = frozenset({"ia.display.label", "ia.input.button", "ia.navigation.link"})
@@ -573,7 +574,7 @@ def console(entries: list[dict[str, str]]) -> list[Diagnostic]:
 def degraded(reasons: list[str]) -> list[Diagnostic]:
     """X001: part of the eyes is missing, so some anomalies cannot be seen."""
     return [_diag("X001", "warning", None, reason,
-                  "Check `uv run pdk gateway health`; the report still covers what the browser sees.")
+                  f"Check `{RUN}pdk gateway health`; the report still covers what the browser sees.")
             for reason in reasons]
 
 

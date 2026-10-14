@@ -1,18 +1,17 @@
 #!/bin/sh
 # Installs PDK for Ignition Perspective on this machine (Linux and macOS).
 #
-# Gets the repo (clones it if this script is not running from a checkout), installs uv if it is missing,
-# the Python dependencies (uv brings Python 3.12 if needed), extracts the schema bundle of the installed
-# Perspective and downloads Playwright's Chromium. Safe to run again: it updates what is there.
+# Installs uv if it is missing (uv brings its own Python: nothing else to install), then PDK as a command
+# (`uv tool install pdk-perspective`): `pdk` and `pdk-mcp` work from any folder, with no clone and no git. It
+# extracts the schema bundle of the installed Perspective, downloads Playwright's Chromium and sets up a folder
+# for Claude Code (`pdk init`). Safe to run again: it upgrades PDK and refreshes that folder.
 # It never touches the gateway, ignition.conf or anything that needs root; it prints those steps.
 #
 #   curl -LsSf https://raw.githubusercontent.com/fcastel2002/pdk/main/install.sh | sh
-#   ./install.sh                         # from a clone
 #
 # Environment variables:
-#   PDK_DIR   where to clone (default: ./pdk in the current directory)
-#   PDK_REF   branch or tag to clone (default: main)
-#   PDK_REPO  repository URL (default: https://github.com/fcastel2002/pdk.git)
+#   PDK_PROJECT  the folder to set up for Claude Code (default: ./pdk-views in the current directory)
+#   PDK_SOURCE   what to install (default: pdk-perspective from PyPI; e.g. a wheel file or git+https://...)
 
 set -eu
 
@@ -20,30 +19,10 @@ step() { printf '\n==> %s\n' "$1"; }
 fail() { printf 'pdk install: %s\n' "$1" >&2; exit 1; }
 has() { command -v "$1" >/dev/null 2>&1; }
 
-REPO_URL=${PDK_REPO:-https://github.com/fcastel2002/pdk.git}
-REF=${PDK_REF:-main}
+SOURCE=${PDK_SOURCE:-pdk-perspective}
+PROJECT=${PDK_PROJECT:-$(pwd)/pdk-views}
 
-# 1. The repo: this checkout, or a clone.
-here=$(cd "$(dirname "$0")" 2>/dev/null && pwd || true)
-if [ -n "$here" ] && [ -f "$here/pdk/cli.py" ]; then
-    root=$here
-    step "Using the checkout at $root"
-else
-    has git || fail "git is required to clone PDK. Install it and run this again."
-    root=${PDK_DIR:-$(pwd)/pdk}
-    if [ -d "$root/.git" ]; then
-        step "Updating $root"
-        git -C "$root" pull --ff-only || fail "git pull failed in $root (local changes?). Resolve it and run this again."
-    elif [ -d "$root" ] && [ -n "$(ls -A "$root")" ]; then
-        fail "$root exists and is not a PDK clone. Set PDK_DIR to another folder."
-    else
-        step "Cloning $REPO_URL ($REF) into $root"
-        git clone -c core.longpaths=true --branch "$REF" "$REPO_URL" "$root" || fail "git clone failed."
-    fi
-fi
-cd "$root"
-
-# 2. uv (it also provides Python).
+# 1. uv (it also provides Python).
 if ! has uv; then
     step "Installing uv (https://docs.astral.sh/uv/)"
     has curl || fail "curl is required to install uv. Install uv yourself (https://docs.astral.sh/uv/) and run this again."
@@ -54,14 +33,30 @@ if ! has uv; then
 fi
 step "$(uv --version)"
 
-# 3. Python dependencies.
-step "Installing the Python dependencies (uv sync)"
-uv sync || fail "uv sync failed."
+# 2. PDK itself, as a command on PATH.
+step "Installing PDK ($SOURCE)"
+if ! uv tool install --upgrade "$SOURCE"; then
+    if [ -z "${PDK_SOURCE:-}" ] && has git; then
+        echo "Not on PyPI yet: installing from GitHub."
+        uv tool install --upgrade "git+https://github.com/fcastel2002/pdk" || fail "uv tool install failed."
+    else
+        fail "uv tool install failed."
+    fi
+fi
+uv tool update-shell >/dev/null 2>&1 || true
+BIN=$(uv tool dir --bin)
+PATH="$BIN:$PATH"
+export PATH
+step "$(pdk --version)"
+
+# 3. A folder for Claude Code: skill, subagents, MCP server, hook, CLAUDE.md.
+step "Setting up $PROJECT (pdk init)"
+pdk init "$PROJECT" || echo "pdk init reported problems in $PROJECT (see above)."
 
 # 4. Local setup and the full check: schemas, Chromium, then everything about the gateway.
 step "Extracting the schemas and downloading Chromium (pdk doctor --fix)"
 doctor=0
-uv run pdk doctor --fix || doctor=$?
+pdk doctor --fix || doctor=$?
 
 echo
 if [ "$doctor" -eq 0 ]; then
@@ -71,12 +66,13 @@ else
     echo "  1. Create an empty Perspective project to use as the sandbox (e.g. pdk_sandbox)."
     echo "  2. Add the ignition.conf lines that doctor printed (as root) and restart the gateway."
     echo "  3. Create a gateway API key and save it to ~/.pdk/ignition-api-key."
-    echo "  4. uv run pdk gateway install --restart"
-    echo "  5. uv run pdk doctor   (until everything is ok)"
-    echo "Details: README.md, section \"Gateway setup\"."
+    echo "  4. pdk gateway install --restart"
+    echo "  5. pdk doctor   (until everything is ok)"
+    echo "Details: https://fcastel2002.github.io/pdk/installation.html"
 fi
 if [ "$(uname -s)" = "Linux" ]; then
     echo
-    echo "On Linux, Chromium may need system libraries: sudo \"$root/.venv/bin/playwright\" install-deps chromium"
+    echo "On Linux, Chromium may need system libraries: sudo \"$(uv tool dir)/pdk-perspective/bin/playwright\" install-deps chromium"
 fi
-printf '\nNext: cd "%s" and open it with Claude Code (claude), or use the CLI: uv run pdk --help\n' "$root"
+printf '\nNext: open "%s" with Claude Code (cd "%s" && claude). `pdk --help` works from any folder.\n' "$PROJECT" "$PROJECT"
+echo "Open a new terminal if pdk is not found."

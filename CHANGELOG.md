@@ -4,6 +4,25 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Added
+- PDK installs as a command, with no clone, no git and no Python of your own: `uv tool install pdk-perspective`
+  (the installers do it). `pdk` and `pdk-mcp` work from any folder; the schema bundle and the module build live
+  under `~/.pdk/` (`PDK_HOME`), pulled views in `work/` of the current folder. A clone works as before.
+- `pdk init [folder]` sets up a folder for Claude Code: the `perspective-views` skill, the `pdk-reviewer` and
+  `pdk-log-reader` subagents, the `pdk` MCP server in `.mcp.json`, the validation hook and a PDK section in
+  `CLAUDE.md`, merged with what is there. The MCP server refreshes them after an upgrade.
+- PDK says when a newer release is out: once a day it asks GitHub's public API, then tells you on the next command,
+  in `pdk doctor` (check `version`) and through the MCP server, so the agent mentions it at the start of the
+  session. `PDK_UPDATE_CHECK=0` or `update_check = false` turns it off.
+- `pdk --version`.
+- Releases: a draft release follows `[Unreleased]` with a suggested version; publishing it tests, attaches the wheel,
+  publishes to PyPI and rolls the changelog.
+
+### Changed
+- The version comes from the git tag (hatch-vcs); the build backend is hatchling.
+- Hints name the command as it runs on the machine (`pdk ...` installed, `uv run pdk ...` in a clone), and point to
+  `pdk doctor --fix` for Chromium.
+
 ## [0.2.0] - 2026-10-14
 
 ### Added

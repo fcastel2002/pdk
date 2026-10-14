@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from pdk import REPO_ROOT
+from pdk import paths
 from pdk.bundle import Bundle
 from pdk.diagnostics import CHARS_PER_TOKEN, DEFAULT_BUDGET, Diagnostic, counts, join, render
 from pdk.gateway.client import VIEWS, Gateway, GatewayError
@@ -49,7 +49,7 @@ class Outcome:
 
 
 def work_root() -> Path:
-    return Path(os.environ.get(WORK_ENV) or REPO_ROOT / "work")
+    return Path(os.environ.get(WORK_ENV) or paths.default_work_dir())
 
 
 def local_dir(project: str, path: str, root: Path | None = None) -> Path:

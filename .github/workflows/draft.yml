@@ -1,0 +1,51 @@
+name: Next release (draft)
+
+# Keeps one draft release with what CHANGELOG.md has under [Unreleased] and the version that suggests
+# (tools/changelog.py). Publishing that draft is the release: release.yml takes it from there.
+
+on:
+  push:
+    branches: [main]
+    paths: [CHANGELOG.md]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: draft-release
+  cancel-in-progress: true
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Update the draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          current=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo v0.0.0)
+          next=$(python3 tools/changelog.py next "$current")
+          draft=$(gh api "repos/$GITHUB_REPOSITORY/releases" --jq '[.[] | select(.draft)][0].tag_name // empty')
+          if [ -z "$next" ]; then
+            echo "Nothing under [Unreleased]."
+            if [ -n "$draft" ]; then gh release delete "$draft" --yes; fi
+            exit 0
+          fi
+          {
+            python3 tools/changelog.py pending
+            echo
+            echo "---"
+            echo "Suggested from the changes since ${current}: **v${next}**. Publishing this draft releases it: it tags"
+            echo "\`main\`, attaches the wheel, publishes to PyPI and moves these notes under [${next}] in CHANGELOG.md."
+            echo "To release another version, change the tag before publishing (vX.Y.Z)."
+          } > notes.md
+          if [ -n "$draft" ]; then
+            gh release edit "$draft" --draft --tag "v$next" --title "PDK $next" --notes-file notes.md --target main
+          else
+            gh release create "v$next" --draft --title "PDK $next" --notes-file notes.md --target main
+          fi
+          echo "Draft: PDK $next ($(grep -c '^- ' notes.md) changes)" >> "$GITHUB_STEP_SUMMARY"

@@ -19,6 +19,8 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, TypeVar
 
+from pdk.paths import RUN, SYNC
+
 T = TypeVar("T")
 
 NAVIGATION_MS = 10_000
@@ -516,14 +518,14 @@ class Eyes:
         try:
             from playwright.sync_api import sync_playwright  # lazy: validation never needs a browser
         except ImportError as exc:
-            raise EyesError(BROWSER_MISSING, "playwright is not installed (uv sync)") from exc
+            raise EyesError(BROWSER_MISSING, f"playwright is not installed ({SYNC})") from exc
         if self._playwright is None:
             self._playwright = sync_playwright().start()
         try:
             self._browser = self._playwright.chromium.launch(headless=self._headless)
         except Exception as exc:  # noqa: BLE001
             raise EyesError(BROWSER_MISSING,
-                            f"Chromium did not start ({exc}); run `uv run playwright install chromium`") from exc
+                            f"Chromium did not start ({exc}); run `{RUN}pdk doctor --fix`") from exc
         self._contexts.clear()
         self._pages.clear()
         self._session_pages.clear()

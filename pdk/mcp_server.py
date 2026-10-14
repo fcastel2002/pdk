@@ -16,6 +16,7 @@ from pdk import __version__, sync
 from pdk.bundle import BundleError, load_bundle
 from pdk.catalog import catalog
 from pdk.gateway.client import Gateway, GatewayError
+from pdk.paths import RUN
 from pdk.report import report_paths, report_text, resolve_project
 
 INSTRUCTIONS = (
@@ -50,7 +51,23 @@ DESTRUCTIVE = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempote
 RESOLVED = ("resolved=true only after a G008 conflict, once you merged the gateway version (view.gateway.json): it "
             "writes over that version.")
 
-server = MCPServer("pdk", instructions=INSTRUCTIONS, version=__version__)
+
+
+def _instructions() -> str:
+    """INSTRUCTIONS, plus a line for the agent to pass on when a newer PDK is out; refreshes a folder set up by an
+    older `pdk init` (skill and subagents) on the way."""
+    from pdk.init import refresh_if_stale
+    from pdk.update import notice
+
+    text = INSTRUCTIONS
+    if refresh_if_stale(Path.cwd()):
+        text += f" (PDK {__version__} refreshed this folder's perspective-views skill and pdk-* subagents.)"
+    if message := notice():
+        text += f" UPDATE: tell the user at the start of the session, once: {message}"
+    return text
+
+
+server = MCPServer("pdk", instructions=_instructions(), version=__version__)
 
 
 @server.tool(
@@ -64,7 +81,7 @@ server = MCPServer("pdk", instructions=INSTRUCTIONS, version=__version__)
         "focus (code like P001, component path like root/Panel, or pointer prefix) to expand details; "
         "profile='hmi' for design-token lint; compile=true also compiles every script with the gateway's Jython "
         "(E009 with the line; pdk_deploy always does). B011/E008 (unknown expression function, unknown system.* "
-        "name) need the gateway's function list (`uv run pdk schemas functions`)."
+        f"name) need the gateway's function list (`{RUN}pdk schemas functions`)."
     ),
     annotations=READ_ONLY,
     structured_output=False,

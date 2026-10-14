@@ -26,6 +26,7 @@ from pdk.bundle import (
     find_perspective_modl,
     schemas_root,
 )
+from pdk.paths import RUN, SYNC
 
 OK, WARN, FAIL, SKIP = "ok", "warn", "FAIL", "skip"
 SUPPORTED_IGNITION = "8.3."
@@ -61,11 +62,24 @@ def _config(_: State, __: bool) -> Check:
     return Check("config", OK, f"{path} sets {shown}")
 
 
+def _version(_: State, __: bool) -> Check:
+    from pdk import __version__, update
+
+    if not update.enabled():
+        return Check("version", OK, f"PDK {__version__} (update check off)")
+    newest = update.latest()
+    if newest is None:
+        return Check("version", OK, f"PDK {__version__} (could not check for a newer release)")
+    if update.version_key(newest) > update.version_key(__version__):
+        return Check("version", WARN, f"PDK {__version__}; {newest} is available", update.upgrade_command())
+    return Check("version", OK, f"PDK {__version__} (latest release {newest})")
+
+
 def _playwright(_: State, __: bool) -> Check:
     try:
         import playwright  # noqa: F401
     except ImportError:
-        return Check("python", FAIL, "playwright is not installed", "uv sync")
+        return Check("python", FAIL, "playwright is not installed", SYNC)
     return Check("python", OK, f"Python {sys.version.split()[0]}, dependencies installed")
 
 
@@ -98,10 +112,10 @@ def _schemas(state: State, fix: bool) -> Check:
         try:
             extract_bundle(modl, schemas_root(), state.ignition_home)
         except (BundleError, OSError) as exc:
-            return Check("schemas", FAIL, f"extraction failed: {exc}", "uv run pdk schemas extract")
+            return Check("schemas", FAIL, f"extraction failed: {exc}", f"{RUN}pdk schemas extract")
         return Check("schemas", OK, f"extracted the bundle for Perspective {version} (--fix)")
     return Check("schemas", FAIL, f"no schema bundle for the installed Perspective {version}",
-                 "uv run pdk schemas extract   (or pdk doctor --fix)")
+                 f"{RUN}pdk schemas extract   (or {RUN}pdk doctor --fix)")
 
 
 def _chromium(_: State, fix: bool) -> Check:
@@ -124,9 +138,9 @@ def _chromium(_: State, fix: bool) -> Check:
         if result.returncode == 0 and found and found.is_file():
             return Check("chromium", OK, "downloaded Playwright's Chromium (--fix)")
         return Check("chromium", FAIL, f"download failed: {(result.stderr or result.stdout).strip()[-300:]}",
-                     "uv run playwright install chromium")
+                     f"{RUN}pdk doctor --fix")
     return Check("chromium", FAIL, "Playwright's Chromium is not downloaded (the eyes need it)",
-                 "uv run playwright install chromium   (or pdk doctor --fix)")
+                 f"{RUN}pdk doctor --fix")
 
 
 def _jdk(_: State, __: bool) -> Check:
@@ -211,7 +225,7 @@ def _module(state: State, _: bool) -> Check:
         state.health = Gateway().health()
     except GatewayError as exc:
         return Check("module", FAIL, f"{exc.code}: {exc.message}",
-                     "uv run pdk gateway install --restart   (builds and installs pdk-gateway; restarts Ignition)")
+                     f"{RUN}pdk gateway install --restart   (builds and installs pdk-gateway; restarts Ignition)")
     health = state.health
     perspective = str(health.get("perspectiveVersion") or "").split(" ")[0]
     detail = f"{health.get('module')} {health.get('moduleVersion')}, Perspective {perspective}"
@@ -281,17 +295,17 @@ def _functions(state: State, fix: bool) -> Check:
         listing = Gateway().functions()
     except GatewayError as exc:
         return Check("functions", WARN, f"the module does not list functions ({exc.code}): B011 and E008 are "
-                                        "skipped", "uv run pdk gateway install --restart   (a newer module)")
+                                        "skipped", f"{RUN}pdk gateway install --restart   (a newer module)")
     if not fix and bundle.functions is None:
         return Check("functions", WARN, "no function list next to the bundle: B011 and E008 are skipped",
-                     "uv run pdk schemas functions   (or pdk doctor --fix)")
+                     f"{RUN}pdk schemas functions   (or {RUN}pdk doctor --fix)")
     save_functions(bundle.root, listing, state.health.get("ignitionVersion"))
     return Check("functions", OK, f"saved {len(listing.get('expression') or [])} expression functions and "
                                   f"{len(listing.get('script') or [])} system.* names (--fix)")
 
 
 CHECKS: tuple[Callable[[State, bool], Check], ...] = (
-    _config, _playwright, _ignition, _schemas, _chromium, _jdk, _ignition_conf, _gateway, _api_key, _module,
+    _version, _config, _playwright, _ignition, _schemas, _chromium, _jdk, _ignition_conf, _gateway, _api_key, _module,
     _sandbox, _eyes, _functions,
 )
 

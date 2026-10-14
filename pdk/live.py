@@ -16,6 +16,7 @@ from typing import Any
 from pdk.bundle import available_versions, load_bundle, schemas_root
 from pdk.diagnostics import CHARS_PER_TOKEN, DEFAULT_BUDGET
 from pdk.gateway.client import Gateway
+from pdk.paths import RUN
 from pdk.sync import json_diff
 
 LIVE_FILE = "live.components.json"
@@ -113,7 +114,7 @@ def sync(gateway: Gateway, root: Path | None = None, budget: int = DEFAULT_BUDGE
     if live_version not in available_versions(root):
         have = ", ".join(available_versions(root)) or "none"
         return False, (f"The gateway runs Perspective {live_version} but there is no bundle for it under {root} "
-                       f"(have: {have}). Run `uv run pdk schemas extract` first.")
+                       f"(have: {have}). Run `{RUN}pdk schemas extract` first.")
     catalog = gateway.catalog(full=True)
     if not catalog.get("schemaAvailable"):
         return False, ("The module cannot read raw component schemas on this gateway (see its log): only the "

@@ -1,0 +1,78 @@
+name: Release
+
+# Runs when a release is published (normally the draft kept by draft.yml). The tag is the version: hatch-vcs reads
+# it, so pyproject.toml has nothing to bump. PyPI uses trusted publishing (no token): the project on pypi.org must
+# trust this repository, workflow release.yml and environment pypi.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v10.3.0
+      - name: Check the tag
+        run: |
+          echo "${{ github.event.release.tag_name }}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            || { echo "::error::the tag must be vX.Y.Z"; exit 1; }
+      - name: Test
+        run: |
+          uv sync --locked
+          uv run ruff check .
+          uv run pytest
+      - name: Build
+        run: |
+          uv build
+          ls dist
+          ls dist | grep -q "${GITHUB_REF_NAME#v}" || { echo "::error::built version is not the tag"; exit 1; }
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/* --clobber
+
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v10.3.0
+      - name: Build and publish
+        run: |
+          uv build
+          uv publish --trusted-publishing always
+
+  changelog:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - name: Move [Unreleased] under the version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          python3 tools/changelog.py roll "$version" "$(date -u +%F)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Changelog: $version"
+          git push origin main

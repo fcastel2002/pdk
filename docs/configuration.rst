@@ -29,14 +29,20 @@ Settings
        gateway.
    * - ``work_dir``
      - ``PDK_WORK_DIR``
-     - ``work/`` in the repository. Where pulled and new views live.
+     - ``work/`` in the current folder (the one ``pdk init`` set up); in a clone, in the repository. Where pulled
+       and new views live.
    * - ``schemas_dir``
      - ``PDK_SCHEMAS_DIR``
-     - ``schemas/`` in the repository. Where schema bundles are extracted and read.
+     - ``~/.pdk/schemas/``; in a clone, ``schemas/`` in the repository. Where schema bundles are extracted and read.
    * - ``perspective_version``
      - ``PDK_PERSPECTIVE_VERSION``
      - The newest bundle. Which bundle to validate against when several are extracted; the ``--perspective``
        option overrides it per command.
+   * - ``update_check``
+     - ``PDK_UPDATE_CHECK``
+     - On. Once a day PDK asks GitHub's public API for the latest release and says when a newer one is out (on
+       the next command, in ``pdk doctor`` and to the agent through the MCP server). ``false`` or ``0`` turns it
+       off; it is always off when ``CI`` is set.
 
 Example:
 

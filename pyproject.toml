@@ -1,6 +1,6 @@
 [project]
 name = "pdk-perspective"
-version = "0.2.0"
+dynamic = ["version"]
 description = "PDK for Ignition Perspective: lets an AI agent build, validate, deploy and inspect Perspective views on a development gateway."
 readme = "README.md"
 license = "Apache-2.0"
@@ -44,12 +44,32 @@ docs = [
 ]
 
 [build-system]
-requires = ["uv_build>=0.12.10,<0.14"]
-build-backend = "uv_build"
+requires = ["hatchling>=1.27", "hatch-vcs>=0.4"]
+build-backend = "hatchling.build"
 
-[tool.uv.build-backend]
-module-name = "pdk"
-module-root = ""
+# The version is the git tag (vX.Y.Z); between releases it reads X.Y.(Z+1).devN+g<commit>.
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0"
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/work", "/schemas", "/bench/out", "/docs/_build", "/.claude/worktrees", "/signatures"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pdk"]
+
+# What `pdk init` and `pdk gateway build` need once installed (pdk/paths.py): the Java module's sources, the
+# skill and the subagents meant for users of PDK (the others are for developing PDK itself).
+[tool.hatch.build.targets.wheel.force-include]
+"gateway/module.xml" = "pdk/_bundled/gateway/module.xml"
+"gateway/src/main" = "pdk/_bundled/gateway/src/main"
+".claude/skills/perspective-views" = "pdk/_bundled/skills/perspective-views"
+".claude/agents/pdk-reviewer.md" = "pdk/_bundled/agents/pdk-reviewer.md"
+".claude/agents/pdk-log-reader.md" = "pdk/_bundled/agents/pdk-log-reader.md"
+
+[tool.uv]
+# Reinstall the editable package when the commit or the tags change, so `pdk --version` follows git.
+cache-keys = [{ file = "pyproject.toml" }, { git = { commit = true, tags = true } }]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
-__version__ = "0.2.0"
+try:
+    __version__ = version("pdk-perspective")  # set by the git tag at build time (hatch-vcs)
+except PackageNotFoundError:
+    __version__ = "0.0.0"
 
 PACKAGE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = PACKAGE_DIR.parent

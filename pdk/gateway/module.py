@@ -24,16 +24,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from pdk import REPO_ROOT, __version__
+from pdk import __version__, paths
 from pdk.bundle import BundleError, find_ignition_home, find_perspective_modl
 from pdk.gateway.client import OPENER, Gateway, GatewayError, gateway_url, read_token_file
+from pdk.paths import RUN
 
 MODULE_ID = "dev.pdk.gateway"
 MODULE_FILE = "pdk-gateway.modl"
 JAR_FILE = "pdk-gateway.jar"
 JAVA_RELEASE = 17
-GATEWAY_DIR = REPO_ROOT / "gateway"
-BUILD_DIR = GATEWAY_DIR / "build"
+GATEWAY_DIR = paths.gateway_dir()
+BUILD_DIR = paths.gateway_build_dir()
 API_KEY_ENV = "PDK_IGNITION_API_KEY"
 API_KEY_FILE = Path.home() / ".pdk" / "ignition-api-key"
 _JDK_GLOBS = (
@@ -63,8 +64,11 @@ class BuildResult:
 
 
 def module_version(now: datetime | None = None) -> str:
-    """`<pdk version>.<yyDDDHHmm>`: the build number grows with every build and fits Ignition's int."""
-    return f"{__version__}.{(now or datetime.now()):%y%j%H%M}"
+    """`<pdk version>.<yyDDDHHmm>`: the build number grows with every build and fits Ignition's int.
+
+    A version between releases (`0.2.1.dev3+g1a2b3c4`) keeps only its `X.Y.Z`."""
+    release = re.match(r"\d+\.\d+\.\d+", __version__)
+    return f"{release.group(0) if release else '0.0.0'}.{(now or datetime.now()):%y%j%H%M}"
 
 
 def render_module_xml(version: str) -> str:
@@ -275,7 +279,7 @@ def restart(base: str | None = None, timeout: float = 300, poll: float = 2.0) ->
         raise ModuleError(f"The gateway did not reach RUNNING within {timeout:.0f} s")
     if gateway_state(base) == "COMMISSIONING":
         raise ModuleError(f"The gateway stopped at commissioning: open {base} and accept the PDK Gateway module "
-                          "(new modules are quarantined until accepted), then run `uv run pdk gateway health`.")
+                          f"(new modules are quarantined until accepted), then run `{RUN}pdk gateway health`.")
     health: dict[str, Any] = {}
 
     def module_ready() -> bool:

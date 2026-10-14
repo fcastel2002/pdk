@@ -24,6 +24,7 @@ from pdk.eyes.browser import ROOT_PATH, Eyes, EyesError, Opened, Viewport
 from pdk.eyes.expect import page_location
 from pdk.eyes.join import Joined, join, mounted_view
 from pdk.gateway.client import VIEWS, Gateway, GatewayError
+from pdk.paths import RUN
 from pdk.validate.tree import build_tree, walk
 
 SETTLE_S = 3.0
@@ -40,8 +41,8 @@ OPEN_HINTS = {
     "readiness-timeout": "The view did not render in time: check the gateway log and the browser console.",
     "layout-unstable": "Something keeps moving (an animation or a growing component): inspect again, or look at "
                        "the component named in the message.",
-    "browser-crash": "Inspect again; if it repeats, update Playwright's Chromium (uv run playwright install chromium).",
-    "browser-missing": "uv sync, then uv run playwright install chromium.",
+    "browser-crash": f"Inspect again; if it repeats, update Playwright's Chromium ({RUN}pdk doctor --fix).",
+    "browser-missing": f"{RUN}pdk doctor --fix.",
 }
 
 

@@ -4,6 +4,7 @@ A kit for an agent to build and fix Ignition Perspective views (`view.json`), ve
 
 ## Commands
 - `uv sync` · `uv run pdk doctor [--fix]` (see `README.md`) · `uv run pytest` · `uv run ruff check .`
+- Users install with `uv tool install pdk-perspective` and `pdk init <folder>` (skill, user subagents, `.mcp.json`, hook, CLAUDE.md section); `pdk/paths.py` says where things live in a clone and installed. The version is the git tag (hatch-vcs); releases come from the draft release that `.github/workflows/draft.yml` keeps from `[Unreleased]` in `CHANGELOG.md` (`tools/changelog.py`). PDK checks GitHub for a newer release once a day (`pdk/update.py`, `PDK_UPDATE_CHECK=0`).
 - `uv run pdk schemas extract`: `schemas/<ver>/` from the installed `.modl` (not versioned).
 - `uv run pdk schemas functions`: the gateway's expression functions and `system.*` names next to the bundle (B011, E008).
 - `uv run pdk validate <view.json|dir> [--project P] [--compile]` (`--compile`: scripts through the gateway's Jython, E009) · `uv run pdk catalog [type] [--prop P|--search S|--topic T]`
@@ -19,7 +20,7 @@ A kit for an agent to build and fix Ignition Perspective views (`view.json`), ve
 - `uv run --group docs sphinx-build -W -b html docs docs/_build/html`: the documentation (published from `main` to GitHub Pages).
 
 ## Layout
-`pdk/` (validate/, eyes/, catalog, sync, live, mcp_server, hook, gateway/) · `tests/` · `bench/` · `.claude/skills/perspective-views/` · `gateway/` (Java 17 module) · `docs/` (Sphinx) · `install.ps1`, `install.sh`.
+`pdk/` (validate/, eyes/, catalog, sync, live, mcp_server, hook, init, update, paths, templates/, gateway/) · `tests/` · `bench/` · `.claude/skills/perspective-views/` · `gateway/` (Java 17 module) · `docs/` (Sphinx) · `tools/changelog.py` · `install.ps1`, `install.sh`.
 
 ## Rules
 - Development only: never production gateways; write to the sandbox (`-Dpdk.sandbox`) and, only with promote and the user's OK, to the target (`-Dpdk.target`).

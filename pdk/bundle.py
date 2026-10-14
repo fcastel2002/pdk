@@ -27,7 +27,8 @@ from jsonschema.protocols import Validator
 from referencing import Registry
 from referencing.jsonschema import DRAFT4
 
-from pdk import REPO_ROOT
+from pdk import paths
+from pdk.paths import RUN
 
 URN_PREFIX = "urn:ignition-schema:"
 BUNDLE_FORMAT = "pdk-schema-bundle-v1"
@@ -266,7 +267,7 @@ class Bundle:
 
 
 def schemas_root() -> Path:
-    return Path(os.environ.get("PDK_SCHEMAS_DIR") or REPO_ROOT / "schemas")
+    return Path(os.environ.get("PDK_SCHEMAS_DIR") or paths.default_schemas_dir())
 
 
 def _version_key(version: str) -> tuple[int, ...]:
@@ -312,7 +313,7 @@ def load_bundle(version: str | None = None, root: Path | None = None) -> Bundle:
     version = version or os.environ.get("PDK_PERSPECTIVE_VERSION")
     versions = available_versions(root)
     if not versions:
-        raise BundleError(f"No schema bundle under {root}. Run `uv run pdk schemas extract`.")
+        raise BundleError(f"No schema bundle under {root}. Run `{RUN}pdk schemas extract`.")
     if version is None:
         version = versions[-1]
     elif version not in versions:

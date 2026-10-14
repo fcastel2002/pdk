@@ -17,10 +17,9 @@ PDK is an independent project. It is not affiliated with, endorsed by or support
 
 ## Requirements
 - **Ignition 8.3 installed on the same machine**, with Perspective. The PDK module only answers loopback connections. Tested with Ignition 8.3.8–8.3.9 (Perspective 3.3.8–3.3.9).
-- **[uv](https://docs.astral.sh/uv/)** (the installer gets it, and uv gets Python 3.12+).
-- **git**, to clone the repo.
+- **[uv](https://docs.astral.sh/uv/)** (the installer gets it, and uv gets Python 3.12+). No Python, git or clone needed.
 - **JDK 17 or newer**, to build the gateway module. PDK looks in `JAVA_HOME`, the `PATH` and the usual install folders.
-- **Optional: [Claude Code](https://claude.com/claude-code)**, which picks up the MCP server (`.mcp.json`), the validation hook and the `perspective-views` skill from the repo. Any other MCP client works with `pdk-mcp`.
+- **Optional: [Claude Code](https://claude.com/claude-code)**, which picks up the MCP server (`.mcp.json`), the validation hook and the `perspective-views` skill that `pdk init` writes in your folder. Any other MCP client works with `pdk-mcp`.
 
 ## Install
 Windows (PowerShell):
@@ -31,16 +30,18 @@ Linux and macOS:
 ```bash
 curl -LsSf https://raw.githubusercontent.com/fcastel2002/pdk/main/install.sh | sh
 ```
-The installer clones PDK into `./pdk` (set `PDK_DIR` to change it), installs uv if it is missing, runs `uv sync`, extracts the schemas of your Perspective into `schemas/<version>/` and downloads Playwright's Chromium. Then it runs `pdk doctor`, which lists what is left on the gateway side. It never touches the gateway or anything that needs admin rights, and it is safe to run again to update.
+The installer installs uv if it is missing and PDK as a command (`uv tool install pdk-perspective`): `pdk` and `pdk-mcp` then work from any folder. It sets up `./pdk-views` for Claude Code with `pdk init` (set `PDK_PROJECT` to change it), extracts the schemas of your Perspective into `~/.pdk/schemas/` and downloads Playwright's Chromium. Then it runs `pdk doctor`, which lists what is left on the gateway side. It never touches the gateway or anything that needs admin rights, and it is safe to run again to update.
 
-From a clone, the same thing is `./install.sh`, `.\install.ps1`, or by hand:
+By hand, the same thing is:
 ```bash
-uv sync
-uv run pdk doctor --fix
+uv tool install pdk-perspective
+pdk init my-views        # any folder: skill, subagents, MCP server, hook and CLAUDE.md for Claude Code
+pdk doctor --fix
 ```
+PDK says when a newer release is out (one check a day against GitHub, also told to the agent at the start of a session); update with `uv tool upgrade pdk-perspective`. To work on PDK itself, clone the repo and run `uv sync` (see [CONTRIBUTING.md](CONTRIBUTING.md)); in a clone the commands are `uv run pdk ...`.
 
 ## Gateway setup
-`uv run pdk doctor` checks every step and says what is missing. Run it at the start and at the end.
+`pdk doctor` checks every step and says what is missing. Run it at the start and at the end.
 
 1. **Create the sandbox project.** It is the only project PDK writes to: create an empty Perspective project (for example `pdk_sandbox`) from the gateway web page or the Designer. Do not use a real project.
 
@@ -61,15 +62,15 @@ uv run pdk doctor --fix
 
 4. **Install the module:**
    ```bash
-   uv run pdk gateway install --restart
+   pdk gateway install --restart
    ```
-   It compiles `gateway/` against the jars of your install, uploads it through the REST API, accepts its certificate (it is an unsigned module) and restarts the gateway.
+   It compiles the module's Java sources (shipped with PDK) against the jars of your install, uploads it through the REST API, accepts its certificate (it is an unsigned module) and restarts the gateway.
 
 5. **Check:**
    ```bash
-   uv run pdk doctor
+   pdk doctor
    ```
-   Every check should be `ok`. Optionally, `uv run pytest -m gateway` runs the live tests, which write only under `PDK/_selftest/` in the sandbox and delete what they create.
+   Every check should be `ok`. Optionally, from a clone, `uv run pytest -m gateway` runs the live tests, which write only under `PDK/_selftest/` in the sandbox and delete what they create.
 
 ## Configuration
 Everything is configured through environment variables. To avoid setting them in every shell, in the MCP server and in the hook, put them in `~/.pdk/config.toml` (or another file pointed to by `PDK_CONFIG`). A variable that is already set wins over the file.
@@ -79,9 +80,10 @@ Everything is configured through environment variables. To avoid setting them in
 | `gateway_url` | `PDK_GATEWAY_URL` | `http://127.0.0.1:8088` |
 | `ignition_home` | `IGNITION_HOME` | the standard path of each OS |
 | `api_key` | `PDK_IGNITION_API_KEY` | `~/.pdk/ignition-api-key` |
-| `work_dir` | `PDK_WORK_DIR` | `work/` in the repo |
-| `schemas_dir` | `PDK_SCHEMAS_DIR` | `schemas/` in the repo |
+| `work_dir` | `PDK_WORK_DIR` | `work/` in the current folder (in a clone, in the repo) |
+| `schemas_dir` | `PDK_SCHEMAS_DIR` | `~/.pdk/schemas/` (in a clone, `schemas/` in the repo) |
 | `perspective_version` | `PDK_PERSPECTIVE_VERSION` | the newest bundle |
+| `update_check` | `PDK_UPDATE_CHECK` | on; `false` (or `0`) stops the daily check for a newer release |
 
 ```toml
 gateway_url = "http://127.0.0.1:8088"
@@ -91,7 +93,7 @@ ignition_home = "C:/Program Files/Inductive Automation/Ignition"
 The sandbox name is not configured in PDK: `-Dpdk.sandbox` sets it on the gateway and the client reads it from `/health`.
 
 ## Usage
-**With Claude Code**, open the repo (`claude` in the PDK folder), approve the `pdk` MCP server and ask for a screen. The `perspective-views` skill drives the cycle:
+**With Claude Code**, open the folder you set up with `pdk init` (`claude` in it), approve the `pdk` MCP server and ask for a screen. The `perspective-views` skill drives the cycle:
 
 catalog → write `view.json` → validate → deploy → inspect → fix.
 
@@ -138,8 +140,8 @@ You are about to run an installer, install an unsigned module on your gateway an
 > Review this repository as a security auditor before I install it on my machine and my Ignition gateway. Tell me whether it contains malware, hidden network calls or telemetry, data exfiltration, obfuscated code, or anything that writes outside what the README says. Check in particular `install.ps1` and `install.sh`, the Java module in `gateway/` (what its REST API allows and from where), and the Python package in `pdk/` (which hosts it contacts, which files and gateway resources it writes). Point to the exact files and lines behind each finding.
 
 What a review should find, so you can compare:
-- The installers download only git repositories, [uv](https://docs.astral.sh/uv/) from astral.sh, Python packages from PyPI (pinned in `uv.lock`) and Playwright's Chromium.
-- PDK itself contacts only your gateway URL (`http://127.0.0.1:8088` by default). There is no telemetry.
+- The installers download only [uv](https://docs.astral.sh/uv/) from astral.sh, PDK and its Python packages from PyPI (from GitHub if PDK is not on PyPI yet) and Playwright's Chromium.
+- PDK itself contacts your gateway URL (`http://127.0.0.1:8088` by default) and, once a day, GitHub's public API for the latest release number (`pdk/update.py`; nothing about your machine is sent, `PDK_UPDATE_CHECK=0` turns it off). There is no telemetry.
 - The module answers loopback only, needs a per-start token, and writes only to the sandbox project, the optional target project and tags under `[default]PDK/`.
 
 An AI review lowers the risk, it does not remove it: models can miss things. For a production network, have someone you trust read the code, and keep PDK on a development machine as recommended above.

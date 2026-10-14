@@ -1,5 +1,5 @@
-"""Command line entry point: `pdk doctor | validate | catalog | schemas | hook | gateway | pull | deploy | promote |
-delete | tags | open | inspect | screenshot`."""
+"""Command line entry point: `pdk doctor | init | validate | catalog | schemas | hook | gateway | pull | deploy |
+promote | delete | tags | open | inspect | screenshot`."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from pdk import __version__
 from pdk.bundle import (
     BundleError,
     available_versions,
@@ -22,6 +23,7 @@ from pdk.bundle import (
 )
 from pdk.catalog import TOPICS, catalog
 from pdk.diagnostics import DEFAULT_BUDGET
+from pdk.paths import RUN
 from pdk.report import report_paths, resolve_project
 from pdk.validate import validate_paths
 
@@ -196,7 +198,7 @@ def _print_health(health: dict) -> None:
     except BundleError:
         bundle = None
     if bundle and live and live != bundle:
-        print(f"warning: the schema bundle is {bundle} but the gateway runs {live}; run `uv run pdk schemas extract`")
+        print(f"warning: the schema bundle is {bundle} but the gateway runs {live}; run `{RUN}pdk schemas extract`")
 
 
 def _cmd_gateway(args: argparse.Namespace) -> int:
@@ -216,7 +218,7 @@ def _cmd_gateway(args: argparse.Namespace) -> int:
             print(f"Uploaded {upload.get('moduleId', module.MODULE_ID)}; install: "
                   f"{(info['install'] or {}).get('message', info['install'])}")
             if not args.restart:
-                print("It loads on the next gateway restart: `uv run pdk gateway restart`.")
+                print(f"It loads on the next gateway restart: `{RUN}pdk gateway restart`.")
                 return EXIT_OK
         if args.action == "restart" or (args.action == "install" and args.restart):
             print("Restarting the gateway...", flush=True)
@@ -394,8 +396,26 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
     return EXIT_FINDINGS if any(check.status == doctor.FAIL for check in checks) else EXIT_OK
 
 
+def _cmd_init(args: argparse.Namespace) -> int:
+    from pdk.init import init
+
+    try:
+        result = init(Path(args.folder))
+    except ValueError as exc:
+        print(f"pdk init: {exc}", file=sys.stderr)
+        return EXIT_USAGE
+    print(f"PDK {__version__} set up in {result.folder}:")
+    for name in result.written:
+        print(f"  {name}")
+    for problem in result.problems:
+        print(f"  warning: {problem}")
+    print(f"Next: `{RUN}pdk doctor --fix`, then open this folder with Claude Code (`claude`).")
+    return EXIT_FINDINGS if result.problems else EXIT_OK
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="pdk", description="Perspective DevKit")
+    parser.add_argument("--version", action="version", version=f"pdk {__version__}")
     parser.add_argument("--perspective", help="bundle version to use (default: newest, or PDK_PERSPECTIVE_VERSION)")
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -404,6 +424,11 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.add_argument("--fix", action="store_true",
                         help="also apply the local fixes: extract the schema bundle, download Chromium")
     doctor.set_defaults(func=_cmd_doctor)
+
+    initer = sub.add_parser("init", help="set up a folder for Claude Code with PDK: skill, subagents, MCP server, "
+                                         "hook and a CLAUDE.md section (again after an upgrade, to refresh them)")
+    initer.add_argument("folder", nargs="?", default=".", help="the folder (default: the current one)")
+    initer.set_defaults(func=_cmd_init)
 
     validate = sub.add_parser("validate", help="validate view.json files or directories")
     validate.add_argument("paths", nargs="+", help="view.json files or directories (searched recursively)")
@@ -544,6 +569,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     _utf8_streams()
     args = build_parser().parse_args(argv)
+    if args.command != "hook":  # the hook's stderr goes to the agent as problems in the view
+        from pdk.update import notice
+
+        if message := notice():
+            print(message, file=sys.stderr)
     try:
         return args.func(args)
     except (BundleError, FileNotFoundError) as exc:

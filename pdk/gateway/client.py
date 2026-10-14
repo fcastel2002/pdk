@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from pdk.bundle import find_ignition_home
+from pdk.paths import RUN
 
 DEFAULT_URL = "http://127.0.0.1:8088"
 BASE_PATH = "/data/pdk/v1"
@@ -42,12 +43,12 @@ CODES: dict[str, str] = {
 }
 HINTS: dict[str, str] = {
     "G001": "Start the Ignition service, or set PDK_GATEWAY_URL.",
-    "G002": ("Install the module (`uv run pdk gateway install --restart`) and check it is running. On Linux the "
+    "G002": (f"Install the module (`{RUN}pdk gateway install --restart`) and check it is running. On Linux the "
              "token file is readable only by the gateway's user and group: join that group or set PDK_GATEWAY_TOKEN."),
     "G003": "The token changes on every gateway restart and is read from the token file; check PDK_GATEWAY_TOKEN.",
     "G004": "The module only answers loopback connections without proxy headers.",
     "G005": "Add -Dpdk.sandbox=<project> to ignition.conf and restart the gateway.",
-    "G006": ("Writes go to the sandbox shown by `uv run pdk gateway health`; the target takes only views "
+    "G006": (f"Writes go to the sandbox shown by `{RUN}pdk gateway health`; the target takes only views "
              "outside PDK/, through promote --to-project."),
     "G007": "Check the project and the resource path.",
     "G008": "It changed after your pull: pull again, merge, and deploy with the new signature.",
@@ -56,7 +57,7 @@ HINTS: dict[str, str] = {
     "G011": "Perspective's session API did not link on this version: eyes fall back to the DOM only.",
     "G012": ("The session (a slow script or binding) or the tag provider (a large tag operation, a fast timer "
              "script) is busy; retry, or look for long-running work."),
-    "G013": ("Simulated tags are written only under [provider]PDK/ (`uv run pdk gateway health` names the "
+    "G013": (f"Simulated tags are written only under [provider]PDK/ (`{RUN}pdk gateway health` names the "
              "provider), never config properties like X.ValueSource; other tags are read-only."),
 }
 _MODULE_CODES = {
