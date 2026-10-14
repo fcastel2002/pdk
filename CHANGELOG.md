@@ -4,6 +4,8 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-14
+
 ### Added
 - PDK installs as a command, with no clone, no git and no Python of your own: `uv tool install pdk-perspective`
   (the installers do it). `pdk` and `pdk-mcp` work from any folder; the schema bundle and the module build live
