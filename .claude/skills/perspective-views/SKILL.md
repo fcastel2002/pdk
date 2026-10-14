@@ -18,7 +18,7 @@ description: Create or edit Ignition Perspective views (view.json) verified agai
    - `pdk_promote` moves `PDK/X` to `X` and `pdk_delete` deletes it. Both are destructive: only when the user asked for it.
    - `pdk_promote(..., to_project="target")` sends it to the target (final) project: only with the user's explicit OK, and with no references to `PDK/` (promote embedded views and popups first).
 7. **Watch it running** after every deploy: `pdk_inspect(path=...)` opens it in Chromium and returns the anomalies, each on the pointer of the component that has it:
-   - **V** layout: V001 clipped text, V002 container overflow, V003 viewport overflow, V007 collapsed, V010 not rendered, V011 embedded view or repeater that does not load (check `props.path` and the params).
+   - **V** layout: V001 clipped text, V002 container overflow, V003 viewport overflow, V007 collapsed, V010 not rendered, V011 embedded view or repeater that does not load (check `props.path` and the params), V014 a scroll nobody asked for.
    - **Q** binding quality (points to the `propConfig`): Q001 `Bad_NotFound` (missing tag: fix the path), Q002 `Error_*` (failing script or expression), Q003 no value yet.
    - **L001** a script that failed on the gateway (points to the event) and **C001** a browser error.
    - **X002**: the page does not match the `view.json`, so deploy first.
@@ -53,3 +53,4 @@ description: Create or edit Ignition Perspective views (view.json) verified agai
 - Styles in camelCase (`backgroundColor`), with CSS values as strings (`"12px"`, `"#2F5D7C"`).
 - Style classes can also come from the stylesheet (`.psc-<name>` in `stylesheet/stylesheet.css`); `pdk pull stylesheet` / `pdk deploy` handle it in the sandbox, and `pdk_promote(path=".../_stylesheet", to_project="target")` sends it to the target (with explicit OK).
 - The Designer omits default values; you do not need to write them.
+- **Do not fix overflow with scroll.** On V002/V003, make the content fit (`shrink`/`basis`, `wrap`, more room, smaller fixed sizes); never add `style.overflow` to hide it. Scroll only where the request asks for a scrolling area (a list, a log, a long form), with `overflow` (or `overflowY`) `auto`, never `scroll`, and declare it in `expect` (`root/Events scrolls y`): any other scroll comes back as **V014**.

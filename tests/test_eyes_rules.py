@@ -152,9 +152,37 @@ def _scrolled(dom: dict[str, Any], x: str, y: str) -> dict[str, Any]:
 
 
 def test_scrolled_content_is_neither_overflow_nor_cut_text() -> None:
-    assert _run(_scrolled(_dom(), "hidden", "auto")) == []
+    assert _run(_scrolled(_dom(), "hidden", "auto"), declared_scrolls={"root/Row": {"y"}}) == []
     found = _run(_scrolled(_dom(), "auto", "hidden"))  # it scrolls the other way: the content spills along y
     assert [d["code"] for d in found] == ["V002", "V001"]
+
+
+def test_v014_a_scroll_no_expectation_asks_for() -> None:
+    [found] = _run(_scrolled(_dom(), "hidden", "auto"))
+    assert (found["code"], found["severity"], found["pointer"]) == ("V014", "warning", "/root/children/1")
+    assert "120 px out of sight" in found["message"] and 'expect "root/Row scrolls y"' in found["hint"]
+    assert _run(_scrolled(_dom(), "hidden", "auto"), declared_scrolls={"root/Row": {"x", "y"}}) == []
+    [other] = _run(_scrolled(_dom(), "hidden", "auto"), declared_scrolls={"root/Row": {"x"}})
+    assert other["code"] == "V014"
+
+
+def test_v014_is_an_error_for_a_sliver_or_a_nested_scroll() -> None:
+    dom = _scrolled(_dom(), "hidden", "auto")
+    dom["nodes"][2]["scroll_height"] = 50
+    [sliver] = [d for d in _run(dom) if d["code"] == "V014"]
+    assert sliver["severity"] == "error" and "almost fits" in sliver["message"]
+    dom = _scrolled(_dom(), "hidden", "auto")
+    dom["nodes"][0].update(overflow_y="auto", scroll_height=900)
+    [nested] = [d for d in _run(dom) if d["code"] == "V014"]
+    assert nested["severity"] == "error" and "inside root, which scrolls along y too" in nested["message"]
+
+
+def test_v014_a_scrollbar_with_nothing_to_scroll() -> None:
+    dom = _dom()
+    dom["nodes"][4].update(overflow_x="hidden", overflow_y="scroll")
+    [found] = _run(dom)
+    assert (found["code"], found["severity"], found["component"]) == ("V014", "warning", "root/Box")
+    assert "nothing to scroll" in found["message"]
 
 
 def test_v003_viewport_overflow_names_the_deepest_contributor() -> None:

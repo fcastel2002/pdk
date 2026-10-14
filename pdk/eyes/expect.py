@@ -154,6 +154,20 @@ def check(joined: Joined, text: str, tags: TagReader | None = None) -> Outcome:
     return Outcome(len(items), found)
 
 
+def declared_scrolls(text: str | None) -> dict[str, set[str]]:
+    """The components `scrolls` expectations ask to scroll, with their axes (both without one): those scrolls are
+    by design, so V014 does not report them, whether or not the expectation passes."""
+    declared: dict[str, set[str]] = {}
+    for item in split(text or ""):
+        try:
+            tokens = shlex.split(item)
+        except ValueError:
+            continue
+        if len(tokens) in (2, 3) and tokens[1] == "scrolls" and (len(tokens) == 2 or tokens[2] in ("x", "y")):
+            declared.setdefault(tokens[0], set()).update(tokens[2:] or ("x", "y"))
+    return declared
+
+
 def _check_one(joined: Joined, item: str, tags: TagReader | None = None) -> Diagnostic | None:
     try:
         tokens = shlex.split(item)

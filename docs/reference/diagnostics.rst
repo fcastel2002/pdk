@@ -396,6 +396,12 @@ Produced by ``pdk inspect`` on a running view. See :doc:`../guide/inspection` fo
        groups) whose colors the view chose (a style color, background or class, on it or an ancestor) are judged:
        the theme's defaults and text drawn inside charts or tables are not. Disabled controls are exempt; text over a
        background image is not judged.
+   * - ``V014``
+     - unrequested-scroll
+     - A container that scrolls (its content overflows along an axis with ``overflow`` ``auto`` or ``scroll``), or
+       shows a scrollbar with nothing to scroll, without a ``scrolls`` expectation asking for it: usually a V002
+       hidden behind ``style.overflow``. An error when it scrolls inside another scroll along the same axis, or for
+       less than 24px of content; otherwise a warning.
    * - ``Q001``
      - bad-quality
      - A binding with a *Bad* quality, such as ``Bad_NotFound``.

@@ -337,3 +337,10 @@ def test_page_shows_checks_the_view_routed_on_the_page() -> None:
     assert wrong["code"] == "A001" and "it shows PDK/Y" in wrong["message"]
     [unknown] = expect.check(_at(DETAIL), "page shows PDK/X").diagnostics
     assert unknown["code"] == "A001"
+
+
+def test_declared_scrolls_reads_only_scrolls_expectations() -> None:
+    declared = expect.declared_scrolls('root/Row scrolls y; root/List scrolls; root/A below root/B; root/X scrolls z; '
+                                       'root/Row scrolls x; root/T text "a; b"')
+    assert declared == {"root/Row": {"x", "y"}, "root/List": {"x", "y"}}
+    assert expect.declared_scrolls(None) == {}

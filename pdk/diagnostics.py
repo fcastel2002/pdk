@@ -101,6 +101,7 @@ CODES: dict[str, str] = {
     "V011": "embedded-view-failed",
     "V012": "repeater-instances-overflow",
     "V013": "low-contrast",
+    "V014": "unrequested-scroll",
     "Q001": "bad-quality",
     "Q002": "error-quality",
     "Q003": "uncertain-quality",

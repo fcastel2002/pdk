@@ -311,12 +311,14 @@ def _inspect_one(eyes: Eyes, gateway: Gateway, location: str, viewport: str | No
                 events += gateway.logs(since=cursor, project=target.project, view=path).get("events", [])
     except (EyesError, GatewayError, ValueError) as error:
         return _failed(target, location, error)
+    declared = expectations.declared_scrolls(expect)
     if view:
         joined = join(view, extracted, page, view_path)
         if page is not None and joined.live_view is None:
             reasons.append(f"the gateway does not list {view_path} on page {opened.page_id}")
         diagnostics = rules.evaluate(joined, logs=_mounted(events, view_path, "C"),
-                                     console_entries=extracted["console"], degraded_reasons=reasons)
+                                     console_entries=extracted["console"], degraded_reasons=reasons,
+                                     declared_scrolls=declared)
     else:
         joined = Joined([], {}, None, {}, url=str(extracted["url"]))
         diagnostics = rules.evaluate(joined, console_entries=extracted["console"], degraded_reasons=reasons)
@@ -324,7 +326,8 @@ def _inspect_one(eyes: Eyes, gateway: Gateway, location: str, viewport: str | No
     for popup in popups:
         inside = join(popup.view, popup.extracted, page, popup.path, mount=f"P{popup.id}",
                       prefix=f"popup:{popup.id}/")
-        diagnostics += rules.evaluate(inside, logs=_mounted(events, popup.path, f"P{popup.id}"))
+        diagnostics += rules.evaluate(inside, logs=_mounted(events, popup.path, f"P{popup.id}"),
+                                      declared_scrolls=declared)
         joined.popups[popup.id] = popup.path
         joined.parts += inside.parts
         joined.by_dom.update(inside.by_dom)

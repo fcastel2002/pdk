@@ -69,6 +69,13 @@ Anomalies
        the first opaque one from the text outwards. Only text components whose colors the view chose are judged
        (not the theme's defaults, nor text drawn inside charts or tables); text over an image is not judged, and
        disabled controls are exempt.
+   * - ``V014``
+     - Unrequested scroll
+     - A container scrolls, or shows an empty scrollbar (``overflow: scroll``), and no ``--expect`` item
+       ``<container> scrolls [x|y]`` asks for it. Scrolling hides content just as an overflow does, so a scroll the
+       design did not ask for is usually a V002 silenced with ``style.overflow``: make the content fit instead.
+       It is an error inside another scroll along the same axis (two scrollbars) or for less than 24px of
+       content; a scrolling area the design wants (a list, a log) is declared with the expectation.
    * - ``Q001``
      - Bad quality
      - A binding delivers a *Bad* quality, for example ``Bad_NotFound`` for a tag that does not exist.

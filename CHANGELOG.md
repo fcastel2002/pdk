@@ -5,6 +5,9 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
 ## [Unreleased]
 
 ### Added
+- V014: a container that scrolls without a `scrolls` expectation asking for it (an error inside another scroll
+  along the same axis or for under 24px of content), or that shows a scrollbar with nothing to scroll. V002 can
+  no longer be silenced with `style.overflow`.
 - `--expect` reads properties as the gateway evaluated them (`root/Bar prop value >= 40`, `view prop custom.x = 3`)
   and where a navigation went (`page /detail`, `page shows PDK/Detail`).
 - `pdk screenshot --act` (and `act` in `pdk_screenshot`) runs steps before capturing.

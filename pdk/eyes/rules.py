@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Mapping, Set
 from typing import Any
 
 from pdk.diagnostics import Diagnostic, Severity, join, make
@@ -19,6 +20,7 @@ from pdk.eyes.join import Joined, Part, mounted_by_design
 EPSILON_PX = 0.5  # sub-pixel text and scroll rounding is not a defect
 TEXT_TYPES = frozenset({"ia.display.label", "ia.input.button", "ia.navigation.link"})
 SCROLLING = frozenset({"auto", "scroll"})
+SLIVER_PX = 24.0  # a scrollbar for less than this is content that almost fits, not a scrolling area
 
 QUALITY_HINTS: tuple[tuple[str, str], ...] = (
     ("Bad_NotFound", "The tag or path does not exist: check the path against the tag provider (provider, folders, "
@@ -64,6 +66,11 @@ def _dom_parent(joined: Joined, part: Part) -> Part | None:
 def scrolls(dom: dict[str, Any], axis: str) -> bool:
     """The component scrolls along x or y (overflow auto or scroll) instead of clipping or spilling."""
     return dom.get(f"overflow_{axis}") in SCROLLING
+
+
+def scroll_extent(dom: dict[str, Any], axis: str) -> float:
+    """How far the content runs past the component's content box along x or y."""
+    return dom["scroll_width"] - dom["client_width"] if axis == "x" else dom["scroll_height"] - dom["client_height"]
 
 
 def _clip_owner(joined: Joined, part: Part) -> Part | None:
@@ -143,7 +150,7 @@ def component_overflow(joined: Joined) -> list[Diagnostic]:
             "V002", "error", part,
             f"children overflow the container by {max(extra_w, extra_h):.0f} px ({names})",
             "Shrink or let the children shrink (position shrink/basis), wrap them (props.wrap), "
-            "or give the container more room.",
+            "or give the container more room; do not hide it behind style.overflow auto (V014).",
             {"dom": part.dom_path, "client": [dom["client_width"], dom["client_height"]],
              "scroll": [dom["scroll_width"], dom["scroll_height"]],
              "offenders": [{"name": c.name, "pointer": c.pointer, "bounds": c.dom["bounds"]} for c in offenders]}))
@@ -248,6 +255,59 @@ def failed_views(joined: Joined) -> list[Diagnostic]:
             "the view declares, and inspect the embedded view on its own for its errors.",
             {"failed": failed, "path": props.get("path")},
             pointer=join(part.pointer, "props", "path") if has_path else None))
+    return found
+
+
+def _scrolling_ancestor(joined: Joined, part: Part, axis: str) -> Part | None:
+    current = _dom_parent(joined, part)
+    while current is not None and current.dom is not None:
+        if scrolls(current.dom, axis) and scroll_extent(current.dom, axis) > EPSILON_PX:
+            return current
+        current = _dom_parent(joined, current)
+    return None
+
+
+def unrequested_scroll(joined: Joined, declared: Mapping[str, Set[str]] | None = None) -> list[Diagnostic]:
+    """V014: a container scrolls (its content overflows along an axis with overflow auto or scroll), or shows a
+    scrollbar with nothing to scroll (overflow scroll), and no `scrolls` expectation declares it. A scroll hides
+    content the way V002 reports, so one the view did not ask for is usually V002 silenced. It is an error when it
+    is plainly not a scrolling area: nested in another scroll along the same axis, or for a sliver of content."""
+    declared = declared or {}
+    found: list[Diagnostic] = []
+    for part in joined.parts:
+        dom = part.dom
+        if not dom or part.dom_path == joined.root_path or not (part.type or "").startswith("ia.container.") \
+                or not dom.get("visible"):
+            continue
+        open_axes = [ax for ax in ("x", "y") if ax not in declared.get(part.name, ())]
+        axes = [ax for ax in open_axes if scrolls(dom, ax) and scroll_extent(dom, ax) > EPSILON_PX]
+        bare = [ax for ax in open_axes if dom.get(f"overflow_{ax}") == "scroll" and ax not in axes]
+        evidence = {"dom": part.dom_path, "overflow": [dom.get("overflow_x"), dom.get("overflow_y")],
+                    "client": [dom["client_width"], dom["client_height"]],
+                    "scroll": [dom["scroll_width"], dom["scroll_height"]]}
+        if axes:
+            extra = {ax: round(scroll_extent(dom, ax), 1) for ax in axes}
+            nested = {ax: outer for ax in axes if (outer := _scrolling_ancestor(joined, part, ax))}
+            sliver = [ax for ax in axes if extra[ax] < SLIVER_PX]
+            message = "scrolls along " + ", ".join(f"{ax} ({extra[ax]:.0f} px out of sight)" for ax in axes)
+            if nested:
+                message += "; inside " + ", ".join(f"{outer.name}, which scrolls along {ax} too"
+                                                   for ax, outer in nested.items())
+            elif sliver:
+                message += f"; a scrollbar for under {SLIVER_PX:.0f} px: content that almost fits"
+            found.append(_diag(
+                "V014", "error" if nested or sliver else "warning", part,
+                message + "; no expectation asks for it",
+                "Make the content fit instead: let the children shrink (position shrink/basis), wrap them "
+                "(props.wrap) or give the container room, and remove style.overflow. If the design asks for a "
+                f"scrolling area (a list, a log), declare it: expect \"{part.name} scrolls {axes[0]}\".",
+                {**evidence, "extra": extra, "nested_in": {ax: p.name for ax, p in nested.items()}}))
+        elif bare:
+            found.append(_diag(
+                "V014", "warning", part,
+                f"overflow scroll shows a scrollbar along {', '.join(bare)} with nothing to scroll",
+                "Remove style.overflow; where content may outgrow it, auto shows a scrollbar only when it does.",
+                evidence))
     return found
 
 
@@ -528,9 +588,11 @@ def out_of_sync(joined: Joined) -> list[Diagnostic]:
 
 def evaluate(joined: Joined, *, logs: list[dict[str, Any]] | None = None,
              console_entries: list[dict[str, str]] | None = None,
-             degraded_reasons: list[str] | None = None) -> list[Diagnostic]:
+             degraded_reasons: list[str] | None = None,
+             declared_scrolls: Mapping[str, Set[str]] | None = None) -> list[Diagnostic]:
     """Every anomaly of one inspection. A page out of sync with the view.json reports only that, and what happens
-    inside a collapsed component is reported once, as that component's V007."""
+    inside a collapsed component is reported once, as that component's V007. `declared_scrolls` maps component
+    names to the axes `scrolls` expectations ask for (expect.declared_scrolls); V014 leaves those alone."""
     found = degraded(degraded_reasons or []) + console(console_entries or [])
     sync = out_of_sync(joined)
     if sync:
@@ -538,6 +600,7 @@ def evaluate(joined: Joined, *, logs: list[dict[str, Any]] | None = None,
     hidden = collapsed(joined)
     inside = tuple(d["component"] + "/" for d in hidden)
     geometry = viewport_overflow(joined) + component_overflow(joined) + text_clipped(joined)
+    geometry += unrequested_scroll(joined, declared_scrolls)
     found += hidden + [d for d in geometry if not (inside and d["component"].startswith(inside))]
     found += not_mounted(joined) + failed_views(joined) + repeater_overflow(joined)
     found += [d for d in low_contrast(joined) if not (inside and d["component"].startswith(inside))]
