@@ -255,6 +255,15 @@ References (R)
    * - ``R016``
      - named-query-not-found
      - A query binding whose named query (``config.queryPath``) the project, or a parent project, does not define.
+   * - ``R020``
+     - tag-not-found
+     - A tag path the gateway does not have (``validate --tags``, and on deploy as a warning). Direct paths are
+       checked as written; indirect, expression and ``tag()`` paths are expanded through the values the view's
+       callers pass for its params, and the message names the caller.
+   * - ``R021``
+     - tags-not-checked
+     - Tag paths that depend on values known only at runtime (a session property, a component's value), counted once
+       per view; ``pdk inspect`` reports a missing one as ``Q001``.
 
 Design lint (HMI)
 -----------------
@@ -302,6 +311,85 @@ Information-level advice. ``HMI002``, ``HMI003``, ``HMI004``, ``HMI006``, ``HMI0
    * - ``HMI011``
      - alarm-onselect-not-row-selection
      - ``onSelect`` on an alarm table, which is text selection, not row selection.
+
+Bindings and performance (BP)
+-----------------------------
+
+What Ignition integrators recommend for Perspective screens (forum regulars, Inductive Automation's ICC sessions
+on load time, the user manual). Only what breaks or costs is an error or a warning; the rest is information.
+``BP014`` and ``BP015`` need the project (``--project``): they follow embedded views and repeaters across views.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 30 60
+
+   * - Code
+     - Name
+     - Meaning
+   * - ``BP001``
+     - tag-function-in-binding
+     - ``tag()`` in a binding expression, a transform or an expression-mode tag path. It blocks on its first call
+       and subscribes again when any part of the path changes: bind a custom property with an indirect tag binding
+       and reference it.
+   * - ``BP002``
+     - script-transform-only-maps
+     - A script transform that only maps values to values (an ``if value == ...`` chain or a dict lookup): a map
+       transform does it without Python.
+   * - ``BP003``
+     - script-transform-only-computes
+     - A script transform that only computes from ``value``: an expression or format transform does it.
+   * - ``BP004``
+     - blocking-call-in-transform
+     - A script transform that reads or writes tags, queries a database or calls the network: it runs on every
+       change of the binding, in the session.
+   * - ``BP005``
+     - binding-cycle
+     - Bindings that read each other in a loop (error), or two bidirectional property bindings that mirror each
+       other (warning: keep one).
+   * - ``BP006``
+     - change-script-without-origin-guard
+     - A property change script that writes its own property back without checking ``origin``.
+   * - ``BP007``
+     - bound-input-param
+     - A view param that is input but has a binding inside the view: the caller's value and the binding fight.
+   * - ``BP008``
+     - query-polling
+     - A query binding polling faster than every 10 s (warning), or polling while bypassing the named query cache
+       (information).
+   * - ``BP009``
+     - fast-or-many-clocks
+     - ``now()`` faster than every second (warning), or several clocks in one view (information: share one).
+   * - ``BP010``
+     - runscript-in-binding
+     - ``runScript`` in a binding (information), polling faster than every 5 s (warning).
+   * - ``BP011``
+     - pass-through-expression
+     - An expression binding that only reads one property: a property binding does it.
+   * - ``BP012``
+     - same-tag-bound-repeatedly
+     - The same tag bound more than three times in one view: bind it once to a custom property.
+   * - ``BP013``
+     - udt-dropped-by-binding
+     - ``props.dropConfig.udts`` with action ``bind`` (the default): every member of the UDT gets bound; pass its
+       path with action ``path``.
+   * - ``BP014``
+     - deep-embedded-views
+     - Embedded views nested more than three levels deep.
+   * - ``BP015``
+     - heavy-repeated-view
+     - A view a flex repeater shows once per instance that runs queries (warning) or holds heavy components
+       (information).
+   * - ``BP016``
+     - literal-color
+     - Literal colors in inline styles instead of theme variables or style classes (one per view, the rest in the
+       detail).
+   * - ``BP017``
+     - repeated-inline-style
+     - The same inline style on three or more components: make it a style class (one per view).
+   * - ``BP018``
+     - layout-moving-binding
+     - A binding on a size or spacing property, or on a repeater's ``instances``: each change lays the page out
+       again or rebuilds the instances.
 
 Gateway (G)
 -----------

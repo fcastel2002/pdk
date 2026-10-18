@@ -203,7 +203,10 @@ def deploy(gateway: Gateway, location: Path, bundle: Bundle, *, resolved: bool =
         return Outcome(True, f"{project}:{path} unchanged since the pull ({_short(signature)}); nothing to deploy"
                              + preview())
 
-    diagnostics = validate_text(text, bundle, project=_local_project(project), view_path=path)
+    from pdk import tagcheck
+
+    diagnostics = validate_text(text, bundle, project=_local_project(project), view_path=path,
+                                tags=tagcheck.checker(gateway))
     if not counts(diagnostics)["error"]:
         diagnostics += compiled(gateway, text)
     if counts(diagnostics)["error"]:

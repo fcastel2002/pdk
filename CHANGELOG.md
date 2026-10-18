@@ -4,6 +4,20 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Added
+- Integrator best practices for bindings and performance (BP001-BP018): `tag()` in bindings, script transforms
+  that should be map or expression transforms or that block, binding loops and mirrored bidirectional bindings,
+  change scripts without an origin guard, bound input params, fast polling, clocks and runScript, pass-through
+  expressions, a tag bound many times, UDTs dropped by binding, deep embedded views, queries and heavy components in
+  repeated views, literal colors, repeated inline styles, bindings that move the layout. Errors and warnings only
+  for what breaks or costs; the rest is information.
+- `pdk refs tag|view` and the `pdk_refs` MCP tool: where a tag or a view is used in a project, with indirect tag
+  paths expanded through the params the view's callers pass. `pdk inventory` (Markdown, CSV, JSON): every view
+  with its routes, params, callers, tags and write points, named queries, and the views nothing opens.
+- `pdk validate --tags` (`tags=true` in `pdk_validate`, and on every deploy as warnings): tag paths checked on the
+  gateway, indirect ones expanded through the callers. New codes R020 (tag not found) and R021 (paths known only
+  at runtime).
+
 ## [0.3.0] - 2026-10-14
 
 ### Added

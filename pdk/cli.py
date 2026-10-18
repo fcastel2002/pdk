@@ -60,23 +60,27 @@ def default_screenshot(view: str, component: str | None = None) -> Path:
 def _cmd_validate(args: argparse.Namespace) -> int:
     bundle = load_bundle(args.perspective)
     project = resolve_project(args.project)
-    compiler = None
-    if args.compile:
-        from pdk import sync
+    compiler = tags = None
+    if args.compile or args.tags:
+        from pdk import sync, tagcheck
         from pdk.gateway.client import Gateway
 
-        compiler = sync.compiler(Gateway(url=args.url) if args.url else Gateway())
+        gateway = Gateway(url=args.url) if args.url else Gateway()
+        compiler = sync.compiler(gateway) if args.compile else None
+        tags = tagcheck.checker(gateway, strict=True) if args.tags else None
     try:
-        return _validate(args, bundle, project, compiler)
-    except Exception as exc:  # a GatewayError from --compile: the gateway could not compile
+        return _validate(args, bundle, project, compiler, tags)
+    except Exception as exc:  # a GatewayError from --compile or --tags: the gateway could not answer
         from pdk.gateway.client import GatewayError
         if not isinstance(exc, GatewayError):
             raise
-        print(f"pdk: --compile needs the gateway's module (0.2 or later): {exc}", file=sys.stderr)
+        flags = " and ".join(flag for flag, used in (("--compile", args.compile), ("--tags", args.tags)) if used)
+        print(f"pdk: {flags} {'needs' if ' and ' not in flags else 'need'} the gateway's module (0.2 or later): {exc}",
+              file=sys.stderr)
         return EXIT_FINDINGS
 
 
-def _validate(args: argparse.Namespace, bundle: Any, project: Any, compiler: Any) -> int:
+def _validate(args: argparse.Namespace, bundle: Any, project: Any, compiler: Any, tags: Any = None) -> int:
     worst = EXIT_OK
     for raw in args.paths:
         target = Path(raw)
@@ -84,14 +88,15 @@ def _validate(args: argparse.Namespace, bundle: Any, project: Any, compiler: Any
             print(f"pdk: {target} does not exist", file=sys.stderr)
             return EXIT_USAGE
         if args.json:
-            results = validate_paths(target, bundle, project=project, profile=args.profile, compiler=compiler)
+            results = validate_paths(target, bundle, project=project, profile=args.profile, compiler=compiler,
+                                     tags=tags)
             payload = [{"path": str(r.path), "project": r.project.name if r.project else None,
                         "viewPath": r.view_path, "diagnostics": r.diagnostics} for r in results]
             print(json.dumps(payload, indent=2, ensure_ascii=False))
             errors = sum(1 for r in results for d in r.diagnostics if d["severity"] == "error")
         else:
             text, errors = report_paths(target, bundle, project=project, profile=args.profile,
-                                        focus=args.focus, budget=args.budget, compiler=compiler)
+                                        focus=args.focus, budget=args.budget, compiler=compiler, tags=tags)
             print(text)
         if errors:
             worst = EXIT_FINDINGS
@@ -280,6 +285,28 @@ def _cmd_sync(args: argparse.Namespace) -> int:
     return EXIT_OK if outcome.ok else EXIT_FINDINGS
 
 
+def _cmd_refs(args: argparse.Namespace) -> int:
+    from pdk import inventory
+    from pdk.gateway.client import GatewayError
+
+    try:
+        graph = inventory.graph_for(args.project)
+    except (FileNotFoundError, ValueError, GatewayError) as exc:
+        print(f"pdk: {exc}", file=sys.stderr)
+        return EXIT_USAGE
+    if args.command == "inventory":
+        data = inventory.inventory(graph)
+        text = inventory.inventory_text(data, args.format)
+        if args.out:
+            Path(args.out).write_text(text, encoding="utf-8")
+            print(f"{inventory.inventory_summary(data)} -> {args.out}")
+        else:
+            print(text, end="")
+        return EXIT_OK
+    print(inventory.tag_text(graph, args.target) if args.kind == "tag" else inventory.view_text(graph, args.target))
+    return EXIT_OK
+
+
 def _cmd_pages(args: argparse.Namespace) -> int:
     from pdk import pages
     from pdk.gateway.client import Gateway, GatewayError
@@ -439,7 +466,11 @@ def build_parser() -> argparse.ArgumentParser:
     validate.add_argument("--json", action="store_true", help="machine-readable diagnostics")
     validate.add_argument("--compile", action="store_true",
                           help="also compile every script with the gateway's Jython (E009); needs the module")
-    validate.add_argument("--url", help="--compile: gateway URL (default: PDK_GATEWAY_URL or http://127.0.0.1:8088)")
+    validate.add_argument("--tags", action="store_true",
+                          help="also check every tag path on the gateway (R020/R021), indirect ones expanded through "
+                               "what the view's callers pass (with --project); needs the module")
+    validate.add_argument("--url", help="--compile/--tags: gateway URL (default: PDK_GATEWAY_URL or "
+                                        "http://127.0.0.1:8088)")
     validate.set_defaults(func=_cmd_validate)
 
     cat = sub.add_parser("catalog", help="components, props, bindings and events of the installed version")
@@ -515,6 +546,20 @@ def build_parser() -> argparse.ArgumentParser:
     tagger.add_argument("--provider", help="history: tag history provider (default: the gateway's only one)")
     tagger.add_argument("--url", help="gateway URL (default: PDK_GATEWAY_URL or http://127.0.0.1:8088)")
     tagger.set_defaults(func=_cmd_tags)
+
+    refs = sub.add_parser("refs", help="where a tag or a view is used in a project: views, components and bindings, "
+                                       "with indirect tag paths expanded through what their callers pass")
+    refs.add_argument("kind", choices=["tag", "view"])
+    refs.add_argument("target", help="tag: a path, part of one or a glob (provider optional); view: a view path")
+    refs.add_argument("--project", help="project directory or local gateway project (default: the sandbox)")
+    refs.set_defaults(func=_cmd_refs)
+    inventory = sub.add_parser("inventory", help="a project's screens: routes, params, callers, the views each uses, "
+                                                 "its tags (expanded) and write points, named queries")
+    inventory.add_argument("--project", help="project directory or local gateway project (default: the sandbox)")
+    inventory.add_argument("--format", choices=["md", "csv", "json"], default="md",
+                           help="md: one row per view; csv: one row per tag use and path; json: everything")
+    inventory.add_argument("--out", help="file to write (default: print)")
+    inventory.set_defaults(func=_cmd_refs)
 
     pager = sub.add_parser("pages", help="routes of the sandbox's page configuration (URL -> view): list, add, remove")
     pager_actions = pager.add_subparsers(dest="action", required=True)

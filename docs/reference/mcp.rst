@@ -18,7 +18,14 @@ its ``act`` steps run the view's own event scripts on the gateway, which can wri
      - read-only
      - ``path`` (a ``view.json`` or a folder) or ``view`` (JSON text); ``project`` (folder or local gateway project,
        enables reference checks); ``focus`` (code, component path or pointer prefix); ``profile`` (``"hmi"`` for
-       design-token lint). See :doc:`../guide/validation`.
+       design-token lint); ``compile`` (scripts through the gateway's Jython); ``tags`` (tag paths checked on the
+       gateway, ``R020``). See :doc:`../guide/validation`.
+   * - ``pdk_refs``
+     - read-only
+     - ``action`` (``tag``, ``view`` or ``inventory``), ``target`` (a tag path, part of one or a glob; a view path),
+       ``project`` (folder or local gateway project; default the sandbox). Where a tag or a view is used, with
+       indirect paths expanded through the callers; the inventory is written to ``work/_inventory/``. See
+       :doc:`../guide/references`.
    * - ``pdk_catalog``
      - read-only
      - ``type`` (component id or name), ``prop`` (nested path such as ``columns[].render``), ``search`` (text),

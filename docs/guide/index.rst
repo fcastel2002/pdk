@@ -9,6 +9,7 @@ together in one cycle.
 
    catalog
    validation
+   references
    gateway
    inspection
    tags

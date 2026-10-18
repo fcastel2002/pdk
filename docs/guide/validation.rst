@@ -48,7 +48,7 @@ code, a component path or a pointer prefix expands the matching diagnostics with
 What is checked
 ---------------
 
-The validator runs six groups of checks, each with its own code family:
+The validator runs seven groups of checks, each with its own code family:
 
 .. list-table::
    :header-rows: 1
@@ -82,6 +82,52 @@ The validator runs six groups of checks, each with its own code family:
      - Data components without a size in a flex container (``HMI010``), alarm tables relying on ``onSelect``
        (``HMI011``), empty or redundant layout groups. With ``--profile hmi``, rules for the ``hmi-*`` design
        tokens.
+   * - ``BP``
+     - Bindings and performance
+     - What Ignition integrators recommend: ``tag()`` in bindings, script transforms that should be map or
+       expression transforms or that block, binding loops, polling and clocks, a tag bound many times, deep or
+       heavy repeated embedded views, literal colors. See below.
+
+Bindings and performance (BP)
+-----------------------------
+
+The ``BP`` rules encode what experienced Ignition integrators recommend for Perspective screens, from the forum's
+regulars, Inductive Automation's ICC sessions on load time and the user manual. Only what breaks or costs is an
+error or a warning; the rest is information, so a real project is not drowned in advice:
+
+- **Errors and warnings:** binding loops (``BP005``); ``tag()`` in a binding (``BP001``: bind a custom property
+  with an indirect tag binding instead); script transforms that read tags, query or call the network
+  (``BP004``); change scripts that write their own property back without checking ``origin`` (``BP006``); input
+  params bound inside the view (``BP007``); query bindings polling faster than every 10 s (``BP008``);
+  ``now()`` faster than a second (``BP009``); ``runScript`` polling faster than 5 s (``BP010``); UDTs dropped by
+  binding every member (``BP013``); embedded views more than three levels deep (``BP014``); queries in a view a
+  repeater shows once per instance (``BP015``).
+- **Information:** script transforms a map, expression or format transform would do (``BP002``, ``BP003``),
+  expressions that only read one property (``BP011``), the same tag bound more than three times (``BP012``:
+  bind it once to a custom property; subscriptions are shared, so this is about upkeep), literal colors and
+  repeated inline styles (``BP016``, ``BP017``, one each per view), and bindings that move the layout (``BP018``).
+
+``BP014`` and ``BP015`` follow embedded views and repeaters across the project, so they need ``--project`` (or a
+view inside a project tree).
+
+Tag paths on the gateway
+------------------------
+
+Offline, a tag path is only a string: a missing tag shows up when the view runs, as ``Q001 Bad_NotFound``. ``pdk
+validate --tags`` (``tags=true`` in ``pdk_validate``) checks every tag path of the view on the gateway first, and
+``pdk deploy`` does it on every deploy, as warnings that do not block:
+
+- direct paths are checked as written;
+- indirect, expression-mode and ``tag()`` paths are expanded through the values the view's callers pass for its
+  params (embedded views, repeater instances, popups, navigation; see :doc:`references`), so ``{1}/Running`` with
+  ``{1} = view.params.tagPath`` is checked for every pump the faceplate is embedded for, and ``R020`` names the
+  caller whose value gives the missing tag;
+- paths that depend on values known only at runtime (a session property, a component's value), or that only the
+  param's default gives (often a placeholder), are counted once per view in ``R021``.
+
+.. code-block:: bash
+
+   uv run pdk validate work/<sandbox>/PDK/Pump --tags --project <sandbox>
 
 Project-aware checks
 --------------------
@@ -112,6 +158,6 @@ What validation cannot see
 --------------------------
 
 Validation proves that a view is well formed for your Perspective version. It cannot tell whether the text fits,
-whether a tag exists, whether a script fails when it runs or whether the screen looks as requested. That is the job
-of :doc:`inspection`. When PDK cannot validate something offline (for example an expression construct its parser
+whether a script fails when it runs or whether the screen looks as requested (``--tags`` covers whether its tags
+exist). That is the job of :doc:`inspection`. When PDK cannot validate something offline (for example an expression construct its parser
 does not know), it reports a warning rather than blocking.
