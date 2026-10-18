@@ -88,25 +88,30 @@ def resolve(gateway: Gateway, location: str) -> Target:
 
 
 def session_closer(gateway: Gateway) -> Any:
-    """Eyes' `release`: close the sandbox sessions of the browser's pages on the gateway (best effort, so a module
-    without the route only leaves them to time out)."""
+    """Eyes' `release`: close the sessions of the browser's pages on the gateway, in the sandbox or the target (best
+    effort, so a module without the route only leaves them to time out)."""
     def release(page_ids: list[str]) -> None:
         try:
-            project = gateway.health().get("sandbox")
+            projects = [project for project in sync._roles(gateway) if project]
         except GatewayError:
             return
         for page_id in page_ids:
-            try:
-                gateway.close_session(project, page_id)
-            except GatewayError:
-                continue
+            for project in projects:
+                try:
+                    gateway.close_session(project, page_id)
+                    break
+                except GatewayError:
+                    continue
     return release
 
 
 def _preview(gateway: Gateway, target: Target) -> str:
-    sandbox = gateway.health().get("sandbox")
-    if target.project != sandbox:
-        raise ValueError(f"only views of the sandbox ({sandbox}) have a preview page; promote copies stay unopened")
+    """The view's preview page, /pdk/<view path>, added to page-config if missing: in the sandbox, or in the target
+    for a promoted view (the module takes only /pdk/ preview pages there)."""
+    sandbox, target_project = sync._roles(gateway)
+    if target.project not in (sandbox, target_project):
+        raise ValueError(f"only views of the sandbox ({sandbox}) or the target ({target_project or 'none set'}) "
+                         "have a preview page")
     warning = sync.ensure_preview(gateway, target.project, target.path)
     if warning:
         raise ValueError(f"no preview page: {warning}")

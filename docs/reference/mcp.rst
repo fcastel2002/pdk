@@ -4,7 +4,7 @@ MCP tools
 ``pdk-mcp`` is an MCP server over standard input/output (see :doc:`../guide/agents` to register it). Each tool
 mirrors a command of the :doc:`command line <cli>` and returns the same text report. Tools are annotated for the
 client: *read-only*, *writes* (signed, non-destructive) or *destructive*. ``pdk_open`` and ``pdk_screenshot``
-add the preview page to the sandbox's page-config (additive and idempotent); ``pdk_inspect`` is destructive because
+add the preview page to the sandbox's page-config, or the target's for a promoted view (additive and idempotent); ``pdk_inspect`` is destructive because
 its ``act`` steps run the view's own event scripts on the gateway, which can write tags or databases.
 
 .. list-table::

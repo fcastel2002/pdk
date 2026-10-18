@@ -509,3 +509,36 @@ def test_mcp_screenshot_names_an_unreadable_compare_file(monkeypatch: pytest.Mon
     calls = _mcp_compare(monkeypatch, (PNG, None, "unused"))
     result = mcp_server.pdk_screenshot("PDK/Pump", compare=str(tmp_path / "missing.png"))
     assert result.startswith("cannot read the compare PNG") and calls == []
+
+
+def test_session_closer_tries_the_target_for_a_page_the_sandbox_does_not_have() -> None:
+    from pdk.eyes.inspect import session_closer
+
+    gateway = _SessionGateway(fail_on="a")
+    gateway.health = lambda: {"sandbox": "sb", "target": "tg"}  # type: ignore[method-assign]
+    session_closer(gateway)(["a", "b"])
+    assert gateway.closed == [("sb", "a"), ("tg", "a"), ("sb", "b")]
+
+
+@pytest.mark.parametrize(("project", "opens"), [("sb", True), ("tg", True), ("Other", False)])
+def test_preview_pages_exist_in_the_sandbox_and_the_target_only(monkeypatch: pytest.MonkeyPatch, project: str,
+                                                                 opens: bool) -> None:
+    from pdk import sync
+    from pdk.eyes import inspect
+
+    class Health:
+        url = "http://gw"
+
+        def health(self) -> dict[str, str]:
+            return {"sandbox": "sb", "target": "tg"}
+
+    added: list[tuple[str, str]] = []
+    monkeypatch.setattr(sync, "ensure_preview", lambda gateway, name, path: added.append((name, path)))
+    target = inspect.Target(project, "Page/Home", {}, None)
+    if opens:
+        assert inspect._preview(Health(), target) == f"http://gw/data/perspective/client/{project}/pdk/Page/Home"
+        assert added == [(project, "Page/Home")]
+    else:
+        with pytest.raises(ValueError, match="only views of the sandbox"):
+            inspect._preview(Health(), target)
+        assert added == []

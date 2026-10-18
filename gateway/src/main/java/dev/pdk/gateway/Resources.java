@@ -57,6 +57,7 @@ final class Resources {
     private static final long SCAN_TIMEOUT_MS = 60_000;
     private static final Pattern FILE_NAME = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]*");
     private static final Pattern HEX = Pattern.compile("(?:[0-9a-fA-F]{2})+");
+    static final String PAGE_FILE = "config.json";
     private static final Pattern SCOPE = Pattern.compile("[GCD]{1,3}|A|N");
     private static final Set<String> TEXT_SUFFIXES =
             Set.of(".json", ".py", ".txt", ".css", ".js", ".md", ".xml", ".svg", ".html");
@@ -96,10 +97,18 @@ final class Resources {
     }
 
     Reply write(String project, Target target, String body) {
-        sandbox.requireWritable(project, target);
+        boolean targetPages = sandbox.isTargetPages(project, target);
+        if (targetPages) {
+            sandbox.requireEnabled();
+        } else {
+            sandbox.requireWritable(project, target);
+        }
         requireMutable(project);
         WriteRequest request = WriteRequest.parse(body);
         Optional<Resource> current = manager.getResource(project, target.resourcePath());
+        if (targetPages) {
+            requirePreviewsOnly(project, current, request);
+        }
         ChangeOperation change;
         String op;
         if (request.signature() == null) {
@@ -130,6 +139,18 @@ final class Resources {
         result.put("op", op);
         result.put("notified", notified);
         return new Reply("created".equals(op) ? 201 : 200, result);
+    }
+
+    /** The target's page configuration changes only in its /pdk/ preview pages ({@link Sandbox#onlyPreviews}). */
+    private static void requirePreviewsOnly(String project, Optional<Resource> current, WriteRequest request) {
+        String before = current.flatMap(resource -> resource.getData(PAGE_FILE))
+                .flatMap(bytes -> decode(bytes.getBytes())).orElse("");
+        if (!request.files().keySet().equals(Set.of(PAGE_FILE))
+                || !Sandbox.onlyPreviews(before, request.files().get(PAGE_FILE))) {
+            throw new ApiError(403, "OUTSIDE_TARGET", "The target '" + project + "' takes only preview pages under "
+                    + Sandbox.PREVIEW_PREFIX + " in its page configuration, each one a view; its own pages, docks and "
+                    + "settings stay as they are.");
+        }
     }
 
     Reply delete(String project, Target target, String signature) {

@@ -116,7 +116,9 @@ development gateway, so the result can be reviewed in its real context. It is co
 ``-Dpdk.target=<project>`` and must differ from the sandbox. It is deliberately restricted:
 
 - It only receives views **outside** ``PDK/`` and the stylesheet, and only through
-  ``pdk promote … --to-project target``. There is no direct deploy, no preview page and no page configuration.
+  ``pdk promote … --to-project target``. There is no direct deploy and no page configuration, except the eyes'
+  preview pages: ``pdk inspect work/<target>/<view>`` (the folder promote leaves) adds ``/pdk/<view path>`` to
+  the target's page configuration to open the promoted view there. The module refuses any other change to it.
 - A promote is refused if the view references views under ``PDK/`` (promote embedded views and popups first), and
   warns about references the target does not have.
 - The stylesheet is edited in the sandbox and copied with
