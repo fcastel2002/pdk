@@ -80,8 +80,11 @@ server = MCPServer("pdk", instructions=_instructions(), version=__version__)
         "local gateway project name, enables view/param/style-class checks; auto-detected inside a project tree); "
         "focus (code like P001, component path like root/Panel, or pointer prefix) to expand details; "
         "profile='hmi' for design-token lint; compile=true also compiles every script with the gateway's Jython "
-        "(E009 with the line; pdk_deploy always does). B011/E008 (unknown expression function, unknown system.* "
-        f"name) need the gateway's function list (`{RUN}pdk schemas functions`)."
+        "(E009 with the line; pdk_deploy always does); tags=true checks every tag path on the gateway (R020; "
+        "indirect ones expanded through what the view's callers pass, with project; pdk_deploy always does). "
+        "BP codes are integrator best practices (tag() in bindings, script transforms that should be map or "
+        "expression transforms, binding loops, polling, repeated views). B011/E008 (unknown expression function, "
+        f"unknown system.* name) need the gateway's function list (`{RUN}pdk schemas functions`)."
     ),
     annotations=READ_ONLY,
     structured_output=False,
@@ -93,21 +96,25 @@ def pdk_validate(
     focus: str | None = None,
     profile: str | None = None,
     compile: bool = False,
+    tags: bool = False,
 ) -> str:
+    from pdk import tagcheck
+
     try:
         bundle = load_bundle()
         resolved_project = resolve_project(project)
         compiler = sync.compiler(Gateway()) if compile else None
+        checker = tagcheck.checker(Gateway(), strict=True) if tags else None
         if view is not None:
             return report_text(view, bundle, project=resolved_project, profile=profile, focus=focus,
-                               compiler=compiler)[0]
+                               compiler=compiler, tags=checker)[0]
         if not path:
             return "Pass path (a view.json or a directory) or view (the JSON text)."
         target = Path(path)
         if not target.exists():
             return f"{target} does not exist (relative paths resolve against {Path.cwd()})."
         return report_paths(target, bundle, project=resolved_project, profile=profile, focus=focus,
-                            compiler=compiler)[0]
+                            compiler=compiler, tags=checker)[0]
     except (BundleError, FileNotFoundError, GatewayError) as exc:
         return f"pdk: {exc}"
 
@@ -284,6 +291,39 @@ def pdk_tags(action: str, path: str | None = None, value: str | None = None, qua
     except (ValueError, OSError) as exc:
         return f"pdk: {exc}"
     return f"pdk: unknown action {action!r} (list, read, write, apply, delete, alarms, history)"
+
+
+@server.tool(
+    name="pdk_refs",
+    description=(
+        "Where things are used in a project, from its files (Ignition has no cross-reference). action='tag' with "
+        "target a tag path, part of one or a glob (provider optional): every view, component and binding that uses "
+        "it, direct, indirect (expanded through the params their callers pass), in expressions (tag()) or in scripts, "
+        "and which of them write. action='view' with target a view path: who embeds, repeats, opens or routes to it "
+        "and what params they pass, and what it uses. action='inventory': the project's screens with routes, params, "
+        "callers, tags and write points (summary; the full table is written to work/_inventory/<project>.md). "
+        "Use it before renaming a tag, UDT member or view, and to find views nothing opens. project: a project "
+        "directory or a project of the local gateway (default: the sandbox)."
+    ),
+    annotations=READ_ONLY,
+    structured_output=False,
+)
+def pdk_refs(action: str, target: str | None = None, project: str | None = None) -> str:
+    from pdk import inventory
+
+    try:
+        graph = inventory.graph_for(project)
+    except (FileNotFoundError, ValueError, GatewayError) as exc:
+        return f"pdk: {exc}"
+    if action == "inventory":
+        data = inventory.inventory(graph)
+        out = Path.cwd() / "work" / "_inventory" / f"{graph.project.name}.md"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(inventory.inventory_text(data), encoding="utf-8")
+        return f"{inventory.inventory_summary(data)}\nfull table: {out}"
+    if action in ("tag", "view") and target:
+        return inventory.tag_text(graph, target) if action == "tag" else inventory.view_text(graph, target)
+    return "pdk: usage: action 'tag' or 'view' with target, or 'inventory'"
 
 
 @server.tool(

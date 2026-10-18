@@ -11,11 +11,11 @@ from typing import Any
 from pdk.bundle import Bundle
 from pdk.diagnostics import Diagnostic, make, ordered
 from pdk.project import Project, locate
-from pdk.validate import code, config, lint, refs, schema, structure
+from pdk.validate import code, config, lint, practices, refs, schema, structure
 from pdk.validate.context import Context
 from pdk.validate.tree import build_tree, walk
 
-CHECKS = (structure.check, schema.check, config.check, code.check, refs.check, lint.check)
+CHECKS = (structure.check, schema.check, config.check, code.check, refs.check, lint.check, practices.check)
 
 
 def validate_view(
@@ -54,26 +54,30 @@ def parse_view(text: str) -> tuple[Any, Diagnostic | None]:
 
 
 Compiler = Callable[[str], list[Diagnostic]]  # view.json text -> E009 of the scripts that do not compile
+# (view, view path, project) -> R020/R021 of its tag paths on the gateway (pdk.tagcheck.checker)
+TagChecker = Callable[[dict[str, Any], str | None, Project | None], list[Diagnostic]]
 
 
 def validate_text(
     text: str, bundle: Bundle, *, project: Project | None = None, view_path: str | None = None,
-    profile: str | None = None, compiler: Compiler | None = None,
+    profile: str | None = None, compiler: Compiler | None = None, tags: TagChecker | None = None,
 ) -> list[Diagnostic]:
     """With `compiler` (pdk.sync.compiler: the gateway's Jython), a view without errors also gets its scripts
-    compiled."""
+    compiled; with `tags` (pdk.tagcheck.checker), its tag paths are checked on the gateway."""
     view, error = parse_view(text)
     if error:
         return [error]
     diagnostics = validate_view(view, bundle, project=project, view_path=view_path, profile=profile)
     if compiler is not None and not any(d["severity"] == "error" for d in diagnostics):
         diagnostics = ordered(diagnostics + compiler(text))
+    if tags is not None and isinstance(view, dict):
+        diagnostics = ordered(diagnostics + tags(view, view_path, project))
     return diagnostics
 
 
 def validate_file(
     path: Path, bundle: Bundle, *, project: Project | None = None, profile: str | None = None,
-    compiler: Compiler | None = None,
+    compiler: Compiler | None = None, tags: TagChecker | None = None,
 ) -> FileResult:
     view_path = None
     located = locate(path)
@@ -86,7 +90,7 @@ def validate_file(
         error = make("S000", "error", "", "", f"cannot read {path}: {exc.strerror}", "check the path")
         return FileResult(path, [error], project, view_path)
     diagnostics = validate_text(text, bundle, project=project, view_path=view_path, profile=profile,
-                                compiler=compiler)
+                                compiler=compiler, tags=tags)
     return FileResult(path, diagnostics, project, view_path)
 
 
@@ -98,6 +102,7 @@ def view_files(target: Path) -> list[Path]:
 
 def validate_paths(
     target: Path, bundle: Bundle, *, project: Project | None = None, profile: str | None = None,
-    compiler: Compiler | None = None,
+    compiler: Compiler | None = None, tags: TagChecker | None = None,
 ) -> list[FileResult]:
-    return [validate_file(p, bundle, project=project, profile=profile, compiler=compiler) for p in view_files(target)]
+    return [validate_file(p, bundle, project=project, profile=profile, compiler=compiler, tags=tags)
+            for p in view_files(target)]
