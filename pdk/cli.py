@@ -185,7 +185,8 @@ def _print_health(health: dict) -> None:
         print(f"sandbox {sandbox} ({state}), writes {'enabled' if health.get('writeEnabled') else 'disabled'}")
     if health.get("target"):
         print(f"target {health['target']} ({'exists' if health.get('targetExists') else 'MISSING'}): finished "
-              "views, style classes, scripts and the stylesheet only, through promote --to-project")
+              "views, style classes, scripts and the stylesheet only, through promote --to-project (plus the "
+              "eyes' /pdk/ preview pages)")
     if health.get("targetIgnored"):
         print(f"warning: -Dpdk.target={health['targetIgnored']} is ignored: it needs a sandbox and must differ "
               "from it")

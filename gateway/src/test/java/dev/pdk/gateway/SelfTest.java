@@ -60,6 +60,20 @@ public final class SelfTest {
         expect("OUTSIDE_TARGET", () -> both.requireWritable("Planta", Target.parse("com.inductiveautomation.perspective/views/PDK")));
         expect("OUTSIDE_TARGET", () -> both.requireWritable("Planta", Target.parse("com.inductiveautomation.perspective/views")));
         expect("OUTSIDE_TARGET", () -> both.requireWritable("Planta", pages));
+        check(both.isTargetPages("Planta", pages) && !both.isTargetPages("pdk_sandbox", pages)
+                && !both.isTargetPages("Planta", finished), "the target's page configuration is checked apart");
+        String config = "{\"pages\":{\"/\":{\"viewPath\":\"Home\"}},\"sharedDocks\":{}}";
+        check(Sandbox.onlyPreviews(config, "{\"pages\":{\"/\":{\"viewPath\":\"Home\"},"
+                + "\"/pdk/Page/Home\":{\"viewPath\":\"Page/Home\"}},\"sharedDocks\":{}}"), "a preview page is added");
+        check(Sandbox.onlyPreviews("{\"pages\":{\"/\":{\"viewPath\":\"Home\"},\"/pdk/A\":{\"viewPath\":\"A\"}}}",
+                "{\"pages\":{\"/\":{\"viewPath\":\"Home\"}}}"), "a preview page is removed");
+        check(!Sandbox.onlyPreviews(config, "{\"pages\":{\"/\":{\"viewPath\":\"Other\"}},\"sharedDocks\":{}}"),
+                "the project's own pages stay");
+        check(!Sandbox.onlyPreviews(config, "{\"pages\":{\"/\":{\"viewPath\":\"Home\"}},\"sharedDocks\":{\"top\":1}}"),
+                "docks and settings stay");
+        check(!Sandbox.onlyPreviews(config, "{\"pages\":{\"/\":{\"viewPath\":\"Home\"},"
+                + "\"/pdk/x\":{\"viewPath\":\"X\",\"docks\":{}}},\"sharedDocks\":{}}"), "a preview page is only a view");
+        check(!Sandbox.onlyPreviews(config, "not json"), "an unreadable configuration is refused");
         both.requireWritable("Planta", Target.parse("com.inductiveautomation.perspective/stylesheet"));
         expect("OUTSIDE_TARGET", () -> both.requireWritable("Planta", Target.parse("com.inductiveautomation.perspective/stylesheet/x")));
         both.requireWritable("Planta", Target.parse("com.inductiveautomation.perspective/views/PDKX/Resumen"));

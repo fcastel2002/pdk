@@ -321,6 +321,7 @@ def promote(gateway: Gateway, location: Path, bundle: Bundle, *, to: str | None 
         missing = _missing_views(gateway, view_text, sandbox, destination, to)
         note = (f"\nwarning: it references views {destination} does not have ({', '.join(missing[:5])}); "
                 "promote them too") if missing else ""
+        note += f"\nlook at it in {destination}: {paths.RUN}pdk inspect {_shown(target)}"
     return Outcome(outcome.ok, f"promote {project}:{path} -> {shown_to}: {outcome.text}{note}")
 
 

@@ -1,11 +1,18 @@
 package dev.pdk.gateway;
 
+import com.inductiveautomation.ignition.common.gson.JsonElement;
+import com.inductiveautomation.ignition.common.gson.JsonObject;
+import com.inductiveautomation.ignition.common.gson.JsonParser;
+
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
  * The projects PDK may write to. -Dpdk.sandbox=<project> takes any resource; without it the module is read-only.
  * -Dpdk.target=<project> (optional, never the sandbox) takes only finished work: Perspective views, style classes
- * and project scripts outside PDK/, and the project stylesheet.
+ * and project scripts outside PDK/, the project stylesheet, and preview pages under /pdk/ in its page configuration
+ * (so the eyes can open a promoted view there).
  */
 final class Sandbox {
     static final String PROPERTY = "pdk.sandbox";
@@ -17,6 +24,9 @@ final class Sandbox {
     /** What the target takes outside PDK/, through promote. */
     static final java.util.Set<String> FINISHED = java.util.Set.of(VIEWS, STYLE_CLASSES, SCRIPTS);
     static final String WORK_FOLDER = "PDK";
+    static final String PAGE_CONFIG = "com.inductiveautomation.perspective/page-config";
+    /** The eyes' preview pages: /pdk/<view path>. */
+    static final String PREVIEW_PREFIX = "/pdk/";
 
     private final String name;
     private final String target;
@@ -61,6 +71,61 @@ final class Sandbox {
 
     boolean writeEnabled() {
         return name != null;
+    }
+
+    /** The target's page configuration: it takes preview pages only ({@link #onlyPreviews}), checked on write. */
+    boolean isTargetPages(String project, Target resource) {
+        return target != null && target.equals(project) && PAGE_CONFIG.equals(resource.typeKey())
+                && resource.path().isEmpty();
+    }
+
+    /**
+     * True when a new page configuration differs from the current one only in pages under /pdk/, each one a view:
+     * the eyes' preview pages of promoted views. The project's own pages, docks and settings stay as they are.
+     */
+    static boolean onlyPreviews(String before, String after) {
+        JsonObject old;
+        JsonObject updated;
+        try {
+            old = before == null || before.isBlank() ? new JsonObject() : JsonParser.parseString(before)
+                    .getAsJsonObject();
+            updated = JsonParser.parseString(after == null ? "" : after).getAsJsonObject();
+        } catch (RuntimeException error) {
+            return false;
+        }
+        JsonObject newPages = pages(updated);
+        for (Map.Entry<String, JsonElement> page : newPages.entrySet()) {
+            if (page.getKey().startsWith(PREVIEW_PREFIX) && !isViewPage(page.getValue())) {
+                return false;
+            }
+        }
+        return withoutPreviews(old).equals(withoutPreviews(updated));
+    }
+
+    private static boolean isViewPage(JsonElement page) {
+        if (!page.isJsonObject()) {
+            return false;
+        }
+        JsonObject value = page.getAsJsonObject();
+        JsonElement view = value.get("viewPath");
+        return value.size() <= 2 && view != null && view.isJsonPrimitive() && !view.getAsString().isBlank()
+                && (value.size() == 1 || value.has("title"));
+    }
+
+    private static JsonObject pages(JsonObject config) {
+        JsonElement pages = config.get("pages");
+        return pages != null && pages.isJsonObject() ? pages.getAsJsonObject() : new JsonObject();
+    }
+
+    private static JsonObject withoutPreviews(JsonObject config) {
+        JsonObject copy = config.deepCopy();
+        JsonObject pages = pages(copy);
+        for (String key : List.copyOf(pages.keySet())) {
+            if (key.startsWith(PREVIEW_PREFIX)) {
+                pages.remove(key);
+            }
+        }
+        return copy;
     }
 
     void requireEnabled() {

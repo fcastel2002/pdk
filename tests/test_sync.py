@@ -366,6 +366,7 @@ def test_promote_to_the_target_writes_only_the_finished_view(tgw: FakeGateway, t
     first = sync.promote(tgw, source, bundle, to_project="target", to="Planta/Menu", root=tmp_path)
     assert first.ok and f"-> {TARGET}:Planta/Menu: created {TARGET}:Planta/Menu" in first.text, first.text
     assert "preview" not in first.text and tgw.page_writes == 0
+    assert f"look at it in {TARGET}: " in first.text and "pdk inspect" in first.text
     assert tgw.projects[TARGET]["Planta/Menu"][0] == tgw.views["PDK/Menu"][0] and "Planta/Menu" not in tgw.views
     target_dir = tmp_path / TARGET / "Planta" / "Menu"
     assert sync.read_sidecar(target_dir)["signature"] == tgw.signature("Planta/Menu", TARGET)

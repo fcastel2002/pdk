@@ -17,6 +17,8 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
 - `pdk validate --tags` (`tags=true` in `pdk_validate`, and on every deploy as warnings): tag paths checked on the
   gateway, indirect ones expanded through the callers. New codes R020 (tag not found) and R021 (paths known only
   at runtime).
+- The eyes open views promoted to the target: `pdk inspect work/<target>/<view>` adds a `/pdk/` preview page to the
+  target's page configuration, the only change the module accepts there; `promote --to-project` says how to look.
 
 ## [0.3.0] - 2026-10-14
 

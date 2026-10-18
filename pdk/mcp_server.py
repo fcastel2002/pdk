@@ -372,7 +372,8 @@ def _shared_eyes() -> Any:
 
 
 VIEW_ARG = ("path: the local view folder or view.json under work/<sandbox>/, or a view path in the sandbox like "
-            "PDK/Menu; viewport: WIDTHxHEIGHT or desktop|tablet|phone|wide (default 1366x768; pdk_inspect takes "
+            "PDK/Menu, or the folder of a view promoted to the target (work/<target>/...: opened on its preview page "
+            "there); viewport: WIDTHxHEIGHT or desktop|tablet|phone|wide (default 1366x768; pdk_inspect takes "
             "several, comma-separated, e.g. desktop,phone, and reports each)")
 
 
