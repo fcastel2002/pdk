@@ -4,6 +4,8 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-19
+
 ### Security
 - `pdk promote` without `--to-project` could write into the target project from a folder that belonged to it (one
   left by an earlier promote): every promote now starts from the sandbox, like style classes and scripts already
