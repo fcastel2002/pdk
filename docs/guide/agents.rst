@@ -86,6 +86,28 @@ validation hook and the subagents are Claude Code's; elsewhere, have the agent c
 ``view.json`` (``pdk_deploy`` validates anyway). The skill's content (``.claude/skills/perspective-views/SKILL.md``
 and ``reference.md``) is plain text and can be given to other agents as instructions, for example in ``AGENTS.md``.
 
+.. _agent-sessions:
+
+Agent sessions
+--------------
+
+A host that starts an agent runtime for the user, such as the PDK Agent panel, starts PDK's server with a session
+folder: ``pdk-mcp --agent-session <folder>``. PDK's rules then apply to every tool call, in the server itself, so the
+runtime's own settings (allow rules, hooks) cannot loosen them:
+
+- **Normal** reads, looks at sandbox views with the eyes (no ``act``) and changes props of the view open in the
+  Designer. Anything that writes, adds code that runs on the gateway to the open view, or looks at a view of the
+  target is refused (``T002``).
+- **Ultra** first presents a plan with ``pdk_plan`` (``T003`` until then). Once the user approves it, everything
+  runs, and the target receives only what the plan names (``T004``).
+- Writes of files go through ``pdk_work``, confined to the work folder and to PDK's resource files (``T006``).
+
+The host writes the session's state (the mode, the work folder, the approval) to ``state.json`` in that folder,
+signed with a key it passes in the server's environment (``PDK_AGENT_KEY``). An approval is a lease that the host
+renews while the request runs. A state that is missing, unreadable or signed with another key allows reading and
+looking only (``T005``). Without ``--agent-session`` none of this applies: Claude Code and other clients use the
+server as before.
+
 Without an agent
 ----------------
 

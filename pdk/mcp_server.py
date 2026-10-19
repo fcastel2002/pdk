@@ -3,14 +3,17 @@ eyes on the deployed view (one headless Chromium kept for the life of the server
 
 from __future__ import annotations
 
+import argparse
 import atexit
 import os
+import sys
 import threading
+import time
 from pathlib import Path
 from typing import Any
 
 from mcp.server.mcpserver import Image, MCPServer
-from mcp.types import ToolAnnotations
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 
 from pdk import __version__, sync
 from pdk.bundle import BundleError, load_bundle
@@ -43,6 +46,12 @@ INSTRUCTIONS = (
     "scripts/PDK/X); pdk_pages maps a URL to a view for nav; pdk_refs says where a tag or view is used before "
     "renaming it."
 )
+AGENT_SESSION_FLAG = "--agent-session"
+AGENT_INSTRUCTIONS = (
+    "This is a PDK Agent session: PDK's rules apply to every tool. Write files with pdk_work (the runtime's own file "
+    "tools are off); in Ultra, present the plan with pdk_plan and end your turn, then build what it names once the "
+    "user approves. A refusal (T001-T006) says what the mode allows."
+)
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 # ensure_preview adds page-config on the gateway: additive and idempotent, not read-only
 PREVIEW_WRITE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -63,6 +72,8 @@ def _instructions() -> str:
     from pdk.update import notice
 
     text = INSTRUCTIONS
+    if AGENT_SESSION_FLAG in sys.argv:  # a host started it in a folder it does not own: leave the folder alone
+        return text + " " + AGENT_INSTRUCTIONS
     if refresh_if_stale(Path.cwd()):
         text += (f" (PDK {__version__} refreshed this folder's perspective-views skill, pdk-* subagents and the "
                  "PDK section of CLAUDE.md.)")
@@ -71,7 +82,23 @@ def _instructions() -> str:
     return text
 
 
-server = MCPServer("pdk", instructions=_instructions(), version=__version__)
+class _Server(MCPServer):
+    """The MCP server, with the rules of an agent session in front of every tool when the host asked for them."""
+
+    gate: Any = None  # pdk.agent.gate.Gate, set by main() for `--agent-session`
+
+    async def call_tool(self, name: str, arguments: dict[str, Any], context: Any = None) -> Any:
+        if self.gate is not None:
+            refusal = self.gate.check(name, arguments)
+            if refusal is not None:
+                return CallToolResult(content=[TextContent(type="text", text=refusal)], is_error=True)
+            state = self.gate.state()
+            if state is not None and state.work:
+                os.environ[sync.WORK_ENV] = state.work  # the host's work folder, whatever the environment said
+        return await super().call_tool(name, arguments, context)
+
+
+server = _Server("pdk", instructions=_instructions(), version=__version__)
 
 
 @server.tool(
@@ -144,6 +171,94 @@ def pdk_catalog(
         return catalog(load_bundle(), type=type, prop=prop, search=search, topic=topic)
     except BundleError as exc:
         return f"pdk: {exc}"
+
+
+@server.tool(
+    name="pdk_guide",
+    description=(
+        "PDK's guide for building Perspective views (the perspective-views skill), for clients that do not load "
+        "skills. section: 'workflow' (default: the cycle, idioms and the integrator rules), 'reference' (component "
+        "idioms and gotchas), 'snippets' (the list of example views) or a snippet name such as 'table' (its "
+        "view.json)."
+    ),
+    annotations=READ_ONLY,
+    structured_output=False,
+)
+def pdk_guide(section: str | None = None) -> str:
+    from pdk import paths
+
+    skill = paths.skill_dir()
+    wanted = (section or "workflow").strip().lower()
+    if wanted == "workflow":
+        return (skill / "SKILL.md").read_text(encoding="utf-8")
+    if wanted == "reference":
+        return (skill / "reference.md").read_text(encoding="utf-8")
+    snippets = sorted((skill / "snippets").glob("*.view.json"))
+    names = [file.name.removesuffix(".view.json") for file in snippets]
+    if wanted == "snippets":
+        return "snippets (pdk_guide section=<name>): " + ", ".join(names)
+    if wanted in names:
+        return (skill / "snippets" / f"{wanted}.view.json").read_text(encoding="utf-8")
+    return f"pdk: no section {section!r}: workflow, reference, snippets or one of {', '.join(names)}"
+
+
+def _work_tool(action: str, path: str | None = None, content: str | None = None,
+               edits: list[dict[str, str]] | None = None) -> str:
+    """pdk_work: registered by main() in agent sessions only."""
+    from pdk.agent import work
+
+    root = sync.work_root()
+    try:
+        bundle = load_bundle()
+    except BundleError:
+        bundle = None
+    if action == "list":
+        return work.listing(root, path)
+    if not path:
+        return f"pdk: {action} needs path (relative to the work folder {root})"
+    if action == "read":
+        return work.read(root, path)
+    if action == "write":
+        return work.write(root, path, content if content is not None else "", bundle)
+    if action == "edit":
+        return work.edit(root, path, edits or [], bundle)
+    return "pdk: action must be list, read, write or edit"
+
+
+WORK_DESCRIPTION = (
+    "The agent session's files: views (view.json), style classes (style.json), project scripts (code.py) and the "
+    "stylesheet (stylesheet.css) under the work folder, nothing else. action='list' (path: a folder, default the "
+    "work folder), 'read' (path), 'write' (path, content: the whole file; a view.json comes back validated), 'edit' "
+    "(path, edits: [{old, new}], each old text found exactly once, applied in order, then validated). Paths are "
+    "relative to the work folder, e.g. <sandbox>/PDK/Pump/view.json; pdk_deploy sends them to the gateway."
+)
+
+
+def _plan_tool(summary: str, attention: str = "", details: str = "", targets: dict[str, Any] | None = None,
+               checks: str = "") -> str:
+    """pdk_plan: registered by main() in agent sessions only."""
+    from pdk.agent import plan
+
+    folder = server.gate.folder if server.gate is not None else None
+    if folder is None:
+        return "pdk: pdk_plan works only in a PDK Agent session"
+    try:
+        gateway = Gateway()
+    except GatewayError:
+        gateway = None
+    return plan.submit(folder, gateway, summary=summary, attention=attention, details=details, targets=targets,
+                       checks=checks)
+
+
+PLAN_DESCRIPTION = (
+    "Present the plan of an Ultra request, then end your turn: the user approves or rejects it in the panel, and an "
+    "approval covers exactly what it names for the target. summary: at most five short bullets, what the user gets "
+    "(by target path, or in the open view). attention: only what is delicate (anything saved straight to the target, "
+    "overwritten or deleted, tags, scripts that run on the gateway), or 'Nothing.'. details: the steps. checks: how "
+    "you will verify it (validate, inspect with expect, screenshots, simulated tags). targets: what the promote will "
+    "write in the target, {\"views\": [...], \"style_classes\": [...], \"scripts\": [...], \"stylesheet\": "
+    "true|false}; tags and pages cannot go to the target."
+)
 
 
 def _sync(action) -> str:
@@ -483,7 +598,37 @@ def pdk_screenshot(path: str, viewport: str | None = None, component: str | None
     return images
 
 
-def main() -> None:
+def _cached_target(seconds: float = 30.0) -> Any:
+    """The target project's name for the gate, asked again at most every `seconds`."""
+    cache: dict[str, Any] = {"at": float("-inf"), "target": None}
+
+    def target() -> str | None:
+        if time.monotonic() - cache["at"] > seconds:
+            cache["target"] = Gateway().health().get("target")
+            cache["at"] = time.monotonic()
+        return cache["target"]
+    return target
+
+
+def start_agent_session(folder: Path) -> None:
+    """The rules of an agent session in front of every tool, and its two session-only tools."""
+    from pdk.agent.gate import KEY_ENV, Gate
+
+    key = os.environ.get(KEY_ENV, "").encode("utf-8") or None
+    server.gate = Gate(folder, key, target=_cached_target())
+    server.add_tool(_work_tool, name="pdk_work", description=WORK_DESCRIPTION, annotations=LOCAL_WRITE,
+                    structured_output=False)
+    server.add_tool(_plan_tool, name="pdk_plan", description=PLAN_DESCRIPTION, annotations=LOCAL_WRITE,
+                    structured_output=False)
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(prog="pdk-mcp", description="PDK's MCP server (stdio)")
+    parser.add_argument(AGENT_SESSION_FLAG, dest="agent_session", type=Path,
+                        help="the session folder of a PDK Agent host: PDK's rules apply to every tool")
+    args = parser.parse_args(argv)
+    if args.agent_session is not None:
+        start_agent_session(args.agent_session)
     server.run("stdio")
 
 

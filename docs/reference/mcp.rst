@@ -26,6 +26,10 @@ its ``act`` steps run the view's own event scripts on the gateway, which can wri
        ``project`` (folder or local gateway project; default the sandbox). Where a tag or a view is used, with
        indirect paths expanded through the callers; the inventory is written to ``work/_inventory/``. See
        :doc:`../guide/references`.
+   * - ``pdk_guide``
+     - read-only
+     - ``section`` (``workflow``, the default; ``reference``; ``snippets``; or a snippet name such as ``table``).
+       The ``perspective-views`` skill, for clients that do not load skills.
    * - ``pdk_catalog``
      - read-only
      - ``type`` (component id or name), ``prop`` (nested path such as ``columns[].render``), ``search`` (text),
@@ -75,6 +79,26 @@ its ``act`` steps run the view's own event scripts on the gateway, which can wri
        view of the sandbox like ``PDK/Detail``), ``title`` (optional, for ``add``). Routes of the page configuration,
        so a ``nav`` action has a destination; ``remove`` only takes routes to views under ``PDK/``. See
        :doc:`../guide/gateway`.
+
+In an agent session (``pdk-mcp --agent-session <folder>``, see :ref:`agent-sessions`) the server adds two tools:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 12 70
+
+   * - Tool
+     - Kind
+     - Arguments
+   * - ``pdk_work``
+     - writes locally
+     - ``action`` (``list``, ``read``, ``write``, ``edit``), ``path`` (under the work folder), ``content`` (for
+       ``write``), ``edits`` (for ``edit``: ``[{"old", "new"}]``, each old text found once). Only ``view.json``,
+       ``style.json``, ``code.py`` and ``stylesheet.css``; a written ``view.json`` comes back validated.
+   * - ``pdk_plan``
+     - writes locally
+     - ``summary``, ``attention``, ``details``, ``checks``, ``targets`` (``{"views": [...], "style_classes": [...],
+       "scripts": [...], "stylesheet": true}``). Saves the plan for the host to show; an approval covers exactly
+       those targets.
 
 The server's instructions describe the whole cycle (catalog, write, validate, deploy, inspect, fix), so a client
 learns the workflow from the server itself. The browser used by ``pdk_open``, ``pdk_inspect`` and

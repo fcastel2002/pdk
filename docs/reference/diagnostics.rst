@@ -537,3 +537,37 @@ Expectations and actions (A)
    * - ``A005``
      - malformed-action
      - An action that cannot be read.
+
+Agent sessions (T)
+------------------
+
+Produced by ``pdk-mcp --agent-session`` (see :ref:`agent-sessions`) when a tool call breaks the session's rules, and
+by its ``pdk_work`` tool.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 30 60
+
+   * - Code
+     - Name
+     - Meaning
+   * - ``T001``
+     - unknown-tool
+     - A tool the session's rules do not classify; it is refused.
+   * - ``T002``
+     - not-in-normal-mode
+     - Normal mode reads, looks at sandbox views and changes props of the view open in the Designer; anything that
+       writes, adds code to the open view or looks at a view of the target needs Ultra.
+   * - ``T003``
+     - plan-not-approved
+     - In Ultra, everything but reading, looking and presenting the plan (``pdk_plan``) waits for the user's approval.
+   * - ``T004``
+     - outside-the-plan
+     - A write to the target project that the approved plan does not name.
+   * - ``T005``
+     - session-state-unreadable
+     - The session state is missing, unreadable or not signed by the host: only reading and looking are allowed.
+   * - ``T006``
+     - outside-work
+     - ``pdk_work`` was given a path outside the work folder, a hidden folder, or a file that is not one of PDK's
+       resource files.

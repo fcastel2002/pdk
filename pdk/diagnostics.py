@@ -24,7 +24,8 @@ class Diagnostic(TypedDict):
 
 # Stable codes. Families: S structure, P props/meta/position, B propConfig/bindings,
 # E events/scripts, R references, HMI design lint; and from the eyes (pdk.eyes.rules): V rendered geometry,
-# Q gateway qualities, L gateway log, C browser console, X state of the eyes; A expectations (pdk.eyes.expect).
+# Q gateway qualities, L gateway log, C browser console, X state of the eyes; A expectations (pdk.eyes.expect);
+# T the rules of an agent session (pdk.agent.gate) and of its file tool (pdk.agent.work).
 CODES: dict[str, str] = {
     "S000": "invalid-json",
     "S001": "unknown-view-key",
@@ -134,6 +135,12 @@ CODES: dict[str, str] = {
     "A003": "expectation-unknown-component",
     "A004": "action-failed",
     "A005": "malformed-action",
+    "T001": "unknown-tool",
+    "T002": "not-in-normal-mode",
+    "T003": "plan-not-approved",
+    "T004": "outside-the-plan",
+    "T005": "session-state-unreadable",
+    "T006": "outside-work",
 }
 
 

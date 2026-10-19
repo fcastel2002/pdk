@@ -4,6 +4,16 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Added
+- Agent sessions: `pdk-mcp --agent-session <folder>` enforces the rules of a host such as PDK Agent in the server,
+  for every tool call: normal mode reads, looks at sandbox views and edits props of the view open in the Designer;
+  Ultra waits for an approved plan and then writes only the targets it names. The state comes from the host, signed
+  (`PDK_AGENT_KEY`), and an approval expires unless the host renews it; without a valid state only reading and
+  looking run. New codes T001-T006.
+- In an agent session, `pdk_work` (the agent's files, only PDK's resource files under the work folder, a written
+  view validated at once) and `pdk_plan` (the plan as data, with what the gateway says about each target).
+- `pdk_guide`: the perspective-views skill over MCP, for clients that do not load skills.
+
 ## [0.4.1] - 2026-10-19
 
 ### Security
