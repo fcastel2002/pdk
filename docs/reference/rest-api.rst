@@ -15,8 +15,8 @@ Every request must:
 - carry the header ``X-PDK-Token`` with the token the module writes to ``<ignition>/data/pdk-gateway.token`` on every
   start; otherwise the answer is ``401``.
 
-Writes are further limited to the sandbox (``-Dpdk.sandbox``), the target project's finished views
-(``-Dpdk.target``) and tags under ``[provider]PDK/`` (UDT definitions under ``[provider]_types_/PDK/``).
+Writes are further limited to the sandbox (``-Dpdk.sandbox``), the target project's finished work
+(``-Dpdk.target``: views, style classes and scripts outside ``PDK/``, the stylesheet, and ``/pdk/`` preview pages) and tags under ``[provider]PDK/`` (UDT definitions under ``[provider]_types_/PDK/``).
 
 Endpoints
 ---------
@@ -67,7 +67,7 @@ Endpoints
      - Open Perspective sessions of a project, with their pages and views.
    * - DELETE
      - ``/sessions?project=&page=``
-     - Close the sandbox session that owns that page (PDK's own browser sessions, when it closes the browser).
+     - Close the session that owns that page, in the sandbox or the target (PDK's own browser sessions, when it closes the browser).
    * - GET
      - ``/pages/{page}?project=``
      - The evaluated component tree of a page: props and binding qualities.
@@ -124,17 +124,19 @@ the ``current`` version). The Python client maps them to the ``G`` codes in :doc
    * - 403
      - not loopback or proxied; ``WRITE_DISABLED``, ``OUTSIDE_SANDBOX``, ``OUTSIDE_TARGET``, ``OUTSIDE_TAG_FOLDER``
    * - 404
-     - ``NOT_FOUND``, ``PROJECT_NOT_FOUND``, ``PAGE_NOT_FOUND``, ``TAG_NOT_FOUND``, ``TAG_PROVIDER_NOT_FOUND``
+     - ``NOT_FOUND``, ``PROJECT_NOT_FOUND``, ``PAGE_NOT_FOUND``, ``TAG_NOT_FOUND``, ``TAG_PROVIDER_NOT_FOUND``,
+       ``HISTORY_PROVIDER_NOT_FOUND``
    * - 409
      - ``CONFLICT`` (signature mismatch), ``FOLDER_NOT_EMPTY``, ``IMMUTABLE``
    * - 413
-     - ``TOO_MANY_TAGS``
+     - ``TOO_MANY_TAGS``, ``TOO_MANY_SOURCES``, ``SOURCE_TOO_LARGE``
    * - 422
      - ``PUSH_REJECTED``
    * - 500
-     - ``RUNTIME_READ_FAILED``, ``TAG_OPERATION_FAILED``, ``TAG_DELETE_FAILED``, ``WRITE_NOT_VISIBLE``
+     - ``RUNTIME_READ_FAILED``, ``TAG_OPERATION_FAILED``, ``TAG_DELETE_FAILED``, ``WRITE_NOT_VISIBLE``,
+       ``HISTORY_STORE_FAILED``
    * - 501
-     - ``RUNTIME_UNAVAILABLE`` (the session API did not link on this version)
+     - ``RUNTIME_UNAVAILABLE`` (the session API did not link on this version), ``HISTORY_UNAVAILABLE``
    * - 503
      - ``BUSY``, ``INTERRUPTED``, ``PERSPECTIVE_UNAVAILABLE``
    * - 504

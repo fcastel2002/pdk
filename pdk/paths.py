@@ -36,11 +36,19 @@ def default_schemas_dir() -> Path:
 
 
 def default_work_dir() -> Path:
-    return REPO_ROOT / "work" if CHECKOUT else Path.cwd() / "work"
+    """`work/` of the folder the agent works in; from a clone, the repository's own when run inside it (a folder set
+    up with `pdk init` from a clone keeps its views in its own work/)."""
+    cwd = Path.cwd()
+    return REPO_ROOT / "work" if CHECKOUT and cwd.resolve().is_relative_to(REPO_ROOT.resolve()) else cwd / "work"
 
 
 def skill_dir() -> Path:
     return (REPO_ROOT / ".claude" if CHECKOUT else BUNDLED) / "skills" / "perspective-views"
+
+
+def sample_tags() -> Path:
+    """The sample memory tags (`pdk tags apply sample`): Sandbox/Setpoint, Sandbox/Message, North Area alarms."""
+    return REPO_ROOT / "bench" / "tags" / "sandbox.json" if CHECKOUT else BUNDLED / "tags" / "sandbox.json"
 
 
 def agents_dir() -> Path:

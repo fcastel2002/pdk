@@ -4,6 +4,53 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+### Security
+- `pdk promote` without `--to-project` could write into the target project from a folder that belonged to it (one
+  left by an earlier promote): every promote now starts from the sandbox, like style classes and scripts already
+  did.
+- `act` (in `pdk inspect` and `pdk screenshot`) runs a view's own event scripts on the gateway, so it now works only
+  on sandbox views; a view promoted to the target is looked at without it.
+
+### Fixed
+- The eyes close the Perspective sessions they open on promoted views too: the module refused to close sessions
+  outside the sandbox, so every look at a target view left one open until it timed out (on Maker, which caps them,
+  that ran out of sessions). Each page is closed in the project it was opened in. Needs the module reinstalled
+  (`pdk gateway install --restart`).
+- The MCP server's browser no longer closes for being idle while a call is running, and Playwright errors come back
+  as eyes errors (with their hint) instead of a traceback; a screenshot of a component with no size fails at once
+  instead of after 30 s.
+- A collapsed component is reported once, as its V007: a scroll or an overflow of the component itself (its
+  content poking out of a zero-height box) no longer adds a V014 or V002.
+- `pdk inspect` with a step it cannot read (A005) stops before opening the view, as `pdk screenshot` does, instead
+  of checking the expectations on the page before any step.
+- Validating a directory builds each project once (it rebuilt the project's reference graph for every view), and
+  `focus` on an info code across a directory shows those views.
+- `pdk validate` and the hook check a view pulled to `work/<project>/` against that project, like `pdk deploy`
+  does, so a missing embedded view (R010) shows before the deploy refuses it.
+- A deploy over a style class or script that already exists and was never pulled can be resolved with
+  `--resolved`, as views can.
+- A change from `1` to `true` (or `0` to `false`) inside a view is deployed: the comparison with the pulled
+  version told them apart only at the top level.
+- Promote leaves PDK's scratch folders (`PDK/_bench/`, `PDK/_selftest/`) unless `--to` names the destination.
+- R013 no longer flags an embedded view whose whole `params` object is bound; BP006 no longer takes a component's
+  write to `self.view.custom.x` for its own property, and checks view-level change scripts (`self.params.x`).
+- Module errors map to the right codes: `BUSY` and `INTERRUPTED` are G012 (busy, retry), a missing history
+  provider is G007, deleting a folder that is not empty is G009; a test keeps the map, the module and the REST
+  reference in step.
+- The MCP server refreshes only the skill, the subagents and the CLAUDE.md section of a folder after an upgrade:
+  it rewrote the `pdk` entry of `.mcp.json` (dropping its `env`) and the hook. `pdk init` keeps that `env` and the
+  hook's timeout.
+- A folder set up with `pdk init` from a clone keeps its pulled views in its own `work/` (they went to the clone's),
+  and `pdk_refs` writes its inventory under the work folder (`PDK_WORK_DIR`).
+- The sample memory tags the tutorial, the README and the skill use ship with the package: `pdk tags apply sample`
+  (`bench/tags/sandbox.json` was only in a clone).
+- What the target project takes is stated the same way everywhere (SECURITY.md, the README, the docs and the G006
+  hint): views, style classes and scripts outside `PDK/`, the stylesheet, and the eyes' preview pages. The skill
+  and the server's instructions say promote copies, and give the order that works for a view that embeds `PDK/`
+  views; the B011 hint no longer suggests `tag()`, which BP001 flags.
+- The setup for other MCP clients (Codex, Gemini CLI, VS Code, Cursor) works without a clone: `pdk-mcp` with
+  `PDK_WORK_DIR`, with each client's format in the agents guide.
+
 ## [0.4.0] - 2026-10-19
 
 ### Added

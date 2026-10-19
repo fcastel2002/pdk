@@ -599,12 +599,17 @@ def evaluate(joined: Joined, *, logs: list[dict[str, Any]] | None = None,
     if sync:
         return sync + found
     hidden = collapsed(joined)
-    inside = tuple(d["component"] + "/" for d in hidden)
+    names = {d["component"] for d in hidden}
+    inside = tuple(name + "/" for name in names)
+
+    def shown(d: Diagnostic) -> bool:  # the collapsed component itself and what it holds: only its V007
+        return d["component"] not in names and not (inside and d["component"].startswith(inside))
+
     geometry = viewport_overflow(joined) + component_overflow(joined) + text_clipped(joined)
     geometry += unrequested_scroll(joined, declared_scrolls)
-    found += hidden + [d for d in geometry if not (inside and d["component"].startswith(inside))]
+    found += hidden + [d for d in geometry if shown(d)]
     found += not_mounted(joined) + failed_views(joined) + repeater_overflow(joined)
-    found += [d for d in low_contrast(joined) if not (inside and d["component"].startswith(inside))]
+    found += [d for d in low_contrast(joined) if shown(d)]
     found += qualities(joined) if joined.live_view else overlays(joined)
     found += logged(joined, logs or [])
     return found

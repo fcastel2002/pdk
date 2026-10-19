@@ -82,27 +82,32 @@ def resolve(gateway: Gateway, location: str) -> Target:
             mine = json.loads((directory / sync.VIEW_FILE).read_text(encoding="utf-8"))
         except (OSError, ValueError):
             mine = None
-        if mine is not None and mine != view:
+        if mine is not None and not sync._same(mine, view):
             note = "the local copy has edits that are not deployed: this inspects the gateway version"
     return Target(project, path, view, note)
 
 
 def session_closer(gateway: Gateway) -> Any:
-    """Eyes' `release`: close the sessions of the browser's pages on the gateway, in the sandbox or the target (best
-    effort, so a module without the route only leaves them to time out)."""
-    def release(page_ids: list[str]) -> None:
-        try:
-            projects = [project for project in sync._roles(gateway) if project]
-        except GatewayError:
-            return
-        for page_id in page_ids:
-            for project in projects:
-                try:
-                    gateway.close_session(project, page_id)
-                    break
-                except GatewayError:
-                    continue
+    """Eyes' `release`: close the sessions of the browser's pages on the gateway, each in the project its page was
+    opened in, the sandbox or the target (best effort, so a module without the route only leaves them to time
+    out)."""
+    def release(pages: list[tuple[str, str]]) -> None:
+        for project, page_id in pages:
+            if not project:
+                continue
+            try:
+                gateway.close_session(project, page_id)
+            except GatewayError:
+                continue
     return release
+
+
+def _act_here(gateway: Gateway, target: Target) -> None:
+    """act runs the view's own event scripts on the gateway: only on sandbox views (a promoted view is looked at)."""
+    sandbox = sync._roles(gateway)[0]
+    if target.project != sandbox:
+        raise ValueError(f"act runs the view's own scripts: only on views of the sandbox ({sandbox}); look at "
+                         f"{target.project}:{target.path} without act, or act on its PDK/ copy in the sandbox")
 
 
 def _preview(gateway: Gateway, target: Target) -> str:
@@ -270,12 +275,16 @@ def _inspect_one(eyes: Eyes, gateway: Gateway, location: str, viewport: str | No
         acted: actions.Outcome | None = None
         steps: list[actions.Step] = []
         if act:
+            _act_here(gateway, target)
             nodes = {node.path: node for node in walk(build_tree(target.view))}
             steps, malformed = actions.parse(act, nodes)
-            if malformed:
+            if malformed:  # nothing is opened: expectations on the page before any step would only mislead
                 acted = actions.Outcome(len(steps) + len(malformed), 0, malformed)
+                return Result(False, render(malformed, title=f"{target.project}:{target.path}") + "\n"
+                              + acted.summary() + ("\nexpect: not checked, act did not run" if expect else ""),
+                              errors=len(malformed))
         opened = eyes.open(url, Viewport.parse(viewport))
-        if steps and acted is None:
+        if steps:
             pointers = {node.path: node.pointer for node in walk(build_tree(target.view))}
             acted = eyes.act(opened, steps, pointers, _popup_resolver(gateway, target.project, opened),
                              lambda step: simulated.write(gateway, step.tag, step.value, step.quality))
@@ -404,6 +413,7 @@ def _shoot(eyes: Eyes, gateway: Gateway, location: str, viewport: str | None, co
                                    "path like root/Panel/Label, or popup:<id>/root/... after act opened the popup)"
         steps: list[actions.Step] = []
         if act:
+            _act_here(gateway, target)
             steps, malformed = actions.parse(act, nodes)
             if malformed:
                 return None, None, render(malformed, title=f"{target.project}:{target.path}")

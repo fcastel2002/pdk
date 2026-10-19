@@ -158,6 +158,19 @@ def test_bp006_is_not_raised_for_a_write_to_another_prop(bundle) -> None:
     assert [d for d in bp(bundle, view(other)) if d["code"] == "BP006"] == []
 
 
+def test_bp006_a_component_script_writing_the_views_property_is_another_prop(bundle) -> None:
+    script = "self.view.custom.value = currentValue.value"
+    other = label("Lbl", propConfig={"custom.value": {"onChange": {"script": script}}}, custom={"value": 0})
+    assert [d for d in bp(bundle, view(other, custom={"value": 0})) if d["code"] == "BP006"] == []
+
+
+def test_bp006_a_view_param_change_script_writing_the_param_back(bundle) -> None:
+    data = view(label("Lbl"), params={"x": 0},
+                propConfig={"params.x": {"paramDirection": "input",
+                                         "onChange": {"script": "self.params.x = currentValue.value + 1"}}})
+    assert only(bp(bundle, data), "BP006")["message"] == "the change script of params.x writes params.x back"
+
+
 def test_bp006_is_not_raised_when_the_script_checks_origin(bundle) -> None:
     script = "if origin != 'BindingWriteback':\n\tself.props.text = value.upper()"
     assert [d for d in bp(bundle, view(label("Lbl", propConfig={"props.text": {"onChange": {"script": script}}})))

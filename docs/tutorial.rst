@@ -123,12 +123,12 @@ The file is valid, but the status text will not fit. Offline validation cannot k
 4. Create the simulated tags
 ----------------------------
 
-The setpoint label is bound to ``[default]PDK/Sandbox/Setpoint``. The repository ships a small set of memory tags
-for this purpose:
+The setpoint label is bound to ``[default]PDK/Sandbox/Setpoint``. PDK ships a small set of memory tags for this
+purpose, ``sample``:
 
 .. code-block:: console
 
-   $ uv run pdk tags apply bench/tags/sandbox.json
+   $ uv run pdk tags apply sample
    sandbox.json -> [default]PDK: 4 tags (Good 6)
 
 5. Deploy

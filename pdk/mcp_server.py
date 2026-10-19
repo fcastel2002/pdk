@@ -27,7 +27,7 @@ INSTRUCTIONS = (
     "To put a view on the development gateway: pdk_pull (or write work/<project>/PDK/<name>/view.json) -> edit -> "
     "pdk_deploy (validates, writes with the signature of the pull, prints a preview URL). A G008 conflict means "
     "someone (often the Designer) changed it: read the diff, merge from view.gateway.json, deploy with "
-    "resolved=true. pdk_promote moves PDK/X to X (to_project='target' sends it to the final project, "
+    "resolved=true. pdk_promote copies PDK/X to X (to_project='target' sends it to the final project, "
     "only with the user's OK); pdk_delete removes a pulled view. After a deploy, look at it: "
     "pdk_inspect reloads the view in headless Chromium and reports anomalies on the component that has them "
     "(V layout: clipped text, overflow, collapsed, scroll nobody asked for; Q binding quality like Bad_NotFound or "
@@ -38,7 +38,10 @@ INSTRUCTIONS = (
     "pdk_screenshot shows the view or one component, for what only an image can judge. "
     "Simulated tags (memory tags under [provider]PDK/) come from pdk_tags (apply a tag export JSON, write with a "
     "quality, read back, alarms); in pdk_inspect, act 'tag Sandbox/Setpoint 42' sets one and expect "
-    "'tag Sandbox/Setpoint = 42; alarm North/Level active' checks the result."
+    "'tag Sandbox/Setpoint = 42; alarm North/Level active' checks the result. "
+    "Style classes and project scripts are pulled, deployed and promoted like views (style-classes/PDK/X, "
+    "scripts/PDK/X); pdk_pages maps a URL to a view for nav; pdk_refs says where a tag or view is used before "
+    "renaming it."
 )
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 # ensure_preview adds page-config on the gateway: additive and idempotent, not read-only
@@ -61,7 +64,8 @@ def _instructions() -> str:
 
     text = INSTRUCTIONS
     if refresh_if_stale(Path.cwd()):
-        text += f" (PDK {__version__} refreshed this folder's perspective-views skill and pdk-* subagents.)"
+        text += (f" (PDK {__version__} refreshed this folder's perspective-views skill, pdk-* subagents and the "
+                 "PDK section of CLAUDE.md.)")
     if message := notice():
         text += f" UPDATE: tell the user at the start of the session, once: {message}"
     return text
@@ -268,7 +272,7 @@ def pdk_tags(action: str, path: str | None = None, value: str | None = None, qua
             return tags.alarms_text(gateway.alarms(tags.full_path(path) if path else None))
         if action == "apply":
             if not file:
-                return "pdk: apply needs file (a tag export JSON)"
+                return "pdk: apply needs file (a tag export JSON, or 'sample' for PDK's sample tags)"
             return tags.apply(gateway, Path(file), to or tags.FOLDER)
         if action == "history" and not path:
             return "history providers: " + (", ".join(gateway.history_providers()) or "none")
@@ -305,7 +309,7 @@ def pdk_tags(action: str, path: str | None = None, value: str | None = None, qua
         "Use it before renaming a tag, UDT member or view, and to find views nothing opens. project: a project "
         "directory or a project of the local gateway (default: the sandbox)."
     ),
-    annotations=READ_ONLY,
+    annotations=LOCAL_WRITE,  # inventory writes its table under work/
     structured_output=False,
 )
 def pdk_refs(action: str, target: str | None = None, project: str | None = None) -> str:
@@ -317,7 +321,7 @@ def pdk_refs(action: str, target: str | None = None, project: str | None = None)
         return f"pdk: {exc}"
     if action == "inventory":
         data = inventory.inventory(graph)
-        out = Path.cwd() / "work" / "_inventory" / f"{graph.project.name}.md"
+        out = sync.work_root() / "_inventory" / f"{graph.project.name}.md"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(inventory.inventory_text(data), encoding="utf-8")
         return f"{inventory.inventory_summary(data)}\nfull table: {out}"
@@ -373,8 +377,8 @@ def _shared_eyes() -> Any:
 
 VIEW_ARG = ("path: the local view folder or view.json under work/<sandbox>/, or a view path in the sandbox like "
             "PDK/Menu, or the folder of a view promoted to the target (work/<target>/...: opened on its preview page "
-            "there); viewport: WIDTHxHEIGHT or desktop|tablet|phone|wide (default 1366x768; pdk_inspect takes "
-            "several, comma-separated, e.g. desktop,phone, and reports each)")
+            "there; act only on sandbox views); viewport: WIDTHxHEIGHT or desktop|tablet|phone|wide (default "
+            "1366x768; pdk_inspect takes several, comma-separated, e.g. desktop,phone, and reports each)")
 
 
 @server.tool(

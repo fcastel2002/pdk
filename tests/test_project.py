@@ -209,3 +209,65 @@ def test_event_targets_share_the_missing_view_hint(bundle, tmp_path) -> None:
 
 def test_missing_view_hint_without_views_asks_to_create_it() -> None:
     assert _missing_view_hint("Bench/Run/Popup", []).startswith("create the view first (references resolve")
+
+
+def test_a_directory_run_shares_one_project_per_root(bundle, tmp_path, monkeypatch) -> None:
+    import pdk.project as project_module
+    from pdk.validate import validate_paths
+
+    root = _project(tmp_path)
+    for name in ("A", "B", "C"):
+        _view(root, f"Bench/{name}", view(label()))
+    loads: list[Path] = []
+    real = project_module.load_project
+
+    def counting(path: Path, _depth: int = 0):
+        loads.append(path)
+        return real(path, _depth)
+
+    monkeypatch.setattr(project_module, "load_project", counting)
+    results = validate_paths(root / PERSPECTIVE_DIR / "views", bundle)
+    assert len(results) == 4 and loads == [root]
+    assert len({id(r.project) for r in results}) == 1  # one Project, so one reference graph
+
+
+def test_a_view_pulled_to_work_is_checked_against_its_project_like_deploy(bundle, tmp_path, monkeypatch) -> None:
+    from pdk import sync
+
+    root = _project(tmp_path)
+    monkeypatch.setenv(sync.WORK_ENV, str(tmp_path / "work"))
+    monkeypatch.setattr(sync, "_local_project", lambda name: load_project(root) if name == "sandbox" else None)
+    missing = {"type": "ia.display.view", "meta": {"name": "Ghost"}, "position": {"basis": "48px"},
+               "props": {"path": "Templates/Gone"}}
+    file = tmp_path / "work" / "sandbox" / "PDK" / "Card" / "view.json"
+    file.parent.mkdir(parents=True)
+    file.write_text(json.dumps(view(missing)), encoding="utf-8")
+    result = validate_file(file, bundle)
+    assert result.project is not None and result.view_path == "PDK/Card"
+    assert "R010" in {d["code"] for d in result.diagnostics}
+
+    elsewhere = tmp_path / "work" / "Other" / "PDK" / "Card" / "view.json"  # a project this disk does not have
+    elsewhere.parent.mkdir(parents=True)
+    elsewhere.write_text(json.dumps(view(missing)), encoding="utf-8")
+    assert "R010" not in {d["code"] for d in validate_file(elsewhere, bundle).diagnostics}
+
+
+def test_focus_across_a_directory_shows_info_only_views(tmp_path) -> None:
+    from pdk.diagnostics import make
+    from pdk.report import _report_many
+    from pdk.validate import FileResult
+
+    info = FileResult(tmp_path / "Info" / "view.json", [make("BP016", "info", "/root", "root", "a note", "a hint")])
+    bad = FileResult(tmp_path / "Bad" / "view.json", [make("P001", "error", "/root", "root", "unknown", "fix")])
+    text = _report_many([info, bad], tmp_path, "3.3.8", "BP016", 1500)
+    assert "a note" in text
+
+
+def test_a_bound_params_object_passes_params_known_only_at_runtime(bundle, tmp_path) -> None:
+    root = _project(tmp_path)
+    struct = {"binding": {"type": "expr-struct", "config": {"struct": {"name": "{view.params.p}"}}}}
+    embedded = {"type": "ia.display.view", "meta": {"name": "Pump"}, "position": {"basis": "48px"},
+                "props": {"path": "Templates/Pump", "params": {}}, "propConfig": {"props.params": struct}}
+    file = _view(root, "Bench/Bound", view(embedded))
+    codes = {d["code"] for d in validate_file(file, bundle).diagnostics}
+    assert not codes & {"R011", "R013", "R014"}, codes

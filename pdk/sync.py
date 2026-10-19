@@ -7,7 +7,8 @@ a diff by JSON pointer — what changed on the gateway since the pull and what y
 version is saved as `view.gateway.json` to merge from. `--resolved` then writes over that newer version.
 
 Agent work lives under `PDK/` in the sandbox; `promote` copies `PDK/X` to `X` in the same project, signed the
-same way, or to the target project (`-Dpdk.target`), which takes finished views only: no `PDK/`, no preview page.
+same way, or to the target project (`-Dpdk.target`), which takes finished work only: nothing under `PDK/`,
+and of its page configuration only the eyes' preview pages.
 Every deployed view gets a page at `/pdk/<view path>` in page-config, so it can be opened in a browser;
 page-config is edited additively with its own signature and re-read on a 409.
 """
@@ -54,6 +55,11 @@ def work_root() -> Path:
 
 def local_dir(project: str, path: str, root: Path | None = None) -> Path:
     return (root or work_root()) / project / Path(*path.strip("/").split("/"))
+
+
+def scratch(path: str) -> bool:
+    """`PDK/_bench/...`, `PDK/_selftest/...`: PDK's own scratch folders, never promoted by default."""
+    return path.strip("/").startswith(SANDBOX_FOLDER + "/_")
 
 
 # --- sidecar --------------------------------------------------------------------------------------
@@ -107,7 +113,11 @@ def _local(gateway: Gateway, location: Path, root: Path | None) -> Path:
 
 
 def _same(a: Any, b: Any) -> bool:
-    """JSON equality: 1 == 1.0, but true != 1."""
+    """JSON equality, at every depth: 1 == 1.0, but true != 1."""
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(_same(a[key], b[key]) for key in a)
+    if isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(_same(x, y) for x, y in zip(a, b, strict=True))
     return a == b and isinstance(a, bool) == isinstance(b, bool)
 
 
@@ -173,7 +183,7 @@ def deploy(gateway: Gateway, location: Path, bundle: Bundle, *, resolved: bool =
            root: Path | None = None, budget: int = DEFAULT_BUDGET, _promoting: bool = False) -> Outcome:
     """Validate the local view.json and write it with the signature of the pull (create if never pulled).
 
-    The target project only gets views through promote, and never a preview page. The stylesheet goes to
+    The target project only gets views through promote (its preview page comes from the eyes). The stylesheet goes to
     `pdk.stylesheet`.
     """
     from pdk import resources, stylesheet
@@ -282,6 +292,8 @@ def promote(gateway: Gateway, location: Path, bundle: Bundle, *, to: str | None 
     if not _same(_parsed(text), _parsed(sidecar["base"].get(VIEW_FILE))):
         return Outcome(False, f"pdk: {_shown(directory)} has local edits: deploy them before promoting")
     sandbox, target_project = _roles(gateway)
+    if project != sandbox:
+        return Outcome(False, f"pdk: promote starts from the sandbox ({sandbox}), not {project}")
     destination = project
     if to_project is not None:
         if not target_project:
@@ -289,8 +301,6 @@ def promote(gateway: Gateway, location: Path, bundle: Bundle, *, to: str | None 
                                   "ignition.conf and restart it")
         if to_project not in ("target", target_project):
             return Outcome(False, f"pdk: {to_project!r} is not the target project ({target_project})")
-        if project != sandbox:
-            return Outcome(False, f"pdk: promote to the target starts from the sandbox ({sandbox}), not {project}")
         destination = target_project
     current = gateway.resource(project, VIEWS, path)
     if current.get("signature") != sidecar.get("signature"):
@@ -299,6 +309,9 @@ def promote(gateway: Gateway, location: Path, bundle: Bundle, *, to: str | None 
     if to is None:
         if not path.startswith(SANDBOX_FOLDER + "/"):
             return Outcome(False, f"pdk: {path} is not under {SANDBOX_FOLDER}/: pass --to <view path>")
+        if scratch(path):
+            return Outcome(False, f"pdk: {path} is in a scratch folder ({SANDBOX_FOLDER}/_*), not finished work: "
+                                  "pass --to <view path> to promote it anyway")
         to = path[len(SANDBOX_FOLDER) + 1:]
     to = to.strip("/")
     if not to or to == SANDBOX_FOLDER or to.startswith(SANDBOX_FOLDER + "/"):
@@ -308,7 +321,8 @@ def promote(gateway: Gateway, location: Path, bundle: Bundle, *, to: str | None 
     shown_to = to if destination == project else f"{destination}:{to}"
     if references and destination != project:
         return Outcome(False, f"pdk: {project}:{path} references sandbox views ({', '.join(references[:5])}): a "
-                              f"view in {destination} cannot; promote those first and update the paths")
+                              f"view in {destination} cannot. Promote each one to the sandbox and to {destination} "
+                              "(PDK/B -> B), point this view at B, deploy it and promote it again")
     target = local_dir(destination, to, root)
     target.mkdir(parents=True, exist_ok=True)
     (target / VIEW_FILE).write_text(view_text, encoding="utf-8")

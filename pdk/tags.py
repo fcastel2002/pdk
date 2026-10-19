@@ -16,9 +16,11 @@ import time
 from pathlib import Path
 from typing import Any
 
+from pdk import paths
 from pdk.gateway.client import Gateway, GatewayError
 
 FOLDER = "PDK"
+SAMPLE = "sample"  # `apply sample`: the memory tags PDK ships (paths.sample_tags)
 TYPES = "_types_"
 UNITS_MS = {"ms": 1, "s": 1000, "m": 60_000, "h": 3_600_000, "d": 86_400_000}
 LICENSE_EXCEEDED = "Bad_LicenseExceeded"
@@ -109,7 +111,10 @@ class Probe:
 
 def apply(gateway: Gateway, file: Path, to: str = FOLDER) -> str:
     """Import a tag export JSON file into `to` (under PDK/): tags are created, or overwritten with their declared
-    values, and their alarm events acknowledged, which resets them between runs."""
+    values, and their alarm events acknowledged, which resets them between runs. `sample` is PDK's own sample
+    (paths.sample_tags)."""
+    if str(file) == SAMPLE and not file.exists():
+        file = paths.sample_tags()
     data = json.loads(file.read_text(encoding="utf-8"))
     result = gateway.import_tags(full_path(to), data)
     qualities = ", ".join(f"{name} {count}" for name, count in result.get("qualities", {}).items())

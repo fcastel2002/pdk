@@ -62,3 +62,55 @@ def test_installed_text_calls_pdk_directly(monkeypatch) -> None:
 def test_init_refuses_the_checkout_itself() -> None:
     with pytest.raises(ValueError):
         init.init(REPO_ROOT)
+
+
+def test_refresh_leaves_the_mcp_entry_and_the_hook_alone(tmp_path) -> None:
+    init.init(tmp_path)
+    mcp = json.loads((tmp_path / ".mcp.json").read_text())
+    mcp["mcpServers"]["pdk"]["env"] = {"PDK_GATEWAY_URL": "http://127.0.0.1:9088"}
+    (tmp_path / ".mcp.json").write_text(json.dumps(mcp))
+    settings = tmp_path / ".claude" / "settings.json"
+    hooks = json.loads(settings.read_text())
+    hooks["hooks"]["PostToolUse"][0]["hooks"][0]["timeout"] = 120
+    settings.write_text(json.dumps(hooks))
+    (tmp_path / ".claude" / "skills" / "perspective-views" / init.VERSION_FILE).write_text("0.0.1\n")
+    assert init.refresh_if_stale(tmp_path)
+    assert json.loads((tmp_path / ".mcp.json").read_text()) == mcp
+    assert json.loads(settings.read_text()) == hooks
+    marker = tmp_path / ".claude" / "skills" / "perspective-views" / init.VERSION_FILE
+    assert marker.read_text().strip() == __version__
+
+
+def test_init_again_keeps_the_env_of_the_mcp_entry_and_the_hook_timeout(tmp_path) -> None:
+    init.init(tmp_path)
+    mcp = json.loads((tmp_path / ".mcp.json").read_text())
+    mcp["mcpServers"]["pdk"]["env"] = {"PDK_WORK_DIR": "D:/screens/work"}
+    (tmp_path / ".mcp.json").write_text(json.dumps(mcp))
+    settings = tmp_path / ".claude" / "settings.json"
+    hooks = json.loads(settings.read_text())
+    hooks["hooks"]["PostToolUse"][0]["hooks"][0]["timeout"] = 120
+    settings.write_text(json.dumps(hooks))
+    init.init(tmp_path)
+    entry = json.loads((tmp_path / ".mcp.json").read_text())["mcpServers"]["pdk"]
+    assert entry["env"] == {"PDK_WORK_DIR": "D:/screens/work"}
+    assert json.loads(settings.read_text())["hooks"]["PostToolUse"][0]["hooks"][0]["timeout"] == 120
+
+
+def test_a_clone_keeps_work_in_the_repository_only_for_commands_run_inside_it(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(paths, "CHECKOUT", True)
+    monkeypatch.chdir(REPO_ROOT / "docs")
+    assert paths.default_work_dir() == REPO_ROOT / "work"
+    monkeypatch.chdir(tmp_path)
+    assert paths.default_work_dir() == tmp_path / "work"
+
+
+def test_the_wheel_ships_what_init_and_the_docs_use() -> None:
+    import tomllib
+
+    included = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["tool"]["hatch"]["build"][
+        "targets"]["wheel"]["force-include"]
+    bundled = {target.removeprefix("pdk/_bundled/"): source for source, target in included.items()}
+    assert bundled["skills/perspective-views"] == ".claude/skills/perspective-views"
+    for name in init.AGENTS:
+        assert bundled[f"agents/{name}"] == f".claude/agents/{name}"
+    assert bundled["tags/sandbox.json"] == "bench/tags/sandbox.json" and paths.sample_tags().is_file()

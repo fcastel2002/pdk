@@ -274,8 +274,8 @@ def _expression(text: str, pointer: str, where: str, functions: Functions | None
         out.append(make("B011", "error", pointer, where,
                         f"expression function {name}() does not exist on the gateway"
                         + (f" (did you mean {functions.expression[close[0]]}?)" if close else ""),
-                        "use a function of the expression language of this Ignition version; a tag value goes in "
-                        "{braces} or tag(path)",
+                        "use a function of the expression language of this Ignition version; a tag value comes "
+                        "from a tag binding on a custom property, referenced in {braces}",
                         f"near: {_short(text[max(0, position - 20): position + 20])}"))
     return out
 

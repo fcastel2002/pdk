@@ -260,6 +260,17 @@ def test_deploy_409_writes_conflict_and_gateway_copy(bundle: Bundle, tmp_path: P
     assert (folder / copy_name).read_text(encoding="utf-8") == gateway_text
 
 
+def test_a_create_conflict_is_recorded_so_resolved_can_overwrite(bundle: Bundle, tmp_path: Path) -> None:
+    gw = FakeGateway()
+    gw.add(SANDBOX, resources.SCRIPT.type, "PDK/util", {resources.SCRIPT.file: CODE})  # never pulled
+    folder = _write_local(tmp_path, SANDBOX, resources.SCRIPT, "PDK/util", CODE + "x = 2\n")
+    first = resources.deploy(gw, resources.SCRIPT, folder, bundle, root=tmp_path)
+    assert not first.ok and "already exists" in first.text and "--resolved" in first.text
+    second = resources.deploy(gw, resources.SCRIPT, folder, bundle, resolved=True, root=tmp_path)
+    assert second.ok, second.text
+    assert gw.store[(SANDBOX, resources.SCRIPT.type, "PDK/util")]["files"] == {resources.SCRIPT.file: CODE + "x = 2\n"}
+
+
 def test_deploy_refuses_a_project_that_is_not_the_sandbox(bundle: Bundle, tmp_path: Path) -> None:
     folder = _write_local(tmp_path, TARGET, resources.STYLE_CLASS, "PDK/Card", CLASS_JSON)
     gw = FakeGateway()
@@ -293,6 +304,16 @@ def test_promote_refuses_a_destination_inside_pdk(bundle: Bundle, tmp_path: Path
     outcome = resources.promote(gw, resources.STYLE_CLASS, folder, bundle, to="PDK/Other", root=tmp_path)
     assert not outcome.ok and "outside it" in outcome.text
     assert gw.puts == []
+
+
+def test_promote_leaves_scratch_folders_unless_told_where(bundle: Bundle, tmp_path: Path) -> None:
+    gw = FakeGateway()
+    gw.add(SANDBOX, STYLE, "PDK/_bench/Card", {"style.json": CLASS_JSON})
+    assert resources.pull(gw, resources.STYLE_CLASS, "PDK/_bench/Card", root=tmp_path).ok
+    folder = tmp_path / SANDBOX / resources.STYLE_CLASS.folder / "PDK" / "_bench" / "Card"
+    refused = resources.promote(gw, resources.STYLE_CLASS, folder, bundle, root=tmp_path)
+    assert not refused.ok and "scratch folder" in refused.text and gw.puts == []
+    assert resources.promote(gw, resources.STYLE_CLASS, folder, bundle, to="Card", root=tmp_path).ok
 
 
 def test_promote_refuses_local_edits(bundle: Bundle, tmp_path: Path) -> None:

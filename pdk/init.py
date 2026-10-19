@@ -3,7 +3,8 @@
 It writes what an agent needs and nothing else: the `perspective-views` skill and the user-facing subagents under
 `.claude/`, the `pdk` MCP server in `.mcp.json`, the hook that validates every `view.json` in `.claude/settings.json`,
 and a PDK section in `CLAUDE.md`. Files that belong to the folder are merged, not replaced: other MCP servers, other
-hooks and the rest of `CLAUDE.md` stay. Run it again after upgrading PDK to refresh the skill and the subagents.
+hooks and the rest of `CLAUDE.md` stay. Run it again after upgrading PDK to refresh the skill and the subagents;
+the MCP server refreshes them (and the CLAUDE.md section) by itself, and leaves `.mcp.json` and the hook alone.
 """
 
 from __future__ import annotations
@@ -81,7 +82,9 @@ def _mcp(folder: Path, result: InitResult) -> None:
     if data is None:
         return
     command = _command("pdk-mcp")
-    data.setdefault("mcpServers", {})["pdk"] = {"type": "stdio", "command": command[0], "args": command[1:]}
+    servers = data.setdefault("mcpServers", {})
+    entry = servers.get("pdk") if isinstance(servers.get("pdk"), dict) else {}
+    servers["pdk"] = {**entry, "type": "stdio", "command": command[0], "args": command[1:]}  # keeps env and the rest
     _write_json(path, data)
     result.written.append(".mcp.json")
 
@@ -93,9 +96,12 @@ def _hook(folder: Path, result: InitResult) -> None:
         return
     command = " ".join(f'"{part}"' if " " in part else part for part in _command("pdk", "hook"))
     entries = data.setdefault("hooks", {}).setdefault("PostToolUse", [])
+    ours = [hook for entry in entries for hook in entry.get("hooks", [])
+            if str(hook.get("command", "")).endswith("pdk hook")]
+    timeout = next((hook["timeout"] for hook in ours if isinstance(hook.get("timeout"), int)), 60)
     entries[:] = [entry for entry in entries
                   if not any(str(hook.get("command", "")).endswith("pdk hook") for hook in entry.get("hooks", []))]
-    entries.append({"matcher": HOOK_MATCHER, "hooks": [{"type": "command", "command": command, "timeout": 60}]})
+    entries.append({"matcher": HOOK_MATCHER, "hooks": [{"type": "command", "command": command, "timeout": timeout}]})
     _write_json(path, data)
     result.written.append(".claude/settings.json")
 
@@ -118,6 +124,14 @@ def init(folder: Path) -> InitResult:
         raise ValueError("this is the PDK checkout itself: run `pdk init` in the folder you work on views in")
     folder.mkdir(parents=True, exist_ok=True)
     result = InitResult(folder)
+    _assets(folder, result)
+    _mcp(folder, result)
+    _hook(folder, result)
+    return result
+
+
+def _assets(folder: Path, result: InitResult) -> None:
+    """What ships with PDK and changes with it: the skill, the subagents and the CLAUDE.md section."""
     skill = folder / ".claude" / "skills" / "perspective-views"
     _copy_tree(paths.skill_dir(), skill)
     (skill / VERSION_FILE).write_text(__version__ + "\n", encoding="utf-8")
@@ -128,20 +142,20 @@ def init(folder: Path) -> InitResult:
         target.write_text(_text((paths.agents_dir() / name).read_text(encoding="utf-8")), encoding="utf-8",
                           newline="\n")
         result.written.append(f".claude/agents/{name}")
-    _mcp(folder, result)
-    _hook(folder, result)
     _claude_md(folder)
     result.written.append("CLAUDE.md (PDK section)")
-    return result
 
 
 def refresh_if_stale(folder: Path) -> bool:
-    """After an upgrade, bring a folder that `pdk init` set up to this version. Only where init ran before."""
+    """After an upgrade, bring the skill, the subagents and the CLAUDE.md section of a folder that `pdk init` set up
+    to this version. Only where init ran before; `.mcp.json` and the hook are the user's to change."""
     marker = folder / ".claude" / "skills" / "perspective-views" / VERSION_FILE
+    if paths.CHECKOUT and folder.resolve() == REPO_ROOT.resolve():
+        return False  # the checkout's own skill is the source, never a copy to refresh
     try:
         if not marker.is_file() or marker.read_text(encoding="utf-8").strip() == __version__:
             return False
-        init(folder)
+        _assets(folder.resolve(), InitResult(folder))
     except OSError:
         return False
     return True

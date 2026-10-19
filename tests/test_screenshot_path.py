@@ -118,11 +118,13 @@ class _ActEyes:
         return PNG
 
 
-def _stub_view(monkeypatch: pytest.MonkeyPatch, popup: Any = None) -> None:
-    """Replaces the view lookup, the preview URL and the popup resolver, so that screenshot runs on _ActEyes alone."""
+def _stub_view(monkeypatch: pytest.MonkeyPatch, popup: Any = None, project: str = "PDK") -> None:
+    """Replaces the view lookup, the preview URL and the popup resolver, so that screenshot runs on _ActEyes alone.
+    The sandbox is the project "PDK" and the target "Planta"."""
     from pdk.eyes import inspect
 
-    target = inspect.Target("PDK", "Pump", VIEW, None)
+    target = inspect.Target(project, "Pump", VIEW, None)
+    monkeypatch.setattr(inspect.sync, "_roles", lambda gateway: ("PDK", "Planta"))
     monkeypatch.setattr(inspect, "resolve", lambda gateway, location: target)
     monkeypatch.setattr(inspect, "_preview", lambda gateway, view_target: "http://gateway/preview")
     monkeypatch.setattr(inspect, "_popup_resolver", lambda gateway, project, opened: popup or (lambda name: None))
@@ -167,6 +169,29 @@ def test_screenshot_malformed_act_is_a005_and_opens_nothing(monkeypatch: pytest.
     assert eyes.calls == []
 
 
+def test_act_on_a_target_view_is_refused_before_anything_opens(monkeypatch: pytest.MonkeyPatch) -> None:
+    from pdk.eyes import inspect
+
+    _stub_view(monkeypatch, project="Planta")
+    eyes = _ActEyes()
+    png, text = inspect.screenshot(eyes, None, "Planta/Pump", None, None, "click root/Save")
+    assert png is None and "only on views of the sandbox (PDK)" in text and eyes.calls == []
+    result = inspect.inspect_view(eyes, SimpleNamespace(health=lambda: {}), "Planta/Pump", act="click root/Save")
+    assert not result.ok and "only on views of the sandbox (PDK)" in result.text and eyes.calls == []
+
+
+def test_inspect_with_a_malformed_act_opens_nothing_and_checks_no_expectation(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    from pdk.eyes import inspect
+
+    _stub_view(monkeypatch)
+    eyes = _ActEyes()
+    result = inspect.inspect_view(eyes, SimpleNamespace(health=lambda: {}), "PDK/Pump", act="jump root/Save",
+                                  expect="root/Save width 100%")
+    assert not result.ok and "A005" in result.text and "act: 0/1 done" in result.text
+    assert "expect: not checked, act did not run" in result.text and eyes.calls == []
+
+
 def test_screenshot_popup_component_is_resolved_after_act(monkeypatch: pytest.MonkeyPatch) -> None:
     from pdk.eyes import inspect
 
@@ -209,18 +234,11 @@ def test_screenshot_cli_passes_component_and_act_on(monkeypatch: pytest.MonkeyPa
 
 
 class _SessionGateway:
-    """The two gateway calls `session_closer` makes: health() for the sandbox, close_session() per page."""
+    """The gateway call `session_closer` makes: close_session() per page, in the project the page was opened in."""
 
-    def __init__(self, fail_on: str | None = None, health_error: bool = False) -> None:
-        self.fail_on, self.health_error = fail_on, health_error
+    def __init__(self, fail_on: str | None = None) -> None:
+        self.fail_on = fail_on
         self.closed: list[tuple[str, str]] = []
-
-    def health(self) -> dict[str, str]:
-        if self.health_error:
-            from pdk.gateway.client import GatewayError
-
-            raise GatewayError("G007", "x")
-        return {"sandbox": "sb"}
 
     def close_session(self, project: str, page_id: str) -> None:
         self.closed.append((project, page_id))
@@ -230,28 +248,28 @@ class _SessionGateway:
             raise GatewayError("G007", "x")
 
 
-def test_session_closer_closes_each_page_on_the_sandbox() -> None:
+def test_session_closer_closes_each_page_in_its_own_project() -> None:
     from pdk.eyes.inspect import session_closer
 
     gateway = _SessionGateway()
-    session_closer(gateway)(["a", "b"])
-    assert gateway.closed == [("sb", "a"), ("sb", "b")]
+    session_closer(gateway)([("sb", "a"), ("tg", "b")])
+    assert gateway.closed == [("sb", "a"), ("tg", "b")]
 
 
 def test_session_closer_keeps_going_after_a_gateway_error() -> None:
     from pdk.eyes.inspect import session_closer
 
     gateway = _SessionGateway(fail_on="a")
-    session_closer(gateway)(["a", "b"])
+    session_closer(gateway)([("sb", "a"), ("sb", "b")])
     assert gateway.closed == [("sb", "a"), ("sb", "b")]
 
 
-def test_session_closer_does_nothing_when_the_sandbox_is_unknown() -> None:
+def test_session_closer_skips_a_page_outside_perspective() -> None:
     from pdk.eyes.inspect import session_closer
 
-    gateway = _SessionGateway(health_error=True)
-    session_closer(gateway)(["a", "b"])
-    assert gateway.closed == []
+    gateway = _SessionGateway()
+    session_closer(gateway)([("", "a"), ("sb", "b")])
+    assert gateway.closed == [("sb", "b")]
 
 
 # -- visual comparison (--compare / compare=): the naming of changed regions, the outcomes and the two entry points
@@ -509,15 +527,6 @@ def test_mcp_screenshot_names_an_unreadable_compare_file(monkeypatch: pytest.Mon
     calls = _mcp_compare(monkeypatch, (PNG, None, "unused"))
     result = mcp_server.pdk_screenshot("PDK/Pump", compare=str(tmp_path / "missing.png"))
     assert result.startswith("cannot read the compare PNG") and calls == []
-
-
-def test_session_closer_tries_the_target_for_a_page_the_sandbox_does_not_have() -> None:
-    from pdk.eyes.inspect import session_closer
-
-    gateway = _SessionGateway(fail_on="a")
-    gateway.health = lambda: {"sandbox": "sb", "target": "tg"}  # type: ignore[method-assign]
-    session_closer(gateway)(["a", "b"])
-    assert gateway.closed == [("sb", "a"), ("tg", "a"), ("sb", "b")]
 
 
 @pytest.mark.parametrize(("project", "opens"), [("sb", True), ("tg", True), ("Other", False)])

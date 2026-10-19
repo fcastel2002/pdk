@@ -78,9 +78,12 @@ def validate_text(
 def validate_file(
     path: Path, bundle: Bundle, *, project: Project | None = None, profile: str | None = None,
     compiler: Compiler | None = None, tags: TagChecker | None = None,
+    _projects: dict[Any, Project | None] | None = None,
 ) -> FileResult:
+    """The project is the one given, else the project tree the file is in, else, for a view pulled to
+    work/<project>/<view path>/ (or with its sidecar), that project as it is on disk: what deploy checks against."""
     view_path = None
-    located = locate(path)
+    located = locate(path, _projects) or _pulled(path, _projects)
     if located:
         located_project, view_path = located
         project = project or located_project
@@ -94,6 +97,23 @@ def validate_file(
     return FileResult(path, diagnostics, project, view_path)
 
 
+def _pulled(path: Path, cache: dict[Any, Project | None] | None) -> tuple[Project | None, str] | None:
+    """Project (None if it is not on this disk) and view path of a view.json under work/, like deploy finds them."""
+    if path.name != "view.json":
+        return None
+    from pdk import sync  # sync validates on deploy: imported here, not at the top
+
+    try:
+        _, _, name, view_path = sync._target(path, None)
+    except (ValueError, OSError):
+        return None
+    if cache is None:
+        return sync._local_project(name), view_path
+    if ("work", name) not in cache:
+        cache[("work", name)] = sync._local_project(name)
+    return cache[("work", name)], view_path
+
+
 def view_files(target: Path) -> list[Path]:
     if target.is_file():
         return [target]
@@ -104,5 +124,7 @@ def validate_paths(
     target: Path, bundle: Bundle, *, project: Project | None = None, profile: str | None = None,
     compiler: Compiler | None = None, tags: TagChecker | None = None,
 ) -> list[FileResult]:
-    return [validate_file(p, bundle, project=project, profile=profile, compiler=compiler, tags=tags)
+    projects: dict[Any, Project | None] = {}  # one Project per project root (and one graph) for the whole run
+    return [validate_file(p, bundle, project=project, profile=profile, compiler=compiler, tags=tags,
+                          _projects=projects)
             for p in view_files(target)]

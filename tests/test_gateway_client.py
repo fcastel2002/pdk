@@ -259,3 +259,41 @@ def test_history_routes_list_providers_and_store_points(monkeypatch: pytest.Monk
     assert gateway.history_providers() == []
     assert sent == [("GET", "/history", None), ("POST", "/history", {"provider": "Hist", "points": points}),
                     ("GET", "/history", None)]
+
+
+def _module_codes() -> set[tuple[int, str]]:
+    """(status, code) of every `new ApiError(<status>, "<CODE>"` in the module's sources."""
+    import re
+
+    from pdk import REPO_ROOT
+
+    found = set()
+    for java in (REPO_ROOT / "gateway" / "src").rglob("*.java"):
+        for status, code in re.findall(r'new ApiError\((\d+),\s*"([A-Z_]+)"', java.read_text(encoding="utf-8")):
+            found.add((int(status), code))
+    return found
+
+
+def test_every_module_error_code_has_a_g_code_or_falls_back_on_purpose() -> None:
+    from pdk.gateway import client
+
+    emitted = {code for _, code in _module_codes()}
+    assert emitted, "no ApiError found: the sources moved"
+    unmapped = emitted - set(client._MODULE_CODES) - client.STATUS_FALLBACK
+    assert not unmapped, f"map these in client._MODULE_CODES or list them in STATUS_FALLBACK: {sorted(unmapped)}"
+    assert not set(client._MODULE_CODES) - emitted, "mapped but never emitted by the module"
+    assert not set(client._MODULE_CODES) & client.STATUS_FALLBACK
+
+
+def test_every_module_error_code_is_in_the_rest_api_table_under_its_status() -> None:
+    from pdk import REPO_ROOT
+
+    text = (REPO_ROOT / "docs" / "reference" / "rest-api.rst").read_text(encoding="utf-8")
+    table = text[text.index("Errors\n------"):]
+    rows = {}
+    for chunk in table.split("   * - ")[2:]:
+        status, _, codes = chunk.partition("\n")
+        rows[status.strip()] = codes
+    missing = [(status, code) for status, code in sorted(_module_codes())
+               if f"``{code}``" not in rows.get(str(status), "")]
+    assert not missing, f"add these to docs/reference/rest-api.rst (Errors): {missing}"

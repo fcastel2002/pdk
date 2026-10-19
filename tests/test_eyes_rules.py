@@ -202,6 +202,15 @@ def test_v007_collapsed_container_reports_once() -> None:
     assert _codes(found) == [("V007", "/root/children/2")] and "1 children hidden" in found[0]["message"]
 
 
+def test_v007_a_collapsed_container_that_scrolls_is_only_v007() -> None:
+    dom = _dom()
+    dom["nodes"][4]["bounds"].update(height=0, bottom=72)
+    dom["nodes"][4].update(overflow_y="auto", client_height=0, scroll_height=11)  # its child pokes out of it
+    dom["nodes"][5]["bounds"].update(height=0, bottom=72)
+    dom["nodes"][5].update(clip_rect=_node("x", "", None, (0, 72, 800, 0))["bounds"])
+    assert _codes(_run(dom)) == [("V007", "/root/children/2")]
+
+
 def test_v007_ignores_empty_content_sized_components() -> None:
     dom = _dom()
     dom["nodes"][1].update(text=None, text_rects=[])

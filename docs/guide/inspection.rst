@@ -164,7 +164,9 @@ Actions
 -------
 
 ``--act`` runs steps in the browser **before** measuring, so the expectations, the binding qualities and the
-script errors all describe the state after them:
+script errors all describe the state after them. The steps run the view's own event scripts on the gateway, so
+``act`` works only on views of the sandbox: a view promoted to the target is looked at without it. A step that
+cannot be read (``A005``) stops the command before the view opens:
 
 .. list-table::
    :header-rows: 1
@@ -251,5 +253,6 @@ Each open view holds a Perspective session on the gateway, and some editions (Ma
 PDK reuses one browser and one session between calls; the MCP server closes its browser after two minutes without
 use (``PDK_EYES_IDLE_S``). A browser that goes away only disconnects its session, which would keep its slot until it
 times out, so when PDK closes its browser (at the end of a command, or when the MCP server's browser goes idle) it
-also closes its sessions on the gateway. If a gateway still refuses a session, close other Perspective tabs or wait
+also closes its sessions on the gateway, each in the project it was opened in (the sandbox, or the target for a
+promoted view). If a gateway still refuses a session, close other Perspective tabs or wait
 for idle sessions to time out.

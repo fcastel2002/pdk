@@ -68,7 +68,9 @@ def _report_many(results: list[FileResult], base: Path, version: str, focus: str
         lines.append("by code: " + ", ".join(f"{code}x{n}" for code, n in by_code.most_common(12)))
     limit = int(budget * CHARS_PER_TOKEN)
     used = sum(len(line) + 1 for line in lines)
-    ranked = sorted(flagged, key=lambda r: (-counts(r.diagnostics)["error"], -len(r.diagnostics), str(r.path)))
+    # With focus, every view that has a match: a code of severity info counts too.
+    shown = [r for r in results if r.diagnostics] if focus else flagged
+    ranked = sorted(shown, key=lambda r: (-counts(r.diagnostics)["error"], -len(r.diagnostics), str(r.path)))
     for i, result in enumerate(ranked):
         if focus:
             text = render(result.diagnostics, title=_label(result, base), focus=focus,

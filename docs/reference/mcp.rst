@@ -33,20 +33,22 @@ its ``act`` steps run the view's own event scripts on the gateway, which can wri
        :doc:`../guide/catalog`.
    * - ``pdk_pull``
      - writes locally
-     - ``path`` (view or folder in the project, or ``stylesheet``), ``project`` (default: the sandbox), ``force``
-       (overwrite local edits).
+     - ``path`` (view or folder in the project, ``stylesheet``, ``style-classes/PDK/X`` or ``scripts/PDK/X``),
+       ``project`` (default: the sandbox), ``force`` (overwrite local edits).
    * - ``pdk_deploy``
      - writes
-     - ``path`` (local folder or ``view.json``, a sandbox path ``PDK/X``, or the ``_stylesheet`` folder);
+     - ``path`` (local folder or ``view.json``, a sandbox path ``PDK/X``, a style class or script folder, or the
+       ``_stylesheet`` folder);
        ``resolved`` (after a ``G008``, write over the reviewed gateway version). Validates first; returns the
        preview URL.
    * - ``pdk_promote``
      - destructive
-     - ``path`` (local folder of a deployed ``PDK/`` view, or the ``_stylesheet`` folder), ``to`` (destination
-       path, default without ``PDK/``), ``to_project`` (``"target"`` for the target project), ``resolved``.
+     - ``path`` (local folder of a deployed ``PDK/`` view, style class or script, or the ``_stylesheet`` folder),
+       ``to`` (destination path, default without ``PDK/``; scratch folders ``PDK/_*`` need it), ``to_project``
+       (``"target"`` for the target project), ``resolved``. It copies: ``PDK/X`` stays until ``pdk_delete``.
    * - ``pdk_delete``
      - destructive
-     - ``path`` (local folder of a pulled view), ``resolved``.
+     - ``path`` (local folder of a pulled view, style class, script or the stylesheet), ``resolved``.
    * - ``pdk_tags``
      - destructive
      - ``action`` (``list``, ``read``, ``write``, ``apply``, ``delete``, ``alarms``, ``history``), ``path``,
@@ -55,11 +57,13 @@ its ``act`` steps run the view's own event scripts on the gateway, which can wri
        ``provider`` (``history``). See :doc:`../guide/tags`.
    * - ``pdk_open``
      - writes (preview)
-     - ``path`` (sandbox path or local folder), ``viewport`` (``WIDTHxHEIGHT``). Renders the view and reports load
-       time, components rendered and browser errors.
+     - ``path`` (sandbox path, local folder, or the folder of a view promoted to the target), ``viewport``
+       (``WIDTHxHEIGHT`` or ``desktop``, ``tablet``, ``phone``, ``wide``). Renders the view and reports load time,
+       components rendered and browser errors.
    * - ``pdk_inspect``
      - destructive
-     - ``path``, ``viewport``, ``focus``, ``query``, ``expect``, ``act``. See :doc:`../guide/inspection`.
+     - ``path``, ``viewport``, ``focus``, ``query``, ``expect``, ``act`` (only on sandbox views). See
+       :doc:`../guide/inspection`.
    * - ``pdk_screenshot``
      - destructive
      - ``path``, ``viewport``, ``component`` (name path such as ``root/Panel``, or ``popup:<id>/root/...`` after

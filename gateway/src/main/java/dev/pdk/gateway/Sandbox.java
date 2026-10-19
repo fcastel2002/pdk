@@ -135,11 +135,16 @@ final class Sandbox {
         }
     }
 
-    void requireWritable(String project) {
+    /**
+     * Closing a session PDK's eyes opened: in the sandbox, or in the target, where they look at promoted views.
+     * It changes no resource; Live.close only closes the session that holds the given page.
+     */
+    void requireSessionProject(String project) {
         requireEnabled();
-        if (!name.equals(project)) {
+        if (!name.equals(project) && (target == null || !target.equals(project))) {
             throw new ApiError(403, "OUTSIDE_SANDBOX",
-                    "Project '" + project + "' is not the sandbox '" + name + "'.");
+                    "Project '" + project + "' is not the sandbox '" + name + "'"
+                            + (target == null ? "." : " nor the target '" + target + "'."));
         }
     }
 

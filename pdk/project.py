@@ -147,12 +147,17 @@ def open_project(spec: str) -> Project:
     raise FileNotFoundError(f"Project {spec!r} is neither a directory nor a project on the local gateway")
 
 
-def locate(view_file: Path) -> tuple[Project, str] | None:
-    """Project and view path for a view.json stored inside a project tree."""
+def locate(view_file: Path, cache: dict[Path, Project] | None = None) -> tuple[Project, str] | None:
+    """Project and view path for a view.json stored inside a project tree. With `cache`, the views of one project
+    share one Project (and so one reference graph) across a run."""
     parts = view_file.resolve().parts
     for i in range(len(parts) - 1, 0, -1):
         if parts[i] == PERSPECTIVE_DIR and i + 1 < len(parts) and parts[i + 1] == "views":
             root = Path(*parts[:i])
             view_path = _resource_path(parts[i + 2 : -1])
-            return load_project(root), view_path
+            if cache is None:
+                return load_project(root), view_path
+            if root not in cache:
+                cache[root] = load_project(root)
+            return cache[root], view_path
     return None

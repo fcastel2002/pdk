@@ -5,7 +5,7 @@ PDK is for **development gateways only**. Its gateway module is unsigned and wri
 
 What the module is designed to guarantee:
 - It answers only loopback connections, and every request needs a token that changes on every gateway start.
-- Without `-Dpdk.sandbox` it is read-only. With it, it writes only to that project, and to the optional `-Dpdk.target` project only views outside `PDK/` and the stylesheet.
+- Without `-Dpdk.sandbox` it is read-only. With it, it writes only to that project, and to the optional `-Dpdk.target` project only finished work: views, style classes and project scripts outside `PDK/` and the project stylesheet (through promote), plus the eyes' preview pages under `/pdk/` in its page configuration.
 - Tags are written only under `[default]PDK/`.
 - Every write carries the expected resource signature, so concurrent edits are never overwritten.
 

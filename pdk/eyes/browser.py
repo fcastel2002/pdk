@@ -14,6 +14,7 @@ import contextlib
 import re
 import threading
 import time
+import urllib.parse
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -417,18 +418,21 @@ class Eyes:
     With `idle_s`, the browser closes after that long without work: an open page keeps its Perspective session
     connected (Maker caps them per gateway), and a long-lived server would otherwise hold it forever. The next call
     starts it again. A browser that goes away only disconnects its sessions, which then hold their slots until they
-    time out: `release(page_ids)`, called before the contexts close with one page of each session, closes them on
-    the gateway.
+    time out: `release(pages)`, called before the contexts close with (project, page id) for one page of each
+    session, closes them on the gateway.
     """
 
     def __init__(self, headless: bool = True, idle_s: float | None = None,
-                 release: Callable[[list[str]], None] | None = None):
+                 release: Callable[[list[tuple[str, str]]], None] | None = None):
         self._headless = headless
         self._release = release
-        self._session_pages: dict[Viewport, str] = {}  # one page id per context (= Perspective session)
+        # One Perspective session per project in each context: (viewport, project) -> a page id of that session.
+        self._session_pages: dict[tuple[Viewport, str], str] = {}
         self._worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix="pdk-eyes")
         self._idle_s = idle_s
         self._last_use = time.monotonic()
+        self._in_flight = 0  # run() calls submitted and not finished: the idle close waits for them
+        self._in_flight_lock = threading.Lock()
         self._watchdog: threading.Thread | None = None
         self._stopped = threading.Event()
         self._playwright: Any = None
@@ -443,20 +447,35 @@ class Eyes:
         self.close()
 
     def run(self, work: Callable[..., T], *args: Any) -> T:
+        with self._in_flight_lock:
+            self._in_flight += 1
         try:
-            return self._worker.submit(work, *args).result()
+            return self._worker.submit(_playwright_as_eyes_error, work, *args).result()
         finally:
+            with self._in_flight_lock:
+                self._in_flight -= 1
             self._last_use = time.monotonic()
             if self._idle_s and self._watchdog is None and not self._stopped.is_set():
                 self._watchdog = threading.Thread(target=self._close_when_idle, name="pdk-eyes-idle", daemon=True)
                 self._watchdog.start()
 
+    def _idle(self) -> bool:
+        assert self._idle_s
+        with self._in_flight_lock:
+            busy = self._in_flight > 0
+        return not busy and time.monotonic() - self._last_use > self._idle_s
+
     def _close_when_idle(self) -> None:
         assert self._idle_s
         while not self._stopped.wait(min(30.0, self._idle_s / 2)):
-            if self._browser is not None and time.monotonic() - self._last_use > self._idle_s:
+            if self._browser is not None and self._idle():
                 with contextlib.suppress(RuntimeError):  # the pool is shutting down
-                    self._worker.submit(self._close).result()
+                    self._worker.submit(self._close_if_idle).result()
+
+    def _close_if_idle(self) -> None:
+        """On the worker: a call may have started since the watchdog looked, and must not lose its page."""
+        if self._idle():
+            self._close()
 
     # -- public API (any thread) ---------------------------------------------------------------------------------
 
@@ -566,7 +585,7 @@ class Eyes:
         opened.readiness_ms = round((time.perf_counter() - started) * 1000, 1)
         opened.page_id = state.get("pageId")
         if opened.page_id:
-            self._session_pages[viewport] = opened.page_id
+            self._session_pages[(viewport, project_of(url))] = opened.page_id
         opened.maker_notice = _dismiss_maker_notice(opened.page)
         if state.get("dpr") != 1:
             raise EyesError(BROWSER_CRASH, f"unexpected device pixel ratio {state.get('dpr')}")
@@ -605,6 +624,11 @@ class Eyes:
         locator = opened.page.locator(f'[data-component-path="{component}"]')
         if locator.count() != 1:
             raise EyesError(READINESS_TIMEOUT, f"no single component at DOM path {component}")
+        box = locator.bounding_box()
+        if not box or not box["width"] or not box["height"]:
+            # Playwright would wait 30 s for it to become visible: a collapsed or hidden component never does.
+            raise EyesError(READINESS_TIMEOUT, f"the component at DOM path {component} has no size on the page "
+                                               "(collapsed, V007, or not displayed): there is nothing to take")
         return locator.screenshot()
 
     def _compare(self, opened: Opened, before: bytes, after: bytes, threshold: int, cell: int) -> dict[str, Any]:
@@ -619,10 +643,10 @@ class Eyes:
         return result
 
     def _forget(self, viewport: Viewport) -> None:
-        page = self._session_pages.pop(viewport, None)
-        if page and self._release is not None:
+        pages = [(key[1], self._session_pages.pop(key)) for key in list(self._session_pages) if key[0] == viewport]
+        if pages and self._release is not None:
             with contextlib.suppress(Exception):
-                self._release([page])
+                self._release(pages)
         for key in [key for key in self._pages if key[1] == viewport]:
             del self._pages[key]
         context = self._contexts.pop(viewport, None)
@@ -631,7 +655,7 @@ class Eyes:
                 context.close()
 
     def _close(self) -> None:
-        pages = list(self._session_pages.values())
+        pages = [(project, page) for (_viewport, project), page in self._session_pages.items()]
         self._session_pages.clear()
         if pages and self._release is not None:
             with contextlib.suppress(Exception):  # best effort: an unclosed session only times out
@@ -672,6 +696,24 @@ def _navigation_status(exc: Exception) -> str:
     if any(marker in text for marker in UNREACHABLE):
         return GATEWAY_UNAVAILABLE
     return _crash_or(exc, GATEWAY_UNAVAILABLE)
+
+
+def project_of(url: str) -> str:
+    """The project of a Perspective client URL (/data/perspective/client/<project>/...), else ""."""
+    parts = urllib.parse.urlsplit(url).path.split("/")
+    return urllib.parse.unquote(parts[4]) if len(parts) > 4 and parts[1:4] == ["data", "perspective", "client"] else ""
+
+
+def _playwright_as_eyes_error[R](work: Callable[..., R], *args: Any) -> R:
+    """Run `work` on the worker; a Playwright error that no path turned into an EyesError becomes one."""
+    try:
+        return work(*args)
+    except EyesError:
+        raise
+    except Exception as exc:
+        if not type(exc).__module__.startswith("playwright"):
+            raise
+        raise EyesError(_crash_or(exc, READINESS_TIMEOUT), f"the browser failed: {exc}") from exc
 
 
 def _crash_or(exc: Exception, fallback: str) -> str:

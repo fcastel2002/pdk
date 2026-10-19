@@ -56,7 +56,7 @@ PDK says when a newer release is out (one check a day against GitHub, also told 
    ```
    wrapper.java.additional.12=-Dpdk.target=<final_project>
    ```
-   The target only receives views outside `PDK/` and the stylesheet, and only through `pdk promote <sandbox view> --to-project target [--to <path>]`: no direct deploy, preview pages or page config. A promote is refused if the view references views under `PDK/`, and warns about references the target does not have. It must differ from the sandbox.
+   The target only receives finished work (views, style classes and project scripts outside `PDK/`, and the stylesheet), and only through `pdk promote <sandbox view> --to-project target [--to <path>]`: no direct deploy and no page config, except the eyes' preview pages under `/pdk/` to look at a promoted view. A promote is refused if the view references views under `PDK/`, and warns about references the target does not have. It must differ from the sandbox.
 
 3. **Create an API key** on the gateway web page (*Platform > Security > API Keys*), with security level *Administrator* and *Require secure connections* unchecked. Save it to `~/.pdk/ignition-api-key`, or as `api_key` in the config file (below). It is only used to install the module and restart the gateway.
 
@@ -105,16 +105,17 @@ uv run pdk deploy work/<sandbox>/PDK/Pump
 uv run pdk inspect PDK/Pump
 uv run pdk inspect PDK/Pump --query root/Header
 uv run pdk inspect PDK/Pump --expect "root/Body below root/Header; root/Header width 100%"
-uv run pdk tags apply bench/tags/sandbox.json
+uv run pdk tags apply sample
 uv run pdk inspect PDK/Pump --act "tag Sandbox/Setpoint 42" --expect "root/Value text \"42\""
 uv run pdk screenshot PDK/Pump --out pump.png
 ```
 The project stylesheet is edited in the sandbox too: `uv run pdk pull stylesheet` downloads `work/<sandbox>/_stylesheet/stylesheet.css` and `uv run pdk deploy work/<sandbox>/_stylesheet` uploads it.
 
-**From another MCP client**, register the stdio server:
+**From another MCP client** (Codex, Gemini CLI, VS Code, Cursor…), register the stdio server with the `work/` of the folder you set up with `pdk init`, where the pulled views go:
 ```json
-{"mcpServers": {"pdk": {"command": "uv", "args": ["--directory", "/path/to/pdk", "run", "--quiet", "pdk-mcp"]}}}
+{"mcpServers": {"pdk": {"command": "pdk-mcp", "env": {"PDK_WORK_DIR": "/path/to/screens/work"}}}}
 ```
+From a clone: `"command": "uv", "args": ["--directory", "/path/to/pdk", "run", "--quiet", "pdk-mcp"]`. Per-client formats are in the [agents guide](https://fcastel2002.github.io/pdk/guide/agents.html).
 
 The full documentation, with a step-by-step tutorial and the reference of every command and diagnostic, is at **https://fcastel2002.github.io/pdk/**.
 

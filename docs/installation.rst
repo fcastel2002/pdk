@@ -25,7 +25,7 @@ Requirements
      - Only to build the gateway module. PDK looks in ``JAVA_HOME``, the ``PATH`` and the usual install folders.
    * - Claude Code (optional)
      - Picks up PDK's MCP server, validation hook and skill automatically. Any other MCP client can use
-       ``pdk-mcp``.
+       ``pdk-mcp`` (see :ref:`other-mcp-clients`).
 
 Local install
 -------------
@@ -72,7 +72,8 @@ and the ``pdk-reviewer`` and ``pdk-log-reader`` subagents under ``.claude/``, th
 ``.mcp.json``, the hook that validates every ``view.json`` in ``.claude/settings.json``, and a PDK section in
 ``CLAUDE.md`` between ``<!-- pdk:begin -->`` and ``<!-- pdk:end -->`` markers. Existing files are merged: other MCP
 servers, other hooks and the rest of ``CLAUDE.md`` stay. Views you pull go to ``work/`` in that folder. Any number of
-folders can be set up; after an upgrade the MCP server refreshes the skill and subagents of the folder it starts in.
+folders can be set up; after an upgrade the MCP server refreshes the skill, the subagents and the PDK section of
+``CLAUDE.md`` of the folder it starts in (``.mcp.json`` and the hook stay as you left them).
 
 From a clone (to develop PDK)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -180,8 +181,9 @@ To update, run the installer again, or:
 
    uv tool upgrade pdk-perspective
 
-The MCP server refreshes the skill and subagents of a folder set up by ``pdk init`` the next time it starts there
-(``pdk init`` does the same by hand). When the release notes mention the Java module, reinstall it with
+The MCP server refreshes the skill, the subagents and the PDK section of ``CLAUDE.md`` of a folder set up by
+``pdk init`` the next time it starts there (``pdk init`` does it by hand, and rewrites the ``pdk`` entry of
+``.mcp.json`` and the hook too, keeping their ``env`` and ``timeout``). When the release notes mention the Java module, reinstall it with
 ``pdk gateway install --restart``: Ignition 8.3 does not reload modules without a restart. When you upgrade
 Ignition, run ``pdk doctor --fix`` to extract the schemas of the new Perspective version. In a clone, update with
 ``git pull`` and ``uv sync``.

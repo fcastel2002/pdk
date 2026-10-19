@@ -48,8 +48,8 @@ HINTS: dict[str, str] = {
     "G003": "The token changes on every gateway restart and is read from the token file; check PDK_GATEWAY_TOKEN.",
     "G004": "The module only answers loopback connections without proxy headers.",
     "G005": "Add -Dpdk.sandbox=<project> to ignition.conf and restart the gateway.",
-    "G006": (f"Writes go to the sandbox shown by `{RUN}pdk gateway health`; the target takes only views "
-             "outside PDK/, through promote --to-project."),
+    "G006": (f"Writes go to the sandbox shown by `{RUN}pdk gateway health`; the target takes only finished work "
+             "(views, style classes and scripts outside PDK/, the stylesheet), through promote --to-project."),
     "G007": "Check the project and the resource path.",
     "G008": "It changed after your pull: pull again, merge, and deploy with the new signature.",
     "G009": "Fix the path, signature or files of the request.",
@@ -57,8 +57,9 @@ HINTS: dict[str, str] = {
     "G011": "Perspective's session API did not link on this version: eyes fall back to the DOM only.",
     "G012": ("The session (a slow script or binding) or the tag provider (a large tag operation, a fast timer "
              "script) is busy; retry, or look for long-running work."),
-    "G013": (f"Simulated tags are written only under [provider]PDK/ (`{RUN}pdk gateway health` names the "
-             "provider), never config properties like X.ValueSource; other tags are read-only."),
+    "G013": (f"Simulated tags are written only under [provider]PDK/, and UDT definitions under "
+             f"[provider]_types_/PDK/ (`{RUN}pdk gateway health` names the provider), never config properties like "
+             "X.ValueSource; other tags are read-only."),
 }
 _MODULE_CODES = {
     "WRITE_DISABLED": "G005",
@@ -67,16 +68,27 @@ _MODULE_CODES = {
     "NOT_FOUND": "G007",
     "PROJECT_NOT_FOUND": "G007",
     "CONFLICT": "G008",
-    "FOLDER_NOT_EMPTY": "G008",
+    "FOLDER_NOT_EMPTY": "G009",  # a delete of a folder that still has resources: not a signature conflict
     "PAGE_NOT_FOUND": "G007",
-    "SESSION_NOT_FOUND": "G007",
     "RUNTIME_UNAVAILABLE": "G011",
     "SESSION_BUSY": "G012",
     "TAGS_BUSY": "G012",
+    "BUSY": "G012",
+    "INTERRUPTED": "G012",
     "OUTSIDE_TAG_FOLDER": "G013",
     "TAG_NOT_FOUND": "G007",
     "TAG_PROVIDER_NOT_FOUND": "G007",
+    "HISTORY_PROVIDER_NOT_FOUND": "G007",
 }
+# Module codes left to the status fallback on purpose: G009 for a 4xx (the request), G010 otherwise (see the log).
+# tests/test_gateway_client.py checks that every code the module emits is in one of the two.
+STATUS_FALLBACK = frozenset({
+    "BAD_REQUEST", "BAD_SIGNATURE", "SIGNATURE_REQUIRED", "INVALID_PATH", "INVALID_PROJECT", "INVALID_FILE_NAME",
+    "IS_FOLDER", "INVALID_TAGS", "INVALID_TAG_PATH", "UNKNOWN_QUALITY", "IMMUTABLE", "TOO_MANY_TAGS",
+    "TOO_MANY_SOURCES", "SOURCE_TOO_LARGE", "PUSH_REJECTED", "RUNTIME_READ_FAILED", "TAG_OPERATION_FAILED",
+    "TAG_DELETE_FAILED", "WRITE_NOT_VISIBLE", "HISTORY_STORE_FAILED", "HISTORY_UNAVAILABLE",
+    "PERSPECTIVE_UNAVAILABLE",
+})
 
 
 class GatewayError(RuntimeError):
@@ -209,7 +221,7 @@ class Gateway:
         return self.call("GET", "/sessions?" + urllib.parse.urlencode({"project": project}))
 
     def close_session(self, project: str, page_id: str) -> dict[str, Any]:
-        """Close the sandbox session that owns a page, so it does not hold a session slot until it times out."""
+        """Close the session that owns a page (sandbox or target), so it does not hold a slot until it times out."""
         return self.call("DELETE", "/sessions?" + urllib.parse.urlencode({"project": project, "page": page_id}))
 
     def functions(self) -> dict[str, Any]:

@@ -419,3 +419,24 @@ def test_mcp_history_lists_then_needs_a_value_then_stores(monkeypatch: pytest.Mo
     text = mcp_server.pdk_tags(action="history", path="Sandbox/Flow", value="1,2,3")
     assert text.startswith("stored 3 point(s) of [default]PDK/Sandbox/Flow in Hist, every 1m")
     assert [point["value"] for point in gateway.stored[0][1]] == [1, 2, 3]
+
+
+def test_apply_sample_reads_the_tags_pdk_ships(monkeypatch, tmp_path) -> None:
+    from pdk import tags
+
+    seen = {}
+
+    class Gateway:
+        def import_tags(self, path, data):
+            seen["data"] = data
+            return {"path": path, "tags": 4, "qualities": {"Good": 6}}
+
+        def acknowledge_alarms(self, path):
+            return {"acknowledged": 0}
+
+        def tags(self, path, depth):
+            return {"nodes": []}
+
+    monkeypatch.chdir(tmp_path)  # no file called "sample" here
+    text = tags.apply(Gateway(), Path("sample"))
+    assert text.startswith("sandbox.json -> PDK: 4 tags") and seen["data"]

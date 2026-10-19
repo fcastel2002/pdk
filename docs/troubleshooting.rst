@@ -49,8 +49,9 @@ Gateway and module
    The gateway runs without ``-Dpdk.sandbox``. Add it to ``ignition.conf`` and restart.
 
 ``G006`` outside the sandbox
-   Writes go to the sandbox reported by ``pdk gateway health``; the target project accepts only views outside
-   ``PDK/``, through ``promote --to-project target``.
+   Writes go to the sandbox reported by ``pdk gateway health``; the target project accepts only finished work
+   (views, style classes and project scripts outside ``PDK/``, and the stylesheet), through ``promote --to-project
+   target``, plus the eyes' ``/pdk/`` preview pages.
 
 ``G008`` conflict
    Someone changed the view since you pulled it. See :ref:`the conflict procedure <conflicts>` below.

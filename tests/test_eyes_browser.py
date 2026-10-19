@@ -349,10 +349,11 @@ def test_release_gets_one_page_per_session_before_the_contexts_close() -> None:
     events: list[Any] = []
     eyes = browser.Eyes(release=lambda pages: events.append(("release", sorted(pages))))
     try:
-        eyes._session_pages = {Viewport(1366, 768): "p1", Viewport(375, 812): "p2"}
+        eyes._session_pages = {(Viewport(1366, 768), "sb"): "p1", (Viewport(1366, 768), "tg"): "p3",
+                               (Viewport(375, 812), "sb"): "p2"}
         eyes._contexts = {Viewport(1366, 768): _FakeContext(events), Viewport(375, 812): _FakeContext(events)}
         eyes.run(eyes._close)
-        assert events == [("release", ["p1", "p2"]), "close", "close"]
+        assert events == [("release", [("sb", "p1"), ("sb", "p2"), ("tg", "p3")]), "close", "close"]
         assert eyes._session_pages == {}
     finally:
         eyes.close()
@@ -361,16 +362,102 @@ def test_release_gets_one_page_per_session_before_the_contexts_close() -> None:
 def test_a_release_that_raises_does_not_stop_the_close() -> None:
     events: list[Any] = []
 
-    def broken(pages: list[str]) -> None:
+    def broken(pages: list[tuple[str, str]]) -> None:
         events.append("release")
         raise RuntimeError("gateway down")
 
     eyes = browser.Eyes(release=broken)
     try:
-        eyes._session_pages = {Viewport(1366, 768): "p1"}
+        eyes._session_pages = {(Viewport(1366, 768), "sb"): "p1"}
         eyes._contexts = {Viewport(1366, 768): _FakeContext(events)}
         eyes.run(eyes._close)
         assert events == ["release", "close"]
         assert eyes._session_pages == {} and eyes._contexts == {}
+    finally:
+        eyes.close()
+
+
+def test_forget_releases_every_session_of_that_viewport() -> None:
+    released: list[Any] = []
+    eyes = browser.Eyes(release=released.append)
+    try:
+        phone, desktop = Viewport(375, 812), Viewport(1366, 768)
+        eyes._session_pages = {(phone, "sb"): "p1", (phone, "tg"): "p2", (desktop, "sb"): "p3"}
+        eyes._contexts = {phone: _FakeContext([]), desktop: _FakeContext([])}
+        eyes.run(eyes._forget, phone)
+        assert released == [[("sb", "p1"), ("tg", "p2")]] and eyes._session_pages == {(desktop, "sb"): "p3"}
+    finally:
+        eyes._session_pages = {}
+        eyes.close()
+
+
+@pytest.mark.parametrize(("url", "project"), [
+    ("http://127.0.0.1:8088/data/perspective/client/sb/pdk/PDK/Pump", "sb"),
+    ("http://gw/data/perspective/client/Mi%20Planta/pdk/X?x=1", "Mi Planta"),
+    ("http://gw/web/home", ""),
+])
+def test_project_of_a_perspective_url(url: str, project: str) -> None:
+    assert browser.project_of(url) == project
+
+
+def test_the_idle_close_waits_for_a_call_in_flight() -> None:
+    eyes = browser.Eyes(idle_s=0.2)
+    closed: list[int] = []
+    eyes._close = lambda: closed.append(1)  # type: ignore[method-assign]
+    try:
+        eyes._last_use = time.monotonic() - 10
+        eyes._in_flight = 1  # a call submitted after the watchdog looked
+        eyes._close_if_idle()
+        assert closed == []
+        eyes._in_flight = 0
+        eyes._close_if_idle()
+        assert closed == [1]
+    finally:
+        eyes.close()
+
+
+def test_a_playwright_error_from_the_worker_is_an_eyes_error() -> None:
+    class TimeoutError(Exception):  # noqa: A001 - a stand-in for the one Playwright raises
+        pass
+
+    TimeoutError.__module__ = "playwright._impl._errors"
+
+    def fails() -> None:
+        raise TimeoutError("Timeout 30000ms exceeded")
+
+    eyes = browser.Eyes()
+    try:
+        with pytest.raises(browser.EyesError) as caught:
+            eyes.run(fails)
+        assert caught.value.status == browser.READINESS_TIMEOUT
+        with pytest.raises(KeyError):  # PDK's own errors are not hidden
+            eyes.run(lambda: {}["x"])
+    finally:
+        eyes.close()
+
+
+def test_a_screenshot_of_a_component_with_no_size_fails_at_once() -> None:
+    class Locator:
+        def count(self) -> int:
+            return 1
+
+        def bounding_box(self) -> dict[str, float]:
+            return {"x": 0, "y": 0, "width": 120, "height": 0}
+
+        def screenshot(self) -> bytes:
+            raise AssertionError("it would wait 30 s")
+
+    class Page:
+        def evaluate(self, script: str, arg: Any = None) -> bool:
+            return False  # no Maker notice
+
+        def locator(self, selector: str) -> Locator:
+            return Locator()
+
+    eyes = browser.Eyes()
+    try:
+        opened = browser.Opened("http://gw", Viewport(1366, 768), Page(), None, 0.0, False)
+        with pytest.raises(browser.EyesError, match="has no size"):
+            eyes.run(eyes._screenshot, opened, "C.0:1")
     finally:
         eyes.close()

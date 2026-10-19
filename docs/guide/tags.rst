@@ -36,7 +36,7 @@ memory tags (``"valueSource": "memory"``), alarms included:
 
 .. code-block:: console
 
-   $ uv run pdk tags apply bench/tags/sandbox.json
+   $ uv run pdk tags apply sample
    sandbox.json -> [default]PDK: 4 tags (Good 6)
 
 Applying a file overwrites the tags it contains, which also resets their values and acknowledges their alarms: run

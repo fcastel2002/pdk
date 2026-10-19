@@ -339,7 +339,7 @@ def _cmd_tags(args: argparse.Namespace) -> int:
     items = args.items
     if not low <= len(items) <= high or (args.action == "write" and len(items) == 1 and not args.quality):
         usage = {"list": "[path]", "read": "<path>...", "write": "<path> <value> [--quality Q] | <path> --quality Q",
-                 "apply": "<file.json> [--to PDK/folder | _types_/PDK]", "delete": "<path>", "alarms": "[path]",
+                 "apply": "<file.json|sample> [--to PDK/folder | _types_/PDK]", "delete": "<path>", "alarms": "[path]",
                  "history": "[<path> <v1,v2,...> [--every 1m] [--provider P] [--quality Q]]"}[args.action]
         print(f"pdk tags {args.action} {usage}", file=sys.stderr)
         return EXIT_USAGE

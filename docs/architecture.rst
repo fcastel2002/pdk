@@ -113,7 +113,8 @@ A token per start
    group can use PDK.
 Read-only by default
    Without ``-Dpdk.sandbox`` nothing can be written. With it, resources can be written only in the sandbox, and in
-   the target project only views outside ``PDK/`` and the stylesheet. Projects and tags are named in
+   the target project only finished work (views, style classes and project scripts outside ``PDK/``, and the
+   stylesheet) through promote, plus the eyes' preview pages under ``/pdk/``. Projects and tags are named in
    ``ignition.conf``, which needs administrator rights, not by the client.
 Tags only under ``PDK/``
    UDT definitions only under ``_types_/PDK/``; synthetic history only for tags under ``PDK/``. Tag imports accept

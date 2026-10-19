@@ -66,6 +66,7 @@ packages = ["pdk"]
 ".claude/skills/perspective-views" = "pdk/_bundled/skills/perspective-views"
 ".claude/agents/pdk-reviewer.md" = "pdk/_bundled/agents/pdk-reviewer.md"
 ".claude/agents/pdk-log-reader.md" = "pdk/_bundled/agents/pdk-log-reader.md"
+"bench/tags/sandbox.json" = "pdk/_bundled/tags/sandbox.json"  # `pdk tags apply sample`
 
 [tool.uv]
 # Reinstall the editable package when the commit or the tags change, so `pdk --version` follows git.

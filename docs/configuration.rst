@@ -29,7 +29,8 @@ Settings
        gateway.
    * - ``work_dir``
      - ``PDK_WORK_DIR``
-     - ``work/`` in the current folder (the one ``pdk init`` set up); in a clone, in the repository. Where pulled
+     - ``work/`` in the current folder (the one ``pdk init`` set up); in a clone, the repository's when the command
+       runs inside it. Where pulled
        and new views live.
    * - ``schemas_dir``
      - ``PDK_SCHEMAS_DIR``

@@ -42,7 +42,9 @@ _RUNSCRIPT = re.compile(r"\brunScript\s*\(")
 _BLOCKING = re.compile(r"system\.(tag\.(read|write)\w*|db\.\w+|net\.\w+|util\.(sendRequest|getHttpClient))\b")
 _REF = re.compile(r"\{([^{}]+)\}")
 _ONLY_REF = re.compile(r"^\s*\{([^{}]+)\}\s*$")
-_SELF_WRITE = re.compile(r"\bself\.(props|custom|view|position|meta)(\.[\w\[\]'\"]+)*\s*=[^=]")
+# A write to a property of the script's owner: self is the component, or the view in a view's change script.
+_SELF_WRITE = re.compile(r"\bself\.(props|custom|position|meta)(\.[\w\[\]'\"]+)*\s*=[^=]")
+_VIEW_SELF_WRITE = re.compile(r"\bself\.(params|custom|props)(\.[\w\[\]'\"]+)*\s*=[^=]")
 _BUILTINS = {"str", "int", "float", "round", "abs", "min", "max", "len", "bool", "unicode"}
 _METHODS = {"upper", "lower", "strip", "format", "replace", "title", "capitalize", "zfill", "rstrip", "lstrip"}
 
@@ -89,7 +91,8 @@ def check(ctx: Context) -> list[Diagnostic]:
                                     "color or an icon rather than size, or hide with meta.visible"))
             on_change = entry.get("onChange")
             if isinstance(on_change, dict) and isinstance(on_change.get("script"), str):
-                out += _on_change(on_change["script"], prop, join(pointer, "onChange", "script"), where)
+                out += _on_change(on_change["script"], prop, join(pointer, "onChange", "script"), where,
+                                  of_view=node is None)
     for key, count in tag_paths.items():
         if count > SAME_TAG_MAX:
             pointer, where = first_pointer[key]
@@ -316,12 +319,14 @@ def _tag_key(config: dict[str, Any]) -> str:
 # --- change scripts ------------------------------------------------------------------------------
 
 
-def _on_change(script: str, prop: str, pointer: str, where: str) -> list[Diagnostic]:
+def _on_change(script: str, prop: str, pointer: str, where: str, *, of_view: bool) -> list[Diagnostic]:
+    """BP006: the change script writes its own property back. In a component's script `self.view.custom.x` is the
+    view's property, another one; in the view's own script `self` is the view (`self.params.x`)."""
     if "origin" in script:
         return []
     own = prop.split("[")[0]
-    for match in _SELF_WRITE.finditer(script):
-        written = match.group(0).split("=")[0].strip()[len("self."):].replace("view.", "", 1).split("[")[0]
+    for match in (_VIEW_SELF_WRITE if of_view else _SELF_WRITE).finditer(script):
+        written = match.group(0).split("=")[0].strip()[len("self."):].split("[")[0]
         if written == own or written.startswith(own + ".") or own.startswith(written + "."):
             return [make("BP006", "warning", pointer, where, f"the change script of {prop} writes {prop} back",
                          "check origin first (if origin != 'BindingWriteback': ...) or the write fires the script "

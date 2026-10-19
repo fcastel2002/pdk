@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Read-only view of running Perspective sessions. Everything that touches Perspective internals
+ * Running Perspective sessions: read, and closed when PDK's eyes are done with them. Everything that touches Perspective internals
  * ({@link InternalSession}, {@link PerspectiveSessionMonitor}, the models) stays in this class; when it stops
  * linking, the routes answer 501 RUNTIME_UNAVAILABLE and the client falls back to DOM-only eyes.
  */

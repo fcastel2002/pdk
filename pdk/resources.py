@@ -32,6 +32,7 @@ from pdk.sync import (
     _stamp,
     local_dir,
     read_sidecar,
+    scratch,
     work_root,
 )
 from pdk.validate import code
@@ -328,6 +329,9 @@ def promote(gateway: Gateway, kind: Kind, location: Path, bundle: Bundle, *, to:
             return Outcome(False, f"pdk: {to_project!r} is not the target project ({target})")
         destination_project = target
     prefix = SANDBOX_FOLDER + "/"
+    if to is None and scratch(path):
+        return Outcome(False, f"pdk: {path} is in a scratch folder ({prefix}_*), not finished work: pass --to <path> "
+                              "to promote it anyway")
     destination = (to or (path[len(prefix):] if path.startswith(prefix) else "")).strip("/")
     if not destination or destination == SANDBOX_FOLDER or destination.startswith(prefix):
         return Outcome(False, f"pdk: promote takes {kind.plural} from {prefix} to a path outside it: pass --to <path>")
@@ -394,6 +398,10 @@ def _conflict(kind: Kind, error: GatewayError, directory: Path, sidecar: dict[st
     """Save the gateway version and the signature to resolve with; report the diffs."""
     current = error.payload.get("current") or None
     theirs = (current or {}).get("files", {}).get(kind.file)
+    pulled = sidecar is not None
+    if not pulled and current is not None:  # it exists but was never pulled: keep what --resolved overwrites
+        sidecar = {"project": project, "type": kind.type, "path": path, "signature": None, "lastModification": None,
+                   "base": {}}
     if sidecar is not None:
         sidecar["conflict"] = {"signature": current.get("signature") if current else None,
                                "lastModification": current.get("lastModification") if current else None}
@@ -401,11 +409,11 @@ def _conflict(kind: Kind, error: GatewayError, directory: Path, sidecar: dict[st
     if theirs is not None:
         _write(directory / kind.gateway_copy, theirs)
     shown = _shown(directory)
-    base = _norm(sidecar["base"].get(kind.file)) if sidecar else None
+    base = _norm(sidecar["base"].get(kind.file)) if pulled else None
     what = f"{kind.name} {project}:{path}"
     if current is None:
         head = f"G008 conflict: {what} was deleted on the gateway after your pull; nothing was written."
-    elif sidecar is None:
+    elif not pulled:
         head = f"G008 conflict: {what} already exists on the gateway ({_stamp(current)}); nothing was written."
     else:
         head = (f"G008 conflict: {what} changed on the gateway after your pull ({_short(sidecar.get('signature'))} "

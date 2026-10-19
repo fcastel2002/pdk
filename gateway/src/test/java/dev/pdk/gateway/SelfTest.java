@@ -39,11 +39,11 @@ public final class SelfTest {
     private static void sandbox() {
         Sandbox none = Sandbox.of(null);
         check(!none.writeEnabled() && !Sandbox.of("  ").writeEnabled(), "no property: read-only");
-        expect("WRITE_DISABLED", () -> none.requireWritable("pdk_sandbox"));
+        expect("WRITE_DISABLED", () -> none.requireSessionProject("pdk_sandbox"));
         Sandbox sandbox = Sandbox.of(" pdk_sandbox ");
-        sandbox.requireWritable("pdk_sandbox");
-        expect("OUTSIDE_SANDBOX", () -> sandbox.requireWritable("Production"));
-        expect("OUTSIDE_SANDBOX", () -> sandbox.requireWritable("Pdk_sandbox"));
+        sandbox.requireSessionProject("pdk_sandbox");
+        expect("OUTSIDE_SANDBOX", () -> sandbox.requireSessionProject("Production"));
+        expect("OUTSIDE_SANDBOX", () -> sandbox.requireSessionProject("Pdk_sandbox"));
 
         Target finished = Target.parse("com.inductiveautomation.perspective/views/Planta/Resumen");
         Target work = Target.parse("com.inductiveautomation.perspective/views/PDK/Resumen");
@@ -83,7 +83,8 @@ public final class SelfTest {
                 Target.parse("com.inductiveautomation.perspective/style-classes/PDK/Card")));
         expect("OUTSIDE_TARGET", () -> both.requireWritable("Planta", Target.parse("ignition/script-python/PDK/util")));
         expect("OUTSIDE_TARGET", () -> both.requireWritable("Planta", Target.parse("ignition/named-query/q")));
-        expect("OUTSIDE_SANDBOX", () -> both.requireWritable("Planta"));
+        both.requireSessionProject("Planta");  // the eyes close the sessions they open on promoted views
+        expect("OUTSIDE_SANDBOX", () -> both.requireSessionProject("Otro"));
         expect("OUTSIDE_SANDBOX", () -> both.requireWritable("Otro", finished));
         check(Sandbox.of("pdk_sandbox", "pdk_sandbox").target().isEmpty(), "target equal to sandbox is ignored");
         check(Sandbox.of(null, "Planta").target().isEmpty(), "target without sandbox is ignored");

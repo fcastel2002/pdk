@@ -335,9 +335,10 @@ def _project_refs(ctx: Context) -> list[Diagnostic]:
                     out.append(make("R010", "error", pointer, node.path,
                                     f"view '{value}' does not exist in project {project.name}",
                                     _missing_view_hint(value, views)))
-        if node.type == "ia.display.view" and isinstance(props.get("path"), str):
-            bound = {k[len("props.params."):].split(".")[0] for k in (node.component.get("propConfig") or {})
-                     if k.startswith("props.params.")}
+        if node.type == "ia.display.view" and isinstance(props.get("path"), str) \
+                and not _bound(node.component, "props.params"):  # a bound params object is known only at runtime
+            bound = {k[len("props.params."):].split(".")[0].split("[")[0]
+                     for k in (node.component.get("propConfig") or {}) if k.startswith("props.params.")}
             params = props.get("params") if isinstance(props.get("params"), dict) else {}
             out += _params(ctx, props["path"], params, bound, join(node.pointer, "props", "params"), node.path,
                            embedded=True)

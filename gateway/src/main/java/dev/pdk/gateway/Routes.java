@@ -66,7 +66,7 @@ final class Routes {
         mount(routes, HttpMethod.GET, "/sessions", request -> live.sessions(project(request)));
         mount(routes, HttpMethod.DELETE, "/sessions", request -> {
             String project = project(request);
-            sandbox.requireWritable(project);
+            sandbox.requireSessionProject(project);
             return live.close(project, required(request, "page"));
         });
         mount(routes, HttpMethod.GET, "/pages/:page", request -> live.page(project(request), request.getParameter("page")));

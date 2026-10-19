@@ -115,12 +115,13 @@ A target project receives finished screens, for example a copy of the production
 development gateway, so the result can be reviewed in its real context. It is configured on the gateway with
 ``-Dpdk.target=<project>`` and must differ from the sandbox. It is deliberately restricted:
 
-- It only receives views **outside** ``PDK/`` and the stylesheet, and only through
-  ``pdk promote … --to-project target``. There is no direct deploy and no page configuration, except the eyes'
+- It only receives finished work, views, style classes and project scripts **outside** ``PDK/`` and the
+  stylesheet, and only through ``pdk promote … --to-project target``. There is no direct deploy and no page configuration, except the eyes'
   preview pages: ``pdk inspect work/<target>/<view>`` (the folder promote leaves) adds ``/pdk/<view path>`` to
   the target's page configuration to open the promoted view there. The module refuses any other change to it.
-- A promote is refused if the view references views under ``PDK/`` (promote embedded views and popups first), and
-  warns about references the target does not have.
+- A promote is refused if the view references views under ``PDK/``, and warns about references the target does
+  not have. For a view that embeds or opens ``PDK/B``: promote ``PDK/B`` to ``B`` in the sandbox and to the
+  target, point the view at ``B``, deploy it (``B`` now exists in the sandbox, so no ``R010``) and promote it.
 - The stylesheet is edited in the sandbox and copied with
   ``pdk promote work/<sandbox>/_stylesheet --to-project target``.
 

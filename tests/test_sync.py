@@ -85,7 +85,7 @@ class FakeGateway:
         if project != self.target:
             raise GatewayError("G006", f"{project} is not the sandbox", status=403)
         if type_key != sync.VIEWS or not path or path == "PDK" or path.startswith("PDK/"):
-            raise GatewayError("G006", f"the target only takes views outside PDK/, not {path}", status=403)
+            raise GatewayError("G006", f"the target takes only finished work outside PDK/, not {path}", status=403)
 
     def put_resource(self, project: str, type_key: str, path: str, files: dict[str, str],
                      signature: str | None = None, scope: str | None = None) -> dict[str, Any]:
@@ -350,6 +350,15 @@ def test_promote_refuses_what_is_not_deployed(gw: FakeGateway, tmp_path: Path, b
     assert "not a valid target" in sync.promote(gw, source, bundle, to="PDK/X", root=tmp_path).text
 
 
+def test_promote_leaves_scratch_folders_unless_told_where(gw: FakeGateway, tmp_path: Path, bundle) -> None:
+    gw.save("PDK/_bench/Tabla", view(label()), actor="pdk")
+    sync.pull(gw, "PDK/_bench/Tabla", root=tmp_path)
+    source = tmp_path / PROJECT / "PDK" / "_bench" / "Tabla"
+    refused = sync.promote(gw, source, bundle, root=tmp_path)
+    assert not refused.ok and "scratch folder" in refused.text and "_bench/Tabla" not in gw.views
+    assert sync.promote(gw, source, bundle, to="Tabla", root=tmp_path).ok and "Tabla" in gw.views
+
+
 TARGET = "Planta"
 
 
@@ -405,6 +414,8 @@ def test_the_target_takes_views_only_through_promote(tgw: FakeGateway, tmp_path:
     target_dir = tmp_path / TARGET / "Menu"
     assert "starts from the sandbox" in sync.promote(tgw, target_dir, bundle, to_project="target", to="X",
                                                      root=tmp_path).text
+    within = sync.promote(tgw, target_dir, bundle, to="Menu_copy", root=tmp_path)  # no --to-project: still refused
+    assert not within.ok and "starts from the sandbox" in within.text and "Menu_copy" not in tgw.projects[TARGET]
     _edit(target_dir, _set_text(0, "direct"))
     refused = sync.deploy(tgw, target_dir, bundle, root=tmp_path)
     assert not refused.ok and "only with promote" in refused.text
@@ -550,3 +561,23 @@ def test_cli_validate_compile_without_the_module_says_so(tmp_path: Path, monkeyp
     monkeypatch.setattr(sync, "compiler", lambda gateway: refuse)
     assert main(["validate", str(path), "--compile"]) == 1
     assert "--compile needs the gateway's module" in capsys.readouterr().err
+
+
+def test_json_equality_tells_true_from_1_at_every_depth() -> None:
+    assert sync._same({"a": [1, {"x": 1.0}]}, {"a": [1.0, {"x": 1}]})
+    assert not sync._same({"a": {"x": 1}}, {"a": {"x": True}})
+    assert not sync._same([0], [False]) and not sync._same({"a": 1}, {"a": 1, "b": 2})
+
+
+def test_a_change_from_1_to_true_is_deployed(gw: FakeGateway, tmp_path: Path, bundle) -> None:
+    sync.pull(gw, "PDK/Menu", root=tmp_path)
+    source = tmp_path / PROJECT / "PDK" / "Menu"
+    data = json.loads((source / VIEW_FILE).read_text(encoding="utf-8"))
+    data["custom"] = {"flag": 1}
+    (source / VIEW_FILE).write_text(json.dumps(data), encoding="utf-8")
+    assert sync.deploy(gw, source, bundle, root=tmp_path).ok
+    data["custom"] = {"flag": True}
+    (source / VIEW_FILE).write_text(json.dumps(data), encoding="utf-8")
+    outcome = sync.deploy(gw, source, bundle, root=tmp_path)
+    assert outcome.ok and "nothing to deploy" not in outcome.text, outcome.text
+    assert json.loads(gw.views["PDK/Menu"][0])["custom"] == {"flag": True}

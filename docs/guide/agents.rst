@@ -47,26 +47,44 @@ The skill and the tool descriptions set a few rules that keep the agent within s
 - Fix every error; fix or justify every warning.
 - Check the request with expectations, not by looking at a screenshot.
 
+.. _other-mcp-clients:
+
 Other MCP clients
 -----------------
 
-Any client that supports MCP over standard input/output can use PDK. Register the server with the path of your
-clone:
+Any client that supports MCP over standard input/output can use PDK. With PDK installed, the server is the
+``pdk-mcp`` command. It keeps pulled views in ``work/`` of the folder it starts in: name the ``work/`` of the folder
+you set up with ``pdk init`` in ``PDK_WORK_DIR`` (or start the server in that folder, where the client has a ``cwd``
+setting):
 
 .. code-block:: json
 
    {
      "mcpServers": {
        "pdk": {
-         "command": "uv",
-         "args": ["--directory", "/path/to/pdk", "run", "--quiet", "pdk-mcp"]
+         "command": "pdk-mcp",
+         "env": {"PDK_WORK_DIR": "/path/to/screens/work"}
        }
      }
    }
 
+The same entry in other clients' formats:
+
+- Codex (``~/.codex/config.toml``, or ``.codex/config.toml`` in a trusted project): ``[mcp_servers.pdk]`` with
+  ``command = "pdk-mcp"`` and ``env`` (or ``cwd``), plus ``startup_timeout_sec = 30`` and ``tool_timeout_sec = 180``:
+  the eyes take longer than Codex's defaults.
+- Gemini CLI (``.gemini/settings.json``): ``"mcpServers": {"pdk": {"command": "pdk-mcp", "env": {...}, "timeout":
+  180000}}``.
+- VS Code (``.vscode/mcp.json``): ``"servers": {"pdk": {"type": "stdio", "command": "pdk-mcp"}}`` (the key is
+  ``servers``); Cursor (``.cursor/mcp.json``) uses ``mcpServers`` like the block above.
+
+From a clone, run it through uv instead: ``"command": "uv", "args": ["--directory", "/path/to/pdk", "run",
+"--quiet", "pdk-mcp"]``; then ``work/`` is the clone's unless ``PDK_WORK_DIR`` says otherwise.
+
 The server describes its workflow in its instructions, so the model learns the cycle from the server itself. The
-skill's content (``.claude/skills/perspective-views/SKILL.md`` and ``reference.md``) is plain text and can be given
-to other agents as a system prompt.
+validation hook and the subagents are Claude Code's; elsewhere, have the agent call ``pdk_validate`` after writing a
+``view.json`` (``pdk_deploy`` validates anyway). The skill's content (``.claude/skills/perspective-views/SKILL.md``
+and ``reference.md``) is plain text and can be given to other agents as instructions, for example in ``AGENTS.md``.
 
 Without an agent
 ----------------
