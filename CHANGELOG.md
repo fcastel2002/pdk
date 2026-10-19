@@ -4,6 +4,8 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-19
+
 ### Added
 - Integrator best practices for bindings and performance (BP001-BP018): `tag()` in bindings, script transforms
   that should be map or expression transforms or that block, binding loops and mirrored bidirectional bindings,
