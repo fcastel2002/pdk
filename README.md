@@ -3,6 +3,16 @@
 [![CI](https://github.com/fcastel2002/pdk/actions/workflows/ci.yml/badge.svg)](https://github.com/fcastel2002/pdk/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
+## Status: final community edition
+
+PDK 0.5.0 is the last release of this repository, which is now frozen and archived. It remains available under the Apache License 2.0, as every earlier release does: you can use, fork and modify it under those terms. It will not receive further changes, fixes (security fixes included) or support.
+
+Development continues as a commercial edition, maintained for newer Ignition and Perspective versions, with a signed gateway module and support. If you are interested, contact me through GitHub: [@fcastel2002](https://github.com/fcastel2002).
+
+Thank you to everyone who tried PDK and shared feedback.
+
+## About PDK
+
 PDK (Perspective DevKit) is a set of tools for an AI agent (Claude Code or any MCP client) to build and fix Ignition Perspective views (`view.json`) — and to prove they work before you open them. PDK closes the loop *generate → validate → deploy → inspect → fix*:
 
 - **Validate** views against the exact schemas of the Perspective version you have installed: props, bindings, events, expressions and scripts, with a JSON pointer and a hint on every diagnostic.
@@ -158,10 +168,10 @@ An AI review lowers the risk, it does not remove it: models can miss things. For
 | `docs/` | The documentation (Sphinx), published at https://fcastel2002.github.io/pdk/ |
 
 ## Contributing
-Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). External contributions need a signed [CLA](CLA.md).
+This repository is archived and no longer takes issues or pull requests. You are welcome to fork it under the Apache License 2.0.
 
 ## Support and services
-PDK is maintained by [Francisco Castel](https://github.com/fcastel2002). If your company uses it, sponsoring keeps it maintained across Perspective versions. Screens built with PDK, Vision → Perspective migrations, assisted setup and training are available as services: reach out through GitHub.
+The community edition is not supported. The maintained commercial edition, support, and services (screens built with PDK, Vision → Perspective migrations, assisted setup and training) are available from [Francisco Castel](https://github.com/fcastel2002): reach out through GitHub.
 
 ## License
 [Apache License 2.0](LICENSE). See [NOTICE](NOTICE) for attributions.

@@ -58,21 +58,3 @@ jobs:
         run: |
           uv build
           uv publish --trusted-publishing always
-
-  changelog:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: main
-      - name: Move [Unreleased] under the version
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          python3 tools/changelog.py roll "$version" "$(date -u +%F)"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "Changelog: $version"
-          git push origin main

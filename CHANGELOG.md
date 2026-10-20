@@ -4,6 +4,17 @@ All notable changes to PDK are documented here. The format follows [Keep a Chang
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-19
+
+The final community edition: PDK is frozen at this version and the repository is archived. It stays under the
+Apache License 2.0 and gets no more changes or fixes, security fixes included. The maintained edition is commercial
+(see the README).
+
+### Changed
+- On the day's first command (and to the agent when the MCP server starts), PDK says once that this is the final
+  community edition and where the maintained one is. It rides on the existing daily check: no new network call, and
+  `PDK_UPDATE_CHECK=0` still turns it off.
+
 ### Added
 - Agent sessions: `pdk-mcp --agent-session <folder>` enforces the rules of a host such as PDK Agent in the server,
   for every tool call: normal mode reads, looks at sandbox views and edits props of the view open in the Designer;

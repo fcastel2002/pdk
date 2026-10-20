@@ -175,6 +175,9 @@ PDK checks once a day whether a newer release is out (one request to GitHub's pu
 server starts, so it tells you at the start of the session. ``PDK_UPDATE_CHECK=0`` or ``update_check = false`` in
 the configuration file turns that off.
 
+PDK 0.5.0 is the final community edition and no newer release will come. With the same daily check, and no other
+request, it says so once a day, with where the maintained (commercial) edition is.
+
 To update, run the installer again, or:
 
 .. code-block:: bash

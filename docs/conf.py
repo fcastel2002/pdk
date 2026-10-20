@@ -33,6 +33,8 @@ html_theme_options = {
     "source_repository": "https://github.com/fcastel2002/pdk/",
     "source_branch": "main",
     "source_directory": "docs/",
+    "announcement": "PDK is frozen at 0.5.0, the final community edition (Apache-2.0). The maintained edition is "
+                    'commercial: <a href="https://github.com/fcastel2002">contact through GitHub</a>.',
 }
 
 autodoc_default_options = {"members": True, "member-order": "bysource"}

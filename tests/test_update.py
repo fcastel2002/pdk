@@ -46,6 +46,15 @@ def test_notice_only_when_newer(home, monkeypatch) -> None:
     assert update.notice("0.3.1.dev1") is None
 
 
+def test_the_final_edition_says_it_is_frozen_once_a_day(home, monkeypatch) -> None:
+    calls = []
+    monkeypatch.setattr(update, "_fetch", lambda timeout: calls.append(1) or "0.5.0")
+    assert update.notice("0.5.0", now=1000.0) == update.FROZEN
+    assert update.notice("0.5.0", now=1000.0 + 60) is None
+    assert update.MAINTAINED_URL in update.notice("0.5.0", now=1000.0 + update.INTERVAL_S + 1)
+    assert len(calls) == 2  # no call of its own: one a day, as before
+
+
 @pytest.mark.parametrize("value", ["0", "false", "off"])
 def test_the_check_can_be_turned_off(home, monkeypatch, value) -> None:
     monkeypatch.setenv("PDK_UPDATE_CHECK", value)

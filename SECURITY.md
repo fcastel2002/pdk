@@ -12,9 +12,9 @@ What the module is designed to guarantee:
 A way around any of these is a vulnerability.
 
 ## Reporting a vulnerability
-Please report it privately through GitHub: in this repository, open **Security → Report a vulnerability** ([private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)). Do not open a public issue.
+Please report it privately to the author through GitHub ([@fcastel2002](https://github.com/fcastel2002)). Do not open a public issue.
 
-Include the PDK commit, Ignition and Perspective versions, and the steps to reproduce. You will get an answer within a week. Fixes are released on `main` and announced in the advisory once users have had time to update.
+Include the PDK commit, Ignition and Perspective versions, and the steps to reproduce. You will get an answer within a week.
 
 ## Supported versions
-Only the latest commit on `main` gets security fixes.
+None. PDK 0.5.0 is the final community edition: the repository is archived and gets no more fixes, security fixes included. A reported vulnerability is fixed in the maintained (commercial) edition.
